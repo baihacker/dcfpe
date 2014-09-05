@@ -15,7 +15,8 @@ Host:
 * Add workers manual.
 * Comunnicate with Worker
 * Maintain the H process and R process.
-* Maintain the worker list.
+* Maintain the worker list. (View Workers, Network Quality, Worker ability(memory limit, process), Worker status)
+* Distribute task effectively, and manage them. Reliable.
 * Receive tasks from H process and distribute them to W process. (H process -> Host -> Worker -> W process)
 * Receive result from W process and send them to R process. (W process -> Worker -> Host -> R process)
 
@@ -26,6 +27,15 @@ Worker:
 * Maintain the W process.
 * Receive tasks from Worker and pass them to W process.
 * Receive result from W process and send them to Host.
+
+H process:
+* Generate tasks and send to Host
+
+W process:
+* Compute and send result to Worker
+
+R process:
+* Receive results from Host and combine them.
 
 Other:
 ======
