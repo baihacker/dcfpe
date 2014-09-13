@@ -6,7 +6,7 @@ Distributed Computation Framework for Project Euler
 It is a tool to make computer compute together.
 
 
-Brief Compoment List:
+Brief Component List:
 ====================
 
 Host:
@@ -40,7 +40,7 @@ R process:
 Other:
 ======
 
-* Main language C++11. It is possible to use python, lua, php, javascript.
+* Main language is C++11. It is possible to use python, lua, php, javascript.
 * Basic network libary: ZMQ
 * Worker will protect the W process. (sandbox)
 * Trust mechanism between Host and Worker. (It is possible that the worker will receive a virus from Host).
