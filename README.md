@@ -51,7 +51,7 @@ Development Environment(windows):
 * win7 64
 * python 2.7
 * vs2013 or above
-* todo: support win_toolchain of chromium will be supported
+* todo: support win_toolchain of chromium
 
 
 Updated:
