@@ -45,3 +45,15 @@ Other:
 * Worker will protect the W process. (sandbox)
 * Trust mechanism between Host and Worker. (It is possible that the worker will receive a virus from Host).
 * I do not when to release the first version because I am very lazy.
+
+Development Environment(windows):
+======
+* win7 64
+* python 2.7
+* vs2013 or above
+* todo: support win_toolchain of chromium
+
+
+Updated:
+========
+* 2014.09.22 Upload gyp (basic project management tool) and chromium/base (basic code, especially the thread model).
