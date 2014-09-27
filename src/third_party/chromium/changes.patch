@@ -1,6 +1,6 @@
 Index: base/base.gyp
 ===================================================================
---- base/base.gyp	(revision 3)
+--- base/base.gyp	(revision 4)
 +++ base/base.gyp	(working copy)
 @@ -22,10 +22,10 @@
        },
@@ -1350,7 +1350,7 @@ Index: base/base.gyp
  }
 Index: base/base.gypi
 ===================================================================
---- base/base.gypi	(revision 3)
+--- base/base.gypi	(revision 4)
 +++ base/base.gypi	(working copy)
 @@ -22,10 +22,10 @@
            'third_party/nspr/prtime.h',
@@ -1599,7 +1599,7 @@ Index: base/base.gypi
  }
 Index: base/gtest_prod_util.h
 ===================================================================
---- base/gtest_prod_util.h	(revision 3)
+--- base/gtest_prod_util.h	(revision 4)
 +++ base/gtest_prod_util.h	(working copy)
 @@ -5,8 +5,9 @@
  #ifndef BASE_GTEST_PROD_UTIL_H_
@@ -1645,7 +1645,7 @@ Index: base/gtest_prod_util.h
  #endif  // BASE_GTEST_PROD_UTIL_H_
 Index: build/common.gypi
 ===================================================================
---- build/common.gypi	(revision 3)
+--- build/common.gypi	(revision 4)
 +++ build/common.gypi	(working copy)
 @@ -3035,7 +3035,7 @@
        'Debug_Base': {
@@ -1656,9 +1656,18 @@ Index: build/common.gypi
            'WTF_USE_DYNAMIC_ANNOTATIONS=1',
          ],
          'xcode_settings': {
+@@ -5128,7 +5128,7 @@
+             'EnableFunctionLevelLinking': 'true',
+             'RuntimeTypeInfo': 'false',
+             'WarningLevel': '4',
+-            'WarnAsError': 'true',
++            'WarnAsError': 'false',
+             'DebugInformationFormat': '3',
+             'conditions': [
+               ['component=="shared_library"', {
 Index: build/gyp_chromium
 ===================================================================
---- build/gyp_chromium	(revision 3)
+--- build/gyp_chromium	(revision 4)
 +++ build/gyp_chromium	(working copy)
 @@ -15,12 +15,13 @@
  import subprocess

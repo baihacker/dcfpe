@@ -1,17 +1,25 @@
 import os
 import sys
 
+# prepare environment
 ENV_SOLUTION_DIRECTORY = os.path.dirname(os.path.realpath(__file__))
 ENV_GYP_DIRECTORY = os.path.abspath(os.path.join(ENV_SOLUTION_DIRECTORY, r'tools\gyp\pylib'))
-ENV_COMPONENT = 'shared_library'  # shared_library or static library
+ENV_COMPONENT = 'static_library'  # shared_library or static_library
 
-
-
+os.environ['ENV_TARGET_OS'] = 'win'
+os.environ['ENV_TARGET_PLATFORM'] = 'x86'
 os.environ['ENV_SOLUTION_DIRECTORY'] = ENV_SOLUTION_DIRECTORY
 os.environ['ENV_GYP_DIRECTORY'] = ENV_GYP_DIRECTORY
 os.environ['ENV_COMPONENT'] = ENV_COMPONENT
 
+os.environ['ENV_GENERATE_PROJECT'] = '1'
+os.environ['ENV_BUILD_PROJECT'] = '1'
+os.environ['ENV_COPY_PROJECT'] = '1'
+
+# build dependences
 os.system(r'python third_party\chromium\build.py')
+
+# build main solution
 
 #sys.path.insert(0, gyp_path)
 #import gyp
