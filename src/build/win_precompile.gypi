@@ -11,9 +11,9 @@
   'conditions': [
     ['OS=="win"', {
         'target_defaults': {
-          'msvs_precompiled_header': '<(DEPTH)/precompile.h',
-          'msvs_precompiled_source': '<(DEPTH)/precompile.cc',
-          'sources': ['<(DEPTH)/precompile.cc'],
+          'msvs_precompiled_header': '<(DEPTH)/build/precompile.h',
+          'msvs_precompiled_source': '<(DEPTH)/build/precompile.cc',
+          'sources': ['<(DEPTH)/build/precompile.cc'],
         }
       }],
   ],

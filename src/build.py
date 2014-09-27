@@ -13,7 +13,7 @@ if __name__ == '__main__':
   # solution
   os.environ['ENV_SOLUTION_DIRECTORY'] = ENV_SOLUTION_DIRECTORY
   os.environ['ENV_COMPONENT'] = 'static_library'
-  os.environ['ENV_BUILD_DIR'] = 'build'
+  os.environ['ENV_BUILD_DIR'] = 'output'
   
   # control
   os.environ['ENV_GENERATE_PROJECT'] = '1'
@@ -30,13 +30,13 @@ if __name__ == '__main__':
   sys.path.insert(0, ENV_GYP_DIRECTORY)
   import gyp
   args = []
-  args.append('dcfpe.gyp')
+  args.append('build\\dcfpe.gyp')
   args.append('--depth=.')
   args.append('--no-circular-check')
   args.extend(['-D', 'gyp_output_dir=out'])
   args.extend(['-D', 'component='+os.environ.get('ENV_COMPONENT')])
   args.extend(['-D', 'build_dir='+os.environ.get('ENV_BUILD_DIR')])
-  args.append('-I'+os.path.join(ENV_SOLUTION_DIRECTORY, 'common.gypi'))
+  args.append('-I'+os.path.join(ENV_SOLUTION_DIRECTORY, 'build\\common.gypi'))
   ret = gyp.main(args)
   
   sys.exit(ret)
