@@ -2967,7 +2967,7 @@
       'Common_Base': {
         'abstract': 1,
         'msvs_configuration_attributes': {
-          'OutputDirectory': '<(DEPTH)\\build\\<(build_dir_prefix)$(ConfigurationName)',
+          'OutputDirectory': '<(DEPTH)\\<(build_dir)\\<(build_dir_prefix)$(ConfigurationName)',
           'IntermediateDirectory': '$(OutDir)\\obj\\$(ProjectName)',
           'CharacterSet': '1',
         },

@@ -1,11 +1,8 @@
 {
-  'variables':
+  'targets':[
     {
-      'variables':
-      {
-        'x%':"2",
-      },
-      'x':"1",
-      'testx':'<(x)'
-    },
+      'target_name': 'test',
+      'type': 'executable',
+      'sources':['123.c'],
+    }]
 }
