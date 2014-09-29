@@ -52,6 +52,7 @@ Development Environment:
 * win7 64
 * python 2.7
 * vs2013 or above (or win_toolchain 2013e in chromium)
+* [win_toolchain_2013e download] (http://yun.baidu.com/share/link?shareid=2799405881&uk=2684621311)
 
 ### Build by vs2013
 * Make sure os.environ['GYP_GENERATORS'] = 'msvs' and os.environ['GYP_MSVS_VERSION'] = '2013' in build.py
