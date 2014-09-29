@@ -52,7 +52,7 @@ Development Environment(windows):
 * python 2.7
 * vs2013 or above (or win_toolchain 2013e in chromium)
 * Build by vs2013
-* Build step 1: make sure os.environ['GYP_GENERATORS'] = 'msvs' and os.environ['GYP_MSVS_VERSION'] = '2013'
+* Build step 1: make sure os.environ['GYP_GENERATORS'] = 'msvs' and os.environ['GYP_MSVS_VERSION'] = '2013' in build.py
 * Build step 2: run command: python build.py
 * Build step 3: open zmq_demo\zmq_demo.sln by vs2013
 * Build step 4: build solution by vs2013
