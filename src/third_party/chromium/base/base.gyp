@@ -7,6 +7,7 @@
     'chromium_code': 1,
   },
   'includes': [
+    '../build/common.gypi',
     '../build/win_precompile.gypi',
     'base.gypi',
   ],

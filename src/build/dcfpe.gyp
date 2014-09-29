@@ -1,11 +1,15 @@
 {
   'includes':[
+    'common.gypi',
     'win_precompile.gypi'
   ],
   'targets':[
     {
       'target_name': 'test',
-      'type': 'static_library',
-      'sources':['123.c'],
+      'type': 'executable',
+      'sources':['123.cc'],
+      'dependencies':[
+        '<(DEPTH)\\third_party\\chromium\\base\\base.gyp:base',
+        ],
     }]
 }

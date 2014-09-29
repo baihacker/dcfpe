@@ -6,18 +6,40 @@ def copy_file_if_necessary(src, dest):
   if not os.path.isfile(dest): shutil.copyfile(src, dest)
 
 def build_dependencies():
-  os.system(r'python third_party\chromium\build_chromium.py')
+  #os.environ['GYP_GENERATORS'] = 'ninja'
+  #os.system(r'python third_party\chromium\build_chromium.py')
   os.system(r'python third_party\zmq\build_zmq.py')
 
+def prepare_path():
+  if os.environ['GYP_GENERATORS'] == 'ninja':
+    sys.path.insert(0, os.path.join(ENV_SOLUTION_DIRECTORY, 'build'))
+    import vs_toolchain
+    vs2013_runtime_dll_dirs = vs_toolchain.SetEnvironmentAndGetRuntimeDllDirs()
+  
+  sys.path.insert(0, os.environ.get('ENV_GYP_DIRECTORY'))
+
 def build_zmq_test():
+  os.environ['GYP_GENERATORS'] = 'ninja'
+  os.environ['GYP_MSVS_VERSION'] = '2010'
+  prepare_path()
+  # base.gyp depends on this directory
+  sys.path.insert(1, os.path.join(ENV_SOLUTION_DIRECTORY, 'third_party\\chromium\\build'))
+  import gyp
+  
+  print "build zmq_test"
+  print 'Generators='+os.environ['GYP_GENERATORS']
+  print 'MSVSVersion='+os.environ['GYP_MSVS_VERSION']
+  print 'Component='+os.environ['ENV_COMPONENT']
+  
   args = []
   args.append('zmq_demo\\zmq_demo.gyp')
   args.append('--depth=.')
   args.append('--no-circular-check')
-  args.extend(['-D', 'gyp_output_dir=out'])
+  args.extend(['-G', 'output_dir='+os.environ['ENV_BUILD_DIR']])
   args.extend(['-D', 'component='+os.environ.get('ENV_COMPONENT')])
   args.extend(['-D', 'build_dir='+os.environ.get('ENV_BUILD_DIR')])
-  args.append('-I'+os.path.join(ENV_SOLUTION_DIRECTORY, 'build\\common.gypi'))
+  # do not use common.gypi, because it conflicts with third_party\chromium\build\common.gypi
+  # args.append('-I'+os.path.join(ENV_SOLUTION_DIRECTORY, 'build\\common.gypi'))
   ret = gyp.main(args)
   
   # zmq test (vs 2010)
@@ -34,14 +56,27 @@ def build_zmq_test():
   return ret
 
 def build_dcfpe():
+  os.environ['GYP_GENERATORS'] = 'msvs'
+  os.environ['GYP_MSVS_VERSION'] = '2010'
+  prepare_path()
+  # base.gyp depends on this directory
+  sys.path.insert(1, os.path.join(ENV_SOLUTION_DIRECTORY, 'third_party\\chromium\\build'))
+  import gyp
+  
+  print 'build dcfpe'
+  print 'Generators='+os.environ['GYP_GENERATORS']
+  print 'MSVSVersion='+os.environ['GYP_MSVS_VERSION']
+  print 'Component='+os.environ['ENV_COMPONENT']
+  
   args = []
   args.append('build\\dcfpe.gyp')
   args.append('--depth=.')
   args.append('--no-circular-check')
-  args.extend(['-D', 'gyp_output_dir=out'])
+  args.extend(['-G', 'output_dir='+os.environ['ENV_BUILD_DIR']])
   args.extend(['-D', 'component='+os.environ.get('ENV_COMPONENT')])
   args.extend(['-D', 'build_dir='+os.environ.get('ENV_BUILD_DIR')])
-  args.append('-I'+os.path.join(ENV_SOLUTION_DIRECTORY, 'build\\common.gypi'))
+  # do not use common.gypi, because it conflicts with third_party\chromium\build\common.gypi
+  # args.append('-I'+os.path.join(ENV_SOLUTION_DIRECTORY, 'build\\common.gypi'))
   ret = gyp.main(args)
   return ret
   
@@ -51,7 +86,8 @@ if __name__ == '__main__':
   # platform and tools
   os.environ['ENV_TARGET_OS'] = 'win'
   os.environ['ENV_TARGET_PLATFORM'] = 'x86'
-  os.environ['ENV_GYP_DIRECTORY'] = os.path.abspath(os.path.join(ENV_SOLUTION_DIRECTORY, r'tools\gyp\pylib'))
+  os.environ['ENV_TOOLS_DIRECTORY'] = os.path.join(ENV_SOLUTION_DIRECTORY, 'tools')
+  os.environ['ENV_GYP_DIRECTORY'] = os.path.join(ENV_SOLUTION_DIRECTORY, r'tools\gyp\pylib')
   
   # solution
   os.environ['ENV_SOLUTION_DIRECTORY'] = ENV_SOLUTION_DIRECTORY
@@ -63,17 +99,14 @@ if __name__ == '__main__':
   os.environ['ENV_BUILD_PROJECT'] = '0'         # we do not support auto build now
   os.environ['ENV_COPY_PROJECT_OUTPUT'] = '1'
   
+  # win toolchain configurations
+  os.environ['ENV_WIN_TOOL_CHAIN_DATA'] = os.path.join(ENV_SOLUTION_DIRECTORY, 'build\\win_toolchain.json')
+  os.environ['ENV_WIN_TOOL_CHAIN_SCRIPT'] = os.path.join(ENV_SOLUTION_DIRECTORY, 'build\\vs_toolchain.py')
+
   # build dependences
   build_dependencies()
-  
-  # build solution
-  os.environ['GYP_MSVS_VERSION'] = '2010'
-  os.environ['GYP_GENERATORS'] = 'msvs'
-  
-  sys.path.insert(0, os.environ.get('ENV_GYP_DIRECTORY'))
-  import gyp
-  
-  #build_dcfpe()
+
+  # build_dcfpe()
   
   sys.exit(build_zmq_test())
 

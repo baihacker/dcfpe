@@ -2,7 +2,15 @@ Index: base/base.gyp
 ===================================================================
 --- base/base.gyp	(revision 4)
 +++ base/base.gyp	(working copy)
-@@ -22,10 +22,10 @@
+@@ -7,6 +7,7 @@
+     'chromium_code': 1,
+   },
+   'includes': [
++    '../build/common.gypi',
+     '../build/win_precompile.gypi',
+     'base.gypi',
+   ],
+@@ -22,10 +23,10 @@
        },
        'dependencies': [
          'base_static',
@@ -17,7 +25,7 @@ Index: base/base.gyp
        ],
        # TODO(gregoryd): direct_dependent_settings should be shared with the
        #  64-bit target, but it doesn't work due to a bug in gyp
-@@ -62,99 +62,6 @@
+@@ -62,99 +63,6 @@
              '../build/linux/system.gyp:glib',
            ],
          }],
@@ -117,7 +125,7 @@ Index: base/base.gyp
          ['OS == "win"', {
            # Specify delayload for base.dll.
            'msvs_settings': {
-@@ -181,33 +88,7 @@
+@@ -181,33 +89,7 @@
              },
            },
          }],
@@ -152,7 +160,7 @@ Index: base/base.gyp
          ['OS != "win" and OS != "ios"', {
              'dependencies': ['../third_party/libevent/libevent.gyp:libevent'],
          },],
-@@ -253,58 +134,8 @@
+@@ -253,58 +135,8 @@
          'sync_socket_posix.cc',
        ],
      },
@@ -212,7 +220,7 @@ Index: base/base.gyp
        'target_name': 'base_prefs',
        'type': '<(component)',
        'variables': {
-@@ -360,24 +191,6 @@
+@@ -360,24 +192,6 @@
        ],
      },
      {
@@ -237,7 +245,7 @@ Index: base/base.gyp
        # This is the subset of files from base that should not be used with a
        # dynamic library. Note that this library cannot depend on base because
        # base depends on base_static.
-@@ -398,1110 +211,5 @@
+@@ -398,1110 +212,5 @@
          '..',
        ],
      },
@@ -1678,32 +1686,86 @@ Index: build/gyp_chromium
 ===================================================================
 --- build/gyp_chromium	(revision 4)
 +++ build/gyp_chromium	(working copy)
-@@ -15,12 +15,13 @@
+@@ -15,29 +15,39 @@
  import subprocess
  import string
  import sys
 -import vs_toolchain
-+# disable vs_toolchain
-+#import vs_toolchain
  
- script_dir = os.path.dirname(os.path.realpath(__file__))
- chrome_src = os.path.abspath(os.path.join(script_dir, os.pardir))
+-script_dir = os.path.dirname(os.path.realpath(__file__))
+-chrome_src = os.path.abspath(os.path.join(script_dir, os.pardir))
++# prepare ninja
++use_ninja = False
++if os.environ.get('GYP_GENERATORS', '') == 'ninja':
++  use_ninja = True
  
 -sys.path.insert(0, os.path.join(chrome_src, 'tools', 'gyp', 'pylib'))
-+sys.path.insert(0, os.environ.get('GYP_PATH'))
++if use_ninja:
++  tool_chain_script = os.environ.get('ENV_WIN_TOOL_CHAIN_SCRIPT', '')
++  tool_chain_dir = os.path.dirname(tool_chain_script)
++  sys.path.insert(0, tool_chain_dir)
++  import vs_toolchain
++
++# prepare gyp
++sys.path.insert(0, os.environ.get('ENV_GYP_DIRECTORY'))
  import gyp
  
++script_dir = os.path.dirname(os.path.realpath(__file__))
++chrome_src = os.path.abspath(os.path.join(script_dir, os.pardir))
  # Assume this file is in a one-level-deep subdirectory of the source root.
-@@ -270,8 +271,6 @@
+-SRC_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
++#SRC_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ 
+ # Add paths so that pymod_do_main(...) can import files.
+-sys.path.insert(1, os.path.join(chrome_src, 'tools'))
+-sys.path.insert(1, os.path.join(chrome_src, 'tools', 'generate_shim_headers'))
+-sys.path.insert(1, os.path.join(chrome_src, 'tools', 'grit'))
+-sys.path.insert(1, os.path.join(chrome_src, 'chrome', 'tools', 'build'))
+-sys.path.insert(1, os.path.join(chrome_src, 'native_client', 'build'))
+-sys.path.insert(1, os.path.join(chrome_src, 'native_client_sdk', 'src',
+-    'build_tools'))
+-sys.path.insert(1, os.path.join(chrome_src, 'remoting', 'tools', 'build'))
+-sys.path.insert(1, os.path.join(chrome_src, 'third_party', 'liblouis'))
+-sys.path.insert(1, os.path.join(chrome_src, 'third_party', 'WebKit',
+-    'Source', 'build', 'scripts'))
++#sys.path.insert(1, os.path.join(chrome_src, 'tools'))
++#sys.path.insert(1, os.path.join(chrome_src, 'tools', 'generate_shim_headers'))
++#sys.path.insert(1, os.path.join(chrome_src, 'tools', 'grit'))
++#sys.path.insert(1, os.path.join(chrome_src, 'chrome', 'tools', 'build'))
++#sys.path.insert(1, os.path.join(chrome_src, 'native_client', 'build'))
++#sys.path.insert(1, os.path.join(chrome_src, 'native_client_sdk', 'src',
++#    'build_tools'))
++#sys.path.insert(1, os.path.join(chrome_src, 'remoting', 'tools', 'build'))
++#sys.path.insert(1, os.path.join(chrome_src, 'third_party', 'liblouis'))
++#sys.path.insert(1, os.path.join(chrome_src, 'third_party', 'WebKit',
++#    'Source', 'build', 'scripts'))
+ 
+ # On Windows, Psyco shortens warm runs of build/gyp_chromium by about
+ # 20 seconds on a z600 machine with 12 GB of RAM, from 90 down to 70
+@@ -51,8 +61,9 @@
+ # may not be worth it).
+ if sys.platform == 'win32':
+   try:
+-    sys.path.insert(0, os.path.join(chrome_src, 'third_party', 'psyco_win32'))
+-    import psyco
++    #sys.path.insert(0, os.path.join(chrome_src, 'third_party', 'psyco_win32'))
++    #import psyco
++    psyco = None
+   except:
+     psyco = None
+ else:
+@@ -270,8 +281,8 @@
        not 'OS=ios' in os.environ.get('GYP_DEFINES', []):
      os.environ['GYP_GENERATORS'] = 'ninja'
  
 -  vs2013_runtime_dll_dirs = vs_toolchain.SetEnvironmentAndGetRuntimeDllDirs()
 -
++  if use_ninja:
++    vs2013_runtime_dll_dirs = vs_toolchain.SetEnvironmentAndGetRuntimeDllDirs()
    # If CHROMIUM_GYP_SYNTAX_CHECK is set to 1, it will invoke gyp with --check
    # to enfore syntax checking.
    syntax_check = os.environ.get('CHROMIUM_GYP_SYNTAX_CHECK')
-@@ -310,6 +309,7 @@
+@@ -310,6 +321,7 @@
    print 'Updating projects from gyp files...'
    sys.stdout.flush()
  
@@ -1711,7 +1773,7 @@ Index: build/gyp_chromium
    # Off we go...
    gyp_rc = gyp.main(args)
  
-@@ -317,13 +317,7 @@
+@@ -317,13 +329,7 @@
    # rather than a separate runhooks step so that any environment modifications
    # from above are picked up.
    print 'Running build/landmines.py...'

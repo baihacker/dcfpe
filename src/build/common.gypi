@@ -107,6 +107,9 @@
               'credui.lib',
               'netapi32.lib',
             ],
+            'AdditionalLibraryDirectories': [
+              #'$(OutDir)\\$(ConfigurationName)\\lib\\',
+            ],
           },
         },
       },
@@ -347,7 +350,7 @@
           'VCLibrarianTool': {
             'AdditionalOptions': ['/ignore:4221'],
             'AdditionalLibraryDirectories': [
-              '$(OutDir)\\$(Configuration)\\lib\\',
+              #'$(OutDir)\\$(Configuration)\\lib\\',
             ],
           },
           'VCLinkerTool': {
@@ -364,7 +367,6 @@
               'shlwapi.lib',
             ],
             'AdditionalLibraryDirectories': [
-              '$(OutDir)\\$(Configuration)\\lib\\',
             ],
             'GenerateDebugInformation': 'true',
             'MapFileName': '$(OutDir)\\$(TargetName).map',

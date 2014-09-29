@@ -1,11 +1,12 @@
 #include "third_party/zmq/include/zmq.h"
 #include "third_party/zmq/include/zmq_utils.h"
-
+#include "third_party/chromium/base/debug/alias.h"
 int main()
 {
 	void* context = zmq_ctx_new();
 	void* sender = zmq_socket(context, ZMQ_PUB);
 	int rc = zmq_bind(sender, "tcp://127.0.0.1:3357");
+	base::debug::Alias(NULL);
 	for (int msg = 1;;++msg)
 	{
 		char buff[64];

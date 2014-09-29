@@ -1,5 +1,6 @@
 {
   'includes':[
+    '..\\build\\common.gypi',
     '..\\build\\win_precompile.gypi'
   ],
   'variables':{
@@ -45,6 +46,9 @@
       'target_name': 'publisher',
       'type': 'executable',
       'sources':['publisher.cc'],
+      'dependencies':[
+        '<(DEPTH)\\third_party\\chromium\\base\\base.gyp:base',
+        ],
     },
     {
       'target_name': 'subscriber',
