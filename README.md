@@ -46,19 +46,20 @@ Other:
 * Trust mechanism between Host and Worker. (It is possible that the worker will receive a virus from Host).
 * I do not when to release the first version because I am very lazy.
 
-Development Environment(windows):
-======
+Development Environment:
+========================
+## windows
 * win7 64
 * python 2.7
 * vs2013 or above (or win_toolchain 2013e in chromium)
 
-## Build by vs2013
+### Build by vs2013
 * Make sure os.environ['GYP_GENERATORS'] = 'msvs' and os.environ['GYP_MSVS_VERSION'] = '2013' in build.py
 * Run command: python build.py
 * Open zmq_demo\zmq_demo.sln by vs2013
 * Build solution by vs2013
 
-## Build by ninja with win_toolchain
+### Build by ninja with win_toolchain
 * Config win_toolchain, modify src\build\win_toolchain.json
 * Make sure os.environ['GYP_GENERATORS'] = 'ninja' in build.py.(ignore os.environ['GYP_MSVS_VERSION'])
 * Run command: python build.py
