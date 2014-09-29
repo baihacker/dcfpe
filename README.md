@@ -50,8 +50,18 @@ Development Environment(windows):
 ======
 * win7 64
 * python 2.7
-* vs2013 or above
-* todo: support win_toolchain of chromium
+* vs2013 or above (or win_toolchain 2013e in chromium)
+* Build by vs2013
+* Build step 1: make sure os.environ['GYP_GENERATORS'] = 'msvs' and os.environ['GYP_MSVS_VERSION'] = '2013'
+* Build step 2: run command: python build.py
+* Build step 3: open zmq_demo\zmq_demo.sln by vs2013
+* Build step 4: build solution by vs2013
+* Build by ninja with win_toolchain
+* Build step 1: Config win_toolchain, modify src\build\win_toolchain.json
+* Build step 2: make sure os.environ['GYP_GENERATORS'] = 'ninja' in build.py.(ignore os.environ['GYP_MSVS_VERSION'])
+* Build step 3: run command: python build.py
+* Build step 4: ninja -C output\Release
+
 
 
 Updated:
