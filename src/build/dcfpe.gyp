@@ -5,11 +5,12 @@
   ],
   'targets':[
     {
-      'target_name': 'test',
-      'type': 'executable',
+      'target_name': 'all',
+      'type': 'none',
       'sources':['123.cc'],
       'dependencies':[
-        '<(DEPTH)\\third_party\\chromium\\base\\base.gyp:base',
+        '<(DEPTH)\\dpe_base\\dpe_base.gyp:dpe_base',
         ],
-    }]
+    }
+    ]
 }

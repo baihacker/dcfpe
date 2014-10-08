@@ -56,8 +56,8 @@ def build_zmq_test():
   return ret
 
 def build_dcfpe():
-  os.environ['GYP_GENERATORS'] = 'msvs'
-  os.environ['GYP_MSVS_VERSION'] = '2010'
+  os.environ['GYP_GENERATORS'] = 'ninja'
+  os.environ['GYP_MSVS_VERSION'] = '2013'
   prepare_path()
   # base.gyp depends on this directory
   sys.path.insert(1, os.path.join(ENV_SOLUTION_DIRECTORY, 'third_party\\chromium\\build'))
@@ -106,9 +106,10 @@ if __name__ == '__main__':
   # build dependences
   build_dependencies()
 
-  # build_dcfpe()
+  rc = build_dcfpe()
+  #sys.exit(build_zmq_test())
   
-  sys.exit(build_zmq_test())
+  sys.exit(rc)
 
 # ##
 #{
