@@ -26,7 +26,6 @@ enum
 enum
 {
   DPE_OK = 0,
-  DPE_SUCCESS = 0,
   DPE_FAILED = -1,
 };
 
@@ -197,7 +196,7 @@ class InterfacePtr {
     if (ptr_)
       ptr_->Release();
   }
-
+  void** storage() {return reinterpret_cast<void**>(&ptr_);}
   T* get() const { return ptr_; }
   
   operator T*() const { return ptr_; }
