@@ -18,43 +18,6 @@ def prepare_path():
   
   sys.path.insert(0, os.environ.get('ENV_GYP_DIRECTORY'))
 
-def build_zmq_test():
-  os.environ['GYP_GENERATORS'] = 'ninja'
-  os.environ['GYP_MSVS_VERSION'] = '2010'
-  prepare_path()
-  # base.gyp depends on this directory
-  sys.path.insert(1, os.path.join(ENV_SOLUTION_DIRECTORY, 'third_party\\chromium\\build'))
-  import gyp
-  
-  print "build zmq_test"
-  print 'Generators='+os.environ['GYP_GENERATORS']
-  print 'MSVSVersion='+os.environ['GYP_MSVS_VERSION']
-  print 'Component='+os.environ['ENV_COMPONENT']
-  
-  args = []
-  args.append('zmq_demo\\zmq_demo.gyp')
-  args.append('--depth=.')
-  args.append('--no-circular-check')
-  args.extend(['-G', 'output_dir='+os.environ['ENV_BUILD_DIR']])
-  args.extend(['-D', 'component='+os.environ.get('ENV_COMPONENT')])
-  args.extend(['-D', 'build_dir='+os.environ.get('ENV_BUILD_DIR')])
-  # do not use common.gypi, because it conflicts with third_party\chromium\build\common.gypi
-  # args.append('-I'+os.path.join(ENV_SOLUTION_DIRECTORY, 'build\\common.gypi'))
-  ret = gyp.main(args)
-  
-  # zmq test (vs 2010)
-  dest_dir = os.path.join(ENV_SOLUTION_DIRECTORY, os.environ.get('ENV_BUILD_DIR'))
-  src_dir = os.path.join(ENV_SOLUTION_DIRECTORY, 'third_party\\zmq\\bin')
-  debug_dir = os.path.join(dest_dir, 'Debug')
-  release_dir = os.path.join(dest_dir, 'Release')
-  if not os.path.exists(debug_dir): os.makedirs(debug_dir)
-  if not os.path.exists(release_dir): os.makedirs(release_dir)
-  copy_file_if_necessary(os.path.join(src_dir, 'libzmq-v100-mt-gd-4_0_4.dll'),
-                         os.path.join(debug_dir, 'libzmq-v100-mt-gd-4_0_4.dll'))
-  copy_file_if_necessary(os.path.join(src_dir, 'libzmq-v100-mt-4_0_4.dll'),
-                         os.path.join(release_dir, 'libzmq-v100-mt-4_0_4.dll'))
-  return ret
-
 def build_dcfpe():
   os.environ['GYP_GENERATORS'] = 'ninja'
   os.environ['GYP_MSVS_VERSION'] = '2013'

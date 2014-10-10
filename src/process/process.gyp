@@ -8,10 +8,10 @@
     {
       'target_name': 'process',
       'type': '<(component)',
-      'sources':['process_impl\\process_impl.h'],
       'sources':['process_impl\\process_impl.cc'],
       'dependencies':[
         '<(DEPTH)\\third_party\\chromium\\base\\base.gyp:base',
+        '<(DEPTH)\\dpe_base\\dpe_base.gyp:dpe_base',
         ],
     },
     {
