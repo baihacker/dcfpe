@@ -63,8 +63,8 @@ MessageCenterImpl::MessageCenterImpl() :
 MessageCenterImpl::~MessageCenterImpl()
 {
   stop();
-  CloseHandle(start_event_);
-  CloseHandle(hello_event_);
+  ::CloseHandle(start_event_);
+  ::CloseHandle(hello_event_);
 }
 
 int32_t MessageCenterImpl::add_message_handler(IMessageHandler* handler)
@@ -100,8 +100,8 @@ int32_t MessageCenterImpl::remove_message_handler(IMessageHandler* handler)
 
 int32_t MessageCenterImpl::add_sender_address(const char* address)
 {
-  if (status_ == STATUS_RUNNING) return DPE_FAILED;
-  if (!address || !address[0]) return DPE_FAILED;
+  if (status_ == STATUS_RUNNING) return INVALID_CHANNEL_ID;
+  if (!address || !address[0]) return INVALID_CHANNEL_ID;
   
   for (auto& it: publishers_) if (it.second == address)
   {
@@ -109,22 +109,22 @@ int32_t MessageCenterImpl::add_sender_address(const char* address)
   }
   
   void* publisher = zmq_socket(zmq_context_, ZMQ_PUB);
-  if (!publisher) return DPE_FAILED;
+  if (!publisher) return INVALID_CHANNEL_ID;
   int32_t rc = zmq_bind(publisher, address);
   if (rc != 0)
   {
     zmq_close(publisher);
-    return DPE_FAILED;
+    return INVALID_CHANNEL_ID;
   }
   
   publishers_.push_back({publisher, address});
-  return DPE_OK;
+  return reinterpret_cast<int32_t>(publisher);
 }
 
 int32_t MessageCenterImpl::add_receive_address(const char* address)
 {
-  if (status_ == STATUS_RUNNING) return DPE_FAILED;
-  if (!address || !address[0]) return DPE_FAILED;
+  if (status_ == STATUS_RUNNING) return INVALID_CHANNEL_ID;
+  if (!address || !address[0]) return INVALID_CHANNEL_ID;
   
   void* subscriber = NULL;
   int32_t ok = 0;
@@ -144,10 +144,10 @@ int32_t MessageCenterImpl::add_receive_address(const char* address)
     {
       zmq_close(subscriber);
     }
-    return DPE_FAILED;
+    return INVALID_CHANNEL_ID;
   }
   subscribers_.push_back({subscriber, address});
-  return DPE_OK;
+  return reinterpret_cast<int32_t>(subscriber);
 }
 
 int32_t MessageCenterImpl::remove_channel(int32_t channel_id)
@@ -255,6 +255,7 @@ int32_t MessageCenterImpl::start()
   // because we can not send CMD_HELLO
   stop();
   status_ = STATUS_PREPARE;
+  return DPE_FAILED;
 }
 
 int32_t MessageCenterImpl::stop()

@@ -84,6 +84,10 @@ struct IMessageHandler: public IDPEUnknown
         int32_t channel_id, int32_t is_ctrl, const char* msg, int32_t length) = 0;
 };
 
+enum
+{
+  INVALID_CHANNEL_ID = -1
+};
 struct IMessageCenter: public IDPEUnknown
 {
   enum{INTERFACE_ID=INTERFACE_MESSAGE_CENTER};
