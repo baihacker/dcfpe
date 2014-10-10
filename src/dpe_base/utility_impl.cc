@@ -1,12 +1,17 @@
 #include "utility_interface.h"
+
 #include <unordered_map>
 #include <string>
 #include <vector>
 #include <algorithm>
+
+#include "message_center_impl.h"
+
 namespace utility_impl
 {
-struct BufferImpl : public DPEObjectRoot<IBuffer>
+struct BufferImpl : public DPESingleInterfaceObjectRoot<IBuffer>
 {
+
   explicit BufferImpl(int length)
   {
     if (length <= 0) length = 8;
@@ -86,7 +91,7 @@ private:
   int32_t           capacity_;
 };
 
-struct InterfaceListImpl : public DPEObjectRoot<IInterfaceList>
+struct InterfaceListImpl : public DPESingleInterfaceObjectRoot<IInterfaceList>
 {
   InterfaceListImpl()
   {
@@ -160,7 +165,7 @@ private:
   std::vector<IDPEUnknown*> ilist_;
 };
 
-struct StringListImpl : public DPEObjectRoot<IStringList>
+struct StringListImpl : public DPESingleInterfaceObjectRoot<IStringList>
 {
   StringListImpl()
   {
@@ -217,7 +222,7 @@ private:
   std::vector<std::wstring> slist_;
 };
 
-struct StrictDictionaryImpl : public DPEObjectRoot<IStrictDictionary>
+struct StrictDictionaryImpl : public DPESingleInterfaceObjectRoot<IStrictDictionary>
 {
   StrictDictionaryImpl()
   {
@@ -261,7 +266,7 @@ private:
   std::unordered_map<std::wstring, std::wstring>  map_impl_;
 };
 
-struct NonStrictDictionaryImpl : public DPEObjectRoot<IDictionary>
+struct NonStrictDictionaryImpl : public DPESingleInterfaceObjectRoot<IDictionary>
 {
   NonStrictDictionaryImpl()
   {
@@ -312,6 +317,30 @@ private:
   std::unordered_map<std::wstring, std::wstring>  map_impl_;
 };
 
+struct ThreadCheckerImpl : public DPESingleInterfaceObjectRoot<IThreadChecker>
+{
+  ThreadCheckerImpl() : owned_thread_id_(-1)
+  {
+  }
+  ~ThreadCheckerImpl()
+  {
+  }
+  int32_t           set_owned_thread(int32_t thread_id) override
+  {
+    owned_thread_id_ = thread_id <= 0 ?
+        static_cast<int32_t>(GetCurrentThreadId()) :
+        thread_id;
+    return DPE_OK;
+  }
+  int32_t           on_valid_thread() const override
+  {
+    return owned_thread_id_ <= 0 ||
+      owned_thread_id_ == static_cast<int32_t>(GetCurrentThreadId());
+  }
+private:
+  int32_t owned_thread_id_;
+};
+
 }
 
 using namespace utility_impl;
@@ -322,7 +351,7 @@ int32_t      CreateUtility(int32_t interface_id, void** pp)
   {
     case INTERFACE_BUFFER:
         {
-          auto& ptr = *reinterpret_cast<BufferImpl**>(pp);
+          auto& ptr = *reinterpret_cast<IBuffer**>(pp);
           ptr = new BufferImpl(8);
           ptr->AddRef();
         }
@@ -352,6 +381,20 @@ int32_t      CreateUtility(int32_t interface_id, void** pp)
         {
           auto& ptr = *reinterpret_cast<IDictionary**>(pp);
           ptr = new NonStrictDictionaryImpl();
+          ptr->AddRef();
+        }
+        break;
+    case INTERFACE_THREAD_CHECKER:
+        {
+          auto& ptr = *reinterpret_cast<IThreadChecker**>(pp);
+          ptr = new ThreadCheckerImpl();
+          ptr->AddRef();
+        }
+        break;
+    case INTERFACE_MESSAGE_CENTER:
+        {
+          auto& ptr = *reinterpret_cast<IMessageCenter**>(pp);
+          ptr = new MessageCenterImpl();
           ptr->AddRef();
         }
         break;

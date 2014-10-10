@@ -1,17 +1,16 @@
 {
-  'includes':[
-    '..\\build\\common.gypi',
-    '..\\build\\win_precompile.gypi',
-    'support_zmq.gypi',
-  ],
-  'variables':{
-  },
   'target_defaults': {
+    'variables':{
+      'zmq_debug_lib%':'libzmq-v120-mt-gd-4_0_4.lib',
+      'zmq_release_lib%':'libzmq-v120-mt-4_0_4.lib',
+    },
     'include_dirs': [
+      '<(DEPTH)\\thrid_party\\zmq\\include',
     ],
     'msvs_settings': {
       'VCLinkerTool': {
         'AdditionalLibraryDirectories': [
+          '<(DEPTH)\\third_party\\zmq\\lib'
           ],
       },
     },
@@ -21,6 +20,7 @@
         'msvs_settings': {
           'VCLinkerTool': {
             'AdditionalDependencies': [
+              '<(zmq_release_lib)',
             ],
           },
         },
@@ -30,27 +30,11 @@
         'msvs_settings': {
           'VCLinkerTool': {
             'AdditionalDependencies': [
+              '<(zmq_debug_lib)',
             ],
           },
         },
       },
     }
-  },
-  'targets':[
-    {
-      'target_name': 'dpe_base',
-      'type': 'static_library',
-      'sources':['utility_impl.cc', "message_center_impl.cc"],
-      'dependencies':[
-        ],
-    },
-    {
-      'target_name': 'base_test',
-      'type': 'executable',
-      'sources':['base_test.cc'],
-      'dependencies':[
-          'dpe_base',
-        ],
-    },
-  ]
+  }
 }

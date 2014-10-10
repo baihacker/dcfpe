@@ -6,15 +6,15 @@
 #include <utility>
 /*
   Interface base for each module.
-  
+
   Thread safe for interface:
     InterfacePtr:
       It supports multi-thread if the implementation of corresponding interface support.
-    
+
     WeakInterfacePtr:
       It is required that the corresponding object is used in a single thread.
       It does not support to promote weak pointer to strong pointer.
-    
+
     Design Rule:
       A specified implementation is always required to access in a single thread if possible.
 */
@@ -34,35 +34,56 @@ struct IDPEUnknown
 {
   enum{INTERFACE_ID=0};
   virtual ~IDPEUnknown(){}
-  virtual int32_t GetInterfaceID() = 0;
   virtual int32_t QueryInterface(int32_t ID, void** ppInterface) = 0;
   virtual int32_t AddRef() = 0;
   virtual int32_t Release() = 0;
   virtual WeakPtrData* GetWeakPtrData() = 0;
 };
 
-#define SAFE_WEAK_PTR_DATA 1
-
+/*
+  WeakPtrData
+  
+  // Object model
+  RefCountedObjectModel
+  NormalObjectModel
+  
+  // An object implement multiple interfaces.
+  OBJECT_MODEL_IMPL
+  BEGIN_DECLARE_INTERFACE
+  INTERFACE_ENTRY
+  END_DECLARE_INTERFACE
+  
+  class Impl: public ObjectModel, public Interface0, public Interface1
+  {
+    OBJECT_MODEL_IMPL(ObjectModel);
+    
+    BEGIN_DECLARE_INTERFACE(Impl)
+      INTERFACE_ENTRY(Interface0)
+      INTERFACE_ENTRY(Interface1)
+    END_DECLARE_INTERFACE
+  };
+  
+  // An object implement single interface.
+  DPESingleInterfaceObjectRoot
+  class Impl: public DPESingleInterfaceObjectRoot<Interface, ObjectModel>
+  {
+  };
+*/
 struct WeakPtrData
 {
-#if SAFE_WEAK_PTR_DATA
-  typedef IDPEUnknown*    ObjectPtr;
-#else
-  typedef void*           ObjectPtr;
-#endif
-  explicit WeakPtrData(ObjectPtr object) : object_(object)//, ref_count_(0) // msvc does not support
+  explicit WeakPtrData() : destroyed_flag_(0)//, ref_count_(0) msvc does not support
   {
     ref_count_.store(0);
   }
-  
+
   ~WeakPtrData()
   {
-    object_ = nullptr;
+    destroyed_flag_ = 1;
   }
-  
-  void Notify()
+
+  void AddRef()
   {
-    object_ = nullptr;
+    ++ref_count_;
   }
   
   void Release()
@@ -72,50 +93,45 @@ struct WeakPtrData
       delete this;
     }
   }
-  
-  ObjectPtr Access()
+
+  void Notify()
   {
-    return object_;
+    destroyed_flag_ = 1;
   }
-  
-  void AddRef()
+
+  int32_t Valid() const
   {
-    ++ref_count_;
+    return !destroyed_flag_;
   }
-  ObjectPtr object_;
-  std::atomic_int ref_count_;
+
+  int32_t           destroyed_flag_;
+  std::atomic_int   ref_count_;
 };
 
-template <class T, int32_t ObjectId = T::INTERFACE_ID>
-class DPEObjectRoot : public T
+class RefCountedObjectModel
 {
 public:
-  enum { OBJECT_ID = ObjectId };
-
-  DPEObjectRoot() : weakptr_data_(nullptr)
+  RefCountedObjectModel() : weakptr_data_(nullptr)
   {
     ref_count_.store(0);
   }
-  
-  ~DPEObjectRoot()
+
+  virtual ~RefCountedObjectModel()
   {
-    if (weakptr_data_) {
+    if (weakptr_data_)
+    {
       weakptr_data_->Notify();
+      weakptr_data_->Release();
       weakptr_data_ = nullptr;
     }
   }
 
-  virtual int32_t GetInterfaceID()
-  {
-    return T::INTERFACE_ID;
-  }
-
-  virtual int32_t AddRef()
+  virtual int32_t InternalAddRef()
   {
     return ++ref_count_;
   }
 
-  virtual int32_t Release()
+  virtual int32_t InternalRelease()
   {
     int32_t val = --ref_count_;
     if (val == 0)
@@ -124,29 +140,142 @@ public:
     }
     return val;
   }
-  
+
   // on demand construct
-  WeakPtrData* GetWeakPtrData()
+  WeakPtrData* InternalGetWeakPtrData()
   {
     if (!weakptr_data_)
     {
-      weakptr_data_ = new WeakPtrData(this);
+      weakptr_data_ = new WeakPtrData();
       weakptr_data_->AddRef();
     }
     return weakptr_data_;
   }
 
-  virtual int32_t QueryInterface(int32_t id, void** ppInterface)
+protected:
+  std::atomic_int ref_count_;
+  WeakPtrData* weakptr_data_;
+};
+
+class NormalObjectModel
+{
+public:
+  NormalObjectModel() : weakptr_data_(nullptr)
+  {
+  }
+
+  virtual ~NormalObjectModel()
+  {
+    if (weakptr_data_)
+    {
+      weakptr_data_->Notify();
+      weakptr_data_->Release();
+      weakptr_data_ = nullptr;
+    }
+  }
+
+  virtual int32_t InternalAddRef()
+  {
+    return 1;
+  }
+
+  virtual int32_t InternalRelease()
+  {
+    return 1;
+  }
+
+  WeakPtrData* InternalGetWeakPtrData()
+  {
+    if (!weakptr_data_)
+    {
+      weakptr_data_ = new WeakPtrData();
+      weakptr_data_->AddRef();
+    }
+    return weakptr_data_;
+  }
+protected:
+  WeakPtrData* weakptr_data_;
+};
+
+#define OBJECT_MODEL_IMPL(B)                \
+  int32_t AddRef() override                 \
+  {                                         \
+    return B::InternalAddRef();             \
+  }                                         \
+                                            \
+  int32_t Release() override                \
+  {                                         \
+    return B::InternalRelease();            \
+  }                                         \
+                                            \
+  WeakPtrData* GetWeakPtrData() override    \
+  {                                         \
+    return B::InternalGetWeakPtrData();     \
+  }
+
+#define BEGIN_DECLARE_INTERFACE(T)                                      \
+virtual int32_t QueryInterface(int32_t id, void** ppInterface) override \
+{                                                                       \
+  *ppInterface = nullptr;                                               \
+  if (id == INTERFACE_UNKNOWN)                                          \
+  {                                                                     \
+    *ppInterface = (IDPEUnknown*)(T*)this;                              \
+  }
+
+#define INTERFACE_ENTRY(I)                                              \
+  else if (id == I::INTERFACE_ID)                                       \
+  {                                                                     \
+    *ppInterface = (I*)this;                                            \
+  }
+
+#define END_DECLARE_INTERFACE                                           \
+    if (*ppInterface)                                                   \
+    {                                                                   \
+      AddRef();                                                         \
+      return DPE_OK;                                                    \
+    }                                                                   \
+                                                                        \
+    return DPE_FAILED;                                                  \
+}
+
+template<typename I, typename OM = RefCountedObjectModel>
+class DPESingleInterfaceObjectRoot : public OM, public I
+{
+public:
+  DPESingleInterfaceObjectRoot()
+  {
+  }
+
+  ~DPESingleInterfaceObjectRoot()
+  {
+  }
+
+  int32_t AddRef() override
+  {
+    return OM::InternalAddRef();
+  }
+
+  int32_t Release() override
+  {
+    return OM::InternalAddRef();
+  }
+
+  // on demand construct
+  WeakPtrData* GetWeakPtrData() override
+  {
+    return OM::InternalGetWeakPtrData();
+  }
+
+  virtual int32_t QueryInterface(int32_t id, void** ppInterface) override
   {
     *ppInterface = nullptr;
-
     if (id == INTERFACE_UNKNOWN)
     {
-      *ppInterface = (IDPEUnknown*)(T*)this;
+      *ppInterface = (IDPEUnknown*)this;
     }
-    else if (id == T::INTERFACE_ID)
+    else if (id == I::INTERFACE_ID)
     {
-      *ppInterface = (T*)this;
+      *ppInterface = (I*)this;
     }
 
     if (*ppInterface)
@@ -157,10 +286,6 @@ public:
 
     return DPE_FAILED;
   }
-
-protected:
-  std::atomic_int ref_count_;
-  WeakPtrData* weakptr_data_;
 };
 
 // see ref_counted.h
@@ -181,7 +306,7 @@ class InterfacePtr {
     if (ptr_)
       ptr_->AddRef();
   }
-  
+
   InterfacePtr(InterfacePtr<T>&& r) : ptr_(r.ptr_) {
     r.ptr_ = nullptr;
   }
@@ -196,11 +321,13 @@ class InterfacePtr {
     if (ptr_)
       ptr_->Release();
   }
+
   void** storage() {return reinterpret_cast<void**>(&ptr_);}
+
   T* get() const { return ptr_; }
-  
+
   operator T*() const { return ptr_; }
-  
+
   T* operator->() const {
     return ptr_;
   }
@@ -218,7 +345,7 @@ class InterfacePtr {
   InterfacePtr<T>& operator=(const InterfacePtr<T>& r) {
     return *this = r.ptr_;
   }
-  
+
   InterfacePtr<T>& operator=(InterfacePtr<T>&& r) {
     if (r.ptr_ != ptr_) {
       if (ptr_) ptr_->Release();
@@ -251,66 +378,60 @@ template <class T>
 class WeakInterfacePtr {
  public:
   typedef T element_type;
-  
+
   WeakInterfacePtr(T* object) :
+    object_ptr_(object),
     weakptr_data_(object ? object->GetWeakPtrData() : nullptr)
   {
   }
-  
-  WeakInterfacePtr(const WeakInterfacePtr& r) : weakptr_data_(r.weakptr_data_)
+
+  WeakInterfacePtr(const WeakInterfacePtr& r) :
+    object_ptr_(r.object_ptr_),
+    weakptr_data_(r.weakptr_data_)
   {
   }
-  
-  WeakInterfacePtr(WeakInterfacePtr&& r) : weakptr_data_(std::move(r.weakptr_data_))
+
+  WeakInterfacePtr(WeakInterfacePtr&& r) :
+    object_ptr(r.object_ptr_),
+    weakptr_data_(std::move(r.weakptr_data_))
   {
   }
-  
+
   ~WeakInterfacePtr()
   {
   }
-  
+
   operator T*() const { return get(); }
-  
+
   T* operator->() const { return get(); }
-  
+
   WeakInterfacePtr& operator = (T* object)
   {
     return *this = std::move(WeakInterfacePtr(object));
   }
-  
+
   WeakInterfacePtr& operator = (const WeakInterfacePtr& r)
   {
+    object_ptr_ = r.object_ptr_;
     weakptr_data_ = r.weakptr_data_;
     return *this;
   }
-  
+
   WeakInterfacePtr& operator = (WeakInterfacePtr&& r)
   {
+    object_ptr_ = r.object_ptr_;
     weakptr_data_ = std::move(r.weakptr_data_);
     return *this;
   }
 
-#if SAFE_WEAK_PTR_DATA
   T* get() const
   {
-    IDPEUnknown* ptr = weakptr_data_ ? weakptr_data_->Access() : nullptr;
-    if (!ptr) return nullptr;
-    
-    T* ret = nullptr;
-    int32_t rc = ptr->QueryInterface(T::INTERFACE_ID, reinterpret_cast<void**>(&ret));
-    if (rc == 0 && ret) ret->Release(); // remove additional AddRef in QueryInterface
-    
-    return ret;
+    return weakptr_data_ && weakptr_data_->Valid() ? object_ptr_ : nullptr;
   }
-#else
-  T* get() const
-  {
-    return weakptr_data_ ? static_cast<T*>(weakptr_data_->Access()) : nullptr;
-  }
-#endif
 
 private:
-  InterfacePtr<WeakPtrData>  weakptr_data_;
+  T*                          object_ptr_;
+  InterfacePtr<WeakPtrData>   weakptr_data_;
 };
 
 typedef InterfacePtr<IDPEUnknown> UnknownPtr;

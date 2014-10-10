@@ -78,6 +78,17 @@ def build_dcfpe():
   # do not use common.gypi, because it conflicts with third_party\chromium\build\common.gypi
   # args.append('-I'+os.path.join(ENV_SOLUTION_DIRECTORY, 'build\\common.gypi'))
   ret = gyp.main(args)
+  
+  dest_dir = os.path.join(ENV_SOLUTION_DIRECTORY, os.environ.get('ENV_BUILD_DIR'))
+  src_dir = os.path.join(ENV_SOLUTION_DIRECTORY, 'third_party\\zmq\\bin')
+  debug_dir = os.path.join(dest_dir, 'Debug')
+  release_dir = os.path.join(dest_dir, 'Release')
+  if not os.path.exists(debug_dir): os.makedirs(debug_dir)
+  if not os.path.exists(release_dir): os.makedirs(release_dir)
+  copy_file_if_necessary(os.path.join(src_dir, 'libzmq-v120-mt-gd-4_0_4.dll'),
+                         os.path.join(debug_dir, 'libzmq-v120-mt-gd-4_0_4.dll'))
+  copy_file_if_necessary(os.path.join(src_dir, 'libzmq-v120-mt-4_0_4.dll'),
+                         os.path.join(release_dir, 'libzmq-v120-mt-4_0_4.dll'))
   return ret
   
 if __name__ == '__main__':
@@ -107,8 +118,7 @@ if __name__ == '__main__':
   build_dependencies()
 
   rc = build_dcfpe()
-  #sys.exit(build_zmq_test())
-  
+
   sys.exit(rc)
 
 # ##
