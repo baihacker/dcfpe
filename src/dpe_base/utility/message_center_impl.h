@@ -40,7 +40,8 @@ public:
   int32_t       add_sender_address(const char* address) override;
   int32_t       add_receive_address(const char* address) override;
   int32_t       remove_channel(int32_t channel_id) override;
-
+  const char*   get_address_by_channel(int32_t channel_id) override;
+  
   int32_t       send_ctrl_message(const char* msg, int32_t length) override;
   int32_t       send_message(int32_t channel_id, const char* msg, int32_t length) override;
 
@@ -76,6 +77,7 @@ private:
   std::vector<std::pair<void*, std::string> > subscribers_;
   
   std::string                   ctrl_address_;
+
   static int32_t                next_ctrl_port_;
 };
 }

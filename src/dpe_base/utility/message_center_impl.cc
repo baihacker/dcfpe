@@ -169,6 +169,30 @@ int32_t MessageCenterImpl::remove_channel(int32_t channel_id)
   return DPE_OK;
 }
 
+const char* MessageCenterImpl::get_address_by_channel(int32_t channel_id)
+{
+  void* channel = reinterpret_cast<void*>(channel_id);
+  
+  if (channel == zmq_ctrl_pub_ || channel == zmq_ctrl_pub_)
+  {
+    return ctrl_address_.c_str();
+  }
+  
+  for (auto& it: publishers_)
+  if (it.first == channel)
+  {
+    return it.second.c_str();
+  }
+  
+  for (auto& it: subscribers_)
+  if (it.first == channel)
+  {
+    return it.second.c_str();
+  }
+  
+  return "";
+}
+
 int32_t MessageCenterImpl::send_ctrl_message(const char* msg, int32_t length)
 {
   return send_message(reinterpret_cast<int32_t>(zmq_ctrl_pub_), msg, length);
@@ -301,6 +325,7 @@ unsigned    MessageCenterImpl::Run()
     items[0].socket = zmq_ctrl_sub_;
     items[0].fd = NULL;
     items[0].events = ZMQ_POLLIN;
+    
     int32_t top = 1;
     for (auto& it: subscribers_)
     {

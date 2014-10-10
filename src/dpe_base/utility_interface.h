@@ -88,6 +88,7 @@ enum
 {
   INVALID_CHANNEL_ID = -1
 };
+
 struct IMessageCenter: public IDPEUnknown
 {
   enum{INTERFACE_ID=INTERFACE_MESSAGE_CENTER};
@@ -99,6 +100,7 @@ struct IMessageCenter: public IDPEUnknown
   virtual int32_t       add_sender_address(const char* address) = 0;
   virtual int32_t       add_receive_address(const char* address) = 0;
   virtual int32_t       remove_channel(int32_t channel_id) = 0;
+  virtual const char*   get_address_by_channel(int32_t channel_id) = 0;
 
   virtual int32_t       send_ctrl_message(const char* msg, int32_t length) = 0;
   virtual int32_t       send_message(int32_t channel_id, const char* msg, int32_t length) = 0;
