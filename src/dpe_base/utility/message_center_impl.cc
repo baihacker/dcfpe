@@ -222,37 +222,37 @@ int32_t MessageCenterImpl::start()
   }
   
   status_ = STATUS_RUNNING;
-  // started
+  
+  // step 2: send hello message and wait for reply
   // 50ms * 60 tries
-  for (int32_t tries = 0; tries < 30; ++tries)
+  for (int32_t tries = 0; tries < 60; ++tries)
   {
     int32_t msg = CMD_HELLO;
     send_ctrl_message((const char*)&msg, sizeof (msg));
     
     HANDLE handles[] = {thread_handle_, hello_event_};
     DWORD result = ::WaitForMultipleObjects(2, handles, FALSE, 50);
-    if (result != WAIT_OBJECT_0 + 1)
+    if (result == WAIT_OBJECT_0 + 1)
     {
-      if (result == WAIT_OBJECT_0)
-      {
+      return DPE_OK;
+    }
+    else if (result == WAIT_TIMEOUT)
+    {
+      continue;
+    }
+    else if (result == WAIT_OBJECT_0)
+    {
         // thread stopped, it is unexpected
         ::CloseHandle(thread_handle_);
         thread_handle_ = NULL;
-      }
-      else
-      {
-        // thread is still running
-        // it is possible that we can not send CMD_QUIT,
-        // because we can not send CMD_HELLO
-        stop();
-      }
-      status_ = STATUS_PREPARE;
-      return DPE_FAILED;
+        return DPE_FAILED;
     }
-    break;
   }
-  status_ = STATUS_RUNNING;
-  return DPE_OK;
+  // thread is still running
+  // it is possible that we can not send CMD_QUIT,
+  // because we can not send CMD_HELLO
+  stop();
+  status_ = STATUS_PREPARE;
 }
 
 int32_t MessageCenterImpl::stop()
