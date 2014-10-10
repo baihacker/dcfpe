@@ -1,5 +1,6 @@
 #include "third_party/zmq/include/zmq.h"
 #include "third_party/zmq/include/zmq_utils.h"
+#include "dpe_base/chromium_base.h"
 
 int main()
 {

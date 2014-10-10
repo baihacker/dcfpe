@@ -61,6 +61,7 @@ MessageCenterImpl::MessageCenterImpl() :
 
 MessageCenterImpl::~MessageCenterImpl()
 {
+  stop();
 }
 
 int32_t MessageCenterImpl::add_message_handler(IMessageHandler* handler)

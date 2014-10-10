@@ -40,14 +40,25 @@
     {
       'target_name': 'dpe_base',
       'type': 'static_library',
-      'sources':['utility_impl.cc', "message_center_impl.cc"],
+      'sources':[
+        'utility\\utility_impl.cc',
+        'utility\\message_center_impl.cc'
+        ],
       'dependencies':[
+          '<(DEPTH)\\third_party\\chromium\\base\\base.gyp:base',
+        ],
+      # if some module dependences on dpe_base, then it depends on base
+      'export_dependent_settings': [
+          '<(DEPTH)\\third_party\\chromium\\base\\base.gyp:base',
         ],
     },
     {
       'target_name': 'base_test',
       'type': 'executable',
-      'sources':['base_test.cc'],
+      'variables': {
+        'use_zmq': 1,
+      },
+      'sources':['test\\base_test.cc'],
       'dependencies':[
           'dpe_base',
         ],

@@ -8,15 +8,24 @@
     {
       'target_name': 'publisher',
       'type': 'executable',
+      'variables': {
+        'use_zmq': 1,
+      },
       'sources':['publisher.cc'],
       'dependencies':[
-        '<(DEPTH)\\third_party\\chromium\\base\\base.gyp:base',
+        '<(DEPTH)\\dpe_base\\dpe_base.gyp:dpe_base',
         ],
     },
     {
       'target_name': 'subscriber',
       'type': 'executable',
+      'variables': {
+        'use_zmq': 1,
+      },
       'sources':['subscriber.cc'],
+      'dependencies':[
+        '<(DEPTH)\\dpe_base\\dpe_base.gyp:dpe_base',
+        ],
     },
   ]
 }

@@ -1,7 +1,7 @@
 #ifndef SRC_DPE_BASE_MESSAGE_CENTER_IMPL_H
 #define SRC_DPE_BASE_MESSAGE_CENTER_IMPL_H
 
-#include "utility_interface.h"
+#include "dpe_base/utility_interface.h"
 
 #include <vector>
 #include <string>
