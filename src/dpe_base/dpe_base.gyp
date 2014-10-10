@@ -47,7 +47,7 @@
       'dependencies':[
           '<(DEPTH)\\third_party\\chromium\\base\\base.gyp:base',
         ],
-      # if some module dependences on dpe_base, then it depends on base
+      # if a module dependences on dpe_base, then it depends on base
       'export_dependent_settings': [
           '<(DEPTH)\\third_party\\chromium\\base\\base.gyp:base',
         ],

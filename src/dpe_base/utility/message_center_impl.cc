@@ -57,6 +57,7 @@ MessageCenterImpl::MessageCenterImpl() :
   }
   
   start_event_ = ::CreateEvent(NULL, TRUE, FALSE, NULL);
+  hello_event_ = ::CreateEvent(NULL, TRUE, FALSE, NULL);
 }
 
 MessageCenterImpl::~MessageCenterImpl()
@@ -198,6 +199,7 @@ int32_t MessageCenterImpl::start()
   if (status_ != STATUS_PREPARE) return DPE_FAILED;
   
   ::ResetEvent(start_event_);
+  ::ResetEvent(hello_event_);
   unsigned id = 0;
   thread_handle_ = (HANDLE)_beginthreadex(NULL, 0,
       &MessageCenterImpl::ThreadMain, (void*)this, 0, &id);
@@ -206,18 +208,51 @@ int32_t MessageCenterImpl::start()
     return DPE_FAILED;
   }
   
+  // step 1: wait for start event
   HANDLE handles[] = {thread_handle_, start_event_};
   DWORD result = ::WaitForMultipleObjects(2, handles, FALSE, -1);
-  if (result == WAIT_OBJECT_0 + 1)
+  if (result != WAIT_OBJECT_0 + 1)
   {
-    status_ = STATUS_RUNNING;
-    return DPE_OK;
+    if (result == WAIT_OBJECT_0)
+    {
+      ::CloseHandle(thread_handle_);
+    }
+    thread_handle_ = NULL;
+    return DPE_FAILED;
   }
-  if (result == WAIT_OBJECT_0)
+  
+  status_ = STATUS_RUNNING;
+  // started
+  // 50ms * 60 tries
+  for (int32_t tries = 0; tries < 30; ++tries)
   {
-    ::CloseHandle(thread_handle_);
+    int32_t msg = CMD_HELLO;
+    send_ctrl_message((const char*)&msg, sizeof (msg));
+    
+    HANDLE handles[] = {thread_handle_, hello_event_};
+    DWORD result = ::WaitForMultipleObjects(2, handles, FALSE, 50);
+    if (result != WAIT_OBJECT_0 + 1)
+    {
+      if (result == WAIT_OBJECT_0)
+      {
+        // thread stopped, it is unexpected
+        ::CloseHandle(thread_handle_);
+        thread_handle_ = NULL;
+      }
+      else
+      {
+        // thread is still running
+        // it is possible that we can not send CMD_QUIT,
+        // because we can not send CMD_HELLO
+        stop();
+      }
+      status_ = STATUS_PREPARE;
+      return DPE_FAILED;
+    }
+    break;
   }
-  return DPE_FAILED;
+  status_ = STATUS_RUNNING;
+  return DPE_OK;
 }
 
 int32_t MessageCenterImpl::stop()
@@ -346,6 +381,7 @@ void MessageCenterImpl::HandleCtrlMessage(const char* msg, int32_t length)
     switch (cmd)
     {
       case CMD_QUIT: quit_flag_ = 1; break;
+      case CMD_HELLO: ::SetEvent(hello_event_); break;
     }
   }
 }

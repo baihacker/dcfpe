@@ -25,6 +25,7 @@ enum
 };
 enum
 {
+  CMD_HELLO = 0x00,
   CMD_QUIT = 0x01,
 };
 class MessageCenterImpl : public DPESingleInterfaceObjectRoot<IMessageCenter>
@@ -63,6 +64,7 @@ private:
   
   // thread
   HANDLE                        start_event_;
+  HANDLE                        hello_event_;
   HANDLE                        thread_handle_;
   
   // zmq
