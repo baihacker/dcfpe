@@ -63,6 +63,8 @@ MessageCenterImpl::MessageCenterImpl() :
 MessageCenterImpl::~MessageCenterImpl()
 {
   stop();
+  CloseHandle(start_event_);
+  CloseHandle(hello_event_);
 }
 
 int32_t MessageCenterImpl::add_message_handler(IMessageHandler* handler)
@@ -242,10 +244,10 @@ int32_t MessageCenterImpl::start()
     }
     else if (result == WAIT_OBJECT_0)
     {
-        // thread stopped, it is unexpected
-        ::CloseHandle(thread_handle_);
-        thread_handle_ = NULL;
-        return DPE_FAILED;
+      // thread stopped, it is unexpected
+      ::CloseHandle(thread_handle_);
+      thread_handle_ = NULL;
+      return DPE_FAILED;
     }
   }
   // thread is still running
