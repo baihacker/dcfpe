@@ -44,7 +44,7 @@ public:
   
   int32_t       send_ctrl_message(const char* msg, int32_t length) override;
   int32_t       send_message(int32_t channel_id, const char* msg, int32_t length) override;
-
+  int32_t       worker_handle() override{return reinterpret_cast<int32_t>(thread_handle_);}
   int32_t       start() override;
   int32_t       stop() override;
 
@@ -59,7 +59,7 @@ private:
   static int32_t     GetNextCtrlPort();
   
 private:
-  std::vector<IMessageHandler*> handlers_;
+  std::vector<WeakInterfacePtr<IMessageHandler> > handlers_;
   int32_t                       status_;
   volatile  int32_t             quit_flag_; // atomic_int ?
   

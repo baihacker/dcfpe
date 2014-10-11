@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <atomic>
 #include <utility>
+
 /*
   Interface base for each module.
 
@@ -69,16 +70,19 @@ struct IDPEUnknown
   {
   };
 */
+
 struct WeakPtrData
 {
-  explicit WeakPtrData() : destroyed_flag_(0)//, ref_count_(0) msvc does not support
+  explicit WeakPtrData() //:ref_count_(0) msvc does not support
   {
+    destroyed_flag_.store(0);
     ref_count_.store(0);
+    object_strong_ref_count_.store(0);
   }
 
   ~WeakPtrData()
   {
-    destroyed_flag_ = 1;
+    destroyed_flag_ .store(1);
   }
 
   void AddRef()
@@ -96,16 +100,47 @@ struct WeakPtrData
 
   void Notify()
   {
-    destroyed_flag_ = 1;
+    destroyed_flag_.store(1);
   }
 
   int32_t Valid() const
   {
     return !destroyed_flag_;
   }
+  
+  // used by RefCountedObjectModelEx only
+  int32_t AddObjectRef()
+  {
+    return ++object_strong_ref_count_;
+  }
+  
+  int32_t ReleaseObjectRef()
+  {
+    return --object_strong_ref_count_;
+  }
+  
+  bool Promote()
+  {
+    for (;;)
+    {
+      int32_t old_val = object_strong_ref_count_.load();
+      if (old_val == 0)
+      {
+        return false;
+      }
+      
+      int32_t new_val = old_val + 1;
+      if (object_strong_ref_count_.compare_exchange_strong(old_val, new_val))
+      {
+        return true;
+      }
+    }
+  }
 
-  int32_t           destroyed_flag_;
+private:
+  std::atomic_int   destroyed_flag_;
   std::atomic_int   ref_count_;
+  std::atomic_int   object_strong_ref_count_;
 };
 
 class RefCountedObjectModel
@@ -154,6 +189,49 @@ public:
 
 protected:
   std::atomic_int ref_count_;
+  WeakPtrData* weakptr_data_;
+};
+
+class RefCountedObjectModelEx
+{
+public:
+  RefCountedObjectModelEx() : weakptr_data_(nullptr)
+  {
+    weakptr_data_ = new WeakPtrData();
+    weakptr_data_->AddRef();
+  }
+
+  virtual ~RefCountedObjectModelEx()
+  {
+    if (weakptr_data_)
+    {
+      weakptr_data_->Notify();
+      weakptr_data_->Release();
+      weakptr_data_ = nullptr;
+    }
+  }
+
+  virtual int32_t InternalAddRef()
+  {
+    return weakptr_data_->AddObjectRef();
+  }
+
+  virtual int32_t InternalRelease()
+  {
+    int32_t val = weakptr_data_->ReleaseObjectRef();
+    if (val == 0)
+    {
+      delete this;
+    }
+    return val;
+  }
+
+  WeakPtrData* InternalGetWeakPtrData()
+  {
+    return weakptr_data_;
+  }
+
+protected:
   WeakPtrData* weakptr_data_;
 };
 
@@ -257,7 +335,7 @@ public:
 
   int32_t Release() override
   {
-    return OM::InternalAddRef();
+    return OM::InternalRelease();
   }
 
   // on demand construct
@@ -392,7 +470,7 @@ class WeakInterfacePtr {
   }
 
   WeakInterfacePtr(WeakInterfacePtr&& r) :
-    object_ptr(r.object_ptr_),
+    object_ptr_(r.object_ptr_),
     weakptr_data_(std::move(r.weakptr_data_))
   {
   }
@@ -428,7 +506,17 @@ class WeakInterfacePtr {
   {
     return weakptr_data_ && weakptr_data_->Valid() ? object_ptr_ : nullptr;
   }
-
+  
+  InterfacePtr<T> promote()
+  {
+    if (weakptr_data_ && weakptr_data_->Promote())
+    {
+      InterfacePtr<T> ret = object_ptr_;
+      object_ptr_->Release();
+      return ret;
+    }
+    return NULL;
+  }
 private:
   T*                          object_ptr_;
   InterfacePtr<WeakPtrData>   weakptr_data_;

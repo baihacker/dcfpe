@@ -386,14 +386,17 @@ void MessageCenterImpl::ProcessEvent(zmq_pollitem_t* item)
     
     for (auto& it: handlers_)
     {
-      if (it->handle_message(
-            reinterpret_cast<int32_t>(item->socket),
-            item->socket == zmq_ctrl_sub_,
-            static_cast<const char*>(zmq_msg_data(&msg)),
-            static_cast<int32_t>(zmq_msg_size(&msg))
-          ))
+      if (InterfacePtr<IMessageHandler> handler = it.promote())
       {
-        break;
+        if (handler->handle_message(
+              reinterpret_cast<int32_t>(item->socket),
+              item->socket == zmq_ctrl_sub_,
+              static_cast<const char*>(zmq_msg_data(&msg)),
+              static_cast<int32_t>(zmq_msg_size(&msg))
+            ))
+        {
+          break;
+        }
       }
     }
   } while (false);

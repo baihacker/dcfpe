@@ -104,7 +104,7 @@ struct IMessageCenter: public IDPEUnknown
 
   virtual int32_t       send_ctrl_message(const char* msg, int32_t length) = 0;
   virtual int32_t       send_message(int32_t channel_id, const char* msg, int32_t length) = 0;
-
+  virtual int32_t       worker_handle() = 0;
   virtual int32_t       start() = 0;
   virtual int32_t       stop() = 0;
 };
