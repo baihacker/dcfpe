@@ -53,6 +53,17 @@
         ],
     },
     {
+      'target_name': 'thread_pool',
+      'type': 'static_library',
+      'sources':[
+        'thread_pool\\thread_pool_impl.h',
+        'thread_pool\\thread_pool_impl.cc',
+        ],
+      'dependencies':[
+          'dpe_base',
+        ],
+    },
+    {
       'target_name': 'base_test',
       'type': 'executable',
       'variables': {
@@ -61,6 +72,7 @@
       'sources':['test\\base_test.cc'],
       'dependencies':[
           'dpe_base',
+          'thread_pool',
         ],
     },
   ]

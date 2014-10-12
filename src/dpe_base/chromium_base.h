@@ -7,6 +7,10 @@
 #include "third_party/chromium/base/callback.h"
 #include "third_party/chromium/base/bind.h"
 #include "third_party/chromium/base/bind_helpers.h"
+#include "third_party/chromium/base/location.h"
+#include "third_party/chromium/base/logging.h"
+#include "third_party/chromium/base/message_loop/message_loop_proxy.h"
+#include "third_party/chromium/base/task_runner_util.h"
 
 #include "third_party/chromium/base/float_util.h"
 #include "third_party/chromium/base/values.h"
@@ -50,5 +54,7 @@
 #include "third_party/chromium/base/win/wrapped_window_proc.h"
 #include "third_party/chromium/base/win/scoped_handle.h"
 #include "third_party/chromium/base/debug/alias.h"
+
+#include "third_party/chromium/base/message_loop/message_loop.h"
 
 #endif

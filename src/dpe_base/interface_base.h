@@ -17,7 +17,8 @@
       It does not support to promote weak pointer to strong pointer.
 
     Design Rule:
-      A specified implementation is always required to access in a single thread if possible.
+      A specified implementation is always required to access in a single thread 
+      unless the implementation has an object model of RefCountedObjectModelEx
 */
 enum
 {
@@ -45,8 +46,9 @@ struct IDPEUnknown
   WeakPtrData
   
   // Object model
-  RefCountedObjectModel
-  NormalObjectModel
+  RefCountedObjectModel       // weak pointer promoting forbidden
+  RefCountedObjectModelEx     // weak pointer promoting support
+  NormalObjectModel           // do not support reference counted. static object or object on stack.
   
   // An object implement multiple interfaces.
   OBJECT_MODEL_IMPL
@@ -275,20 +277,20 @@ protected:
   WeakPtrData* weakptr_data_;
 };
 
-#define OBJECT_MODEL_IMPL(B)                \
-  int32_t AddRef() override                 \
-  {                                         \
-    return B::InternalAddRef();             \
-  }                                         \
-                                            \
-  int32_t Release() override                \
-  {                                         \
-    return B::InternalRelease();            \
-  }                                         \
-                                            \
-  WeakPtrData* GetWeakPtrData() override    \
-  {                                         \
-    return B::InternalGetWeakPtrData();     \
+#define OBJECT_MODEL_IMPL(MODEL)                                        \
+  int32_t AddRef() override                                             \
+  {                                                                     \
+    return MODEL::InternalAddRef();                                     \
+  }                                                                     \
+                                                                        \
+  int32_t Release() override                                            \
+  {                                                                     \
+    return MODEL::InternalRelease();                                    \
+  }                                                                     \
+                                                                        \
+  WeakPtrData* GetWeakPtrData() override                                \
+  {                                                                     \
+    return MODEL::InternalGetWeakPtrData();                             \
   }
 
 #define BEGIN_DECLARE_INTERFACE(T)                                      \
@@ -338,7 +340,6 @@ public:
     return OM::InternalRelease();
   }
 
-  // on demand construct
   WeakPtrData* GetWeakPtrData() override
   {
     return OM::InternalGetWeakPtrData();
@@ -512,6 +513,8 @@ class WeakInterfacePtr {
     if (weakptr_data_ && weakptr_data_->Promote())
     {
       InterfacePtr<T> ret = object_ptr_;
+      // we add an extra reference to this object when promoting
+      // remove the extra reference now
       object_ptr_->Release();
       return ret;
     }
