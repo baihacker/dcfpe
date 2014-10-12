@@ -1,6 +1,7 @@
 #ifndef DPE_BASE_UTILITY_INTERFACE_H_
 #define DPE_BASE_UTILITY_INTERFACE_H_
 
+#include "dpe_base_export.h"
 #include "interface_base.h"
 
 enum
@@ -109,6 +110,6 @@ struct IMessageCenter: public IDPEUnknown
   virtual int32_t       stop() = 0;
 };
 
-int32_t      CreateUtility(int32_t interface_id, void** pp);
+DPE_BASE_EXPORT int32_t      CreateUtility(int32_t interface_id, void** pp);
 
 #endif
