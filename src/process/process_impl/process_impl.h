@@ -46,8 +46,6 @@ private:
   std::wstring              argument_;
   std::vector<std::wstring> argument_list_;
   
-  InterfacePtr<IMessageCenter>  msg_center_;
-  
   static int32_t            next_ip_;
 };
 }

@@ -13,8 +13,6 @@ enum
   INTERFACE_DICTIONARY,
   
   INTERFACE_THREAD_CHECKER,
-  INTERFACE_MESSAGE_HANDLER,
-  INTERFACE_MESSAGE_CENTER,
 };
 
 struct IBuffer: public IDPEUnknown
@@ -74,40 +72,6 @@ struct IThreadChecker: public IDPEUnknown
   
   virtual int32_t         set_owned_thread(int32_t thread_id = -1) = 0;
   virtual int32_t         on_valid_thread() const = 0;
-};
-
-struct IMessageHandler: public IDPEUnknown
-{
-  enum{INTERFACE_ID=INTERFACE_MESSAGE_HANDLER};
-  
-  // return 1 if handled
-  virtual int32_t           handle_message(
-        int32_t channel_id, int32_t is_ctrl, const char* msg, int32_t length) = 0;
-};
-
-enum
-{
-  INVALID_CHANNEL_ID = -1
-};
-
-struct IMessageCenter: public IDPEUnknown
-{
-  enum{INTERFACE_ID=INTERFACE_MESSAGE_CENTER};
-
-  // strong or weak reference?
-  virtual int32_t       add_message_handler(IMessageHandler* handler) = 0;
-  virtual int32_t       remove_message_handler(IMessageHandler* handler) = 0;
-  
-  virtual int32_t       add_sender_address(const char* address) = 0;
-  virtual int32_t       add_receive_address(const char* address) = 0;
-  virtual int32_t       remove_channel(int32_t channel_id) = 0;
-  virtual const char*   get_address_by_channel(int32_t channel_id) = 0;
-
-  virtual int32_t       send_ctrl_message(const char* msg, int32_t length) = 0;
-  virtual int32_t       send_message(int32_t channel_id, const char* msg, int32_t length) = 0;
-  virtual int32_t       worker_handle() = 0;
-  virtual int32_t       start() = 0;
-  virtual int32_t       stop() = 0;
 };
 
 DPE_BASE_EXPORT int32_t      CreateUtility(int32_t interface_id, void** pp);

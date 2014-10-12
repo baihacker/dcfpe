@@ -57,12 +57,16 @@
         'interface_base.h',
         'utility_interface.h',
         'utility\\utility_impl.cc',
-        'utility\\message_center_impl.cc',
         
         # thread pool
         'thread_pool.h',
         'thread_pool\\thread_pool_impl.h',
         'thread_pool\\thread_pool_impl.cc',
+        
+        # zmq adapter
+        'zmq\\zmq_adapter.cc',
+        'zmq_adapter.h'
+        
         
         # main
         'dpe_base.h',

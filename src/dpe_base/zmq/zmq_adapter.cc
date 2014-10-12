@@ -1,19 +1,25 @@
-#include "message_center_impl.h"
+#include "dpe_base/zmq_adapter.h"
 
 #include <algorithm>
-#include <process.h>
-#include <iostream>
-using namespace std;
-namespace utility_impl
-{
-int32_t MessageCenterImpl::next_ctrl_port_ = DEFAULT_CTRL_PORT;
+//#include <iostream>
 
-MessageCenterImpl::MessageCenterImpl() :
+#include <process.h>
+
+#include "dpe_base/thread_pool.h"
+
+//using namespace std;
+
+namespace base
+{
+int32_t MessageCenter::next_ctrl_port_ = DEFAULT_CTRL_PORT;
+
+MessageCenter::MessageCenter() :
   status_(STATUS_PREPARE),
   quit_flag_(0),
   zmq_context_(NULL),
   zmq_ctrl_pub_(NULL),
-  zmq_ctrl_sub_(NULL)
+  zmq_ctrl_sub_(NULL),
+  weakptr_factory_(this)
 {
   zmq_context_ = zmq_ctx_new();
   const int32_t ctrl_ip = GetCtrlIP();
@@ -60,47 +66,44 @@ MessageCenterImpl::MessageCenterImpl() :
   hello_event_ = ::CreateEvent(NULL, TRUE, FALSE, NULL);
 }
 
-MessageCenterImpl::~MessageCenterImpl()
+MessageCenter::~MessageCenter()
 {
-  stop();
+  Stop();
   ::CloseHandle(start_event_);
   ::CloseHandle(hello_event_);
 }
 
-int32_t MessageCenterImpl::add_message_handler(IMessageHandler* handler)
+bool MessageCenter::AddMessageHandler(MessageHandler* handler)
 {
-  if (status_ == STATUS_PREPARE)
+  DCHECK_CURRENTLY_ON(base::ThreadPool::UI);
+  
+  for (auto it: handlers_)
+  if (it == handler)
   {
-    for (auto it: handlers_)
-    if (it == handler)
-    {
-      return DPE_OK;
-    }
-    if (handler)
-    {
-      handlers_.push_back(handler);
-    }
-    return DPE_OK;
+    return true;
   }
-  return DPE_FAILED;
+  if (handler)
+  {
+    handlers_.push_back(handler);
+  }
+  return true;
 }
 
-int32_t MessageCenterImpl::remove_message_handler(IMessageHandler* handler)
+bool MessageCenter::RemoveMessageHandler(MessageHandler* handler)
 {
-  if (status_ == STATUS_RUNNING)
-  {
-    return DPE_FAILED;
-  }
-  std::remove_if(handlers_.begin(), handlers_.end(), [=](IMessageHandler* x)
+  DCHECK_CURRENTLY_ON(base::ThreadPool::UI);
+  
+  std::remove_if(handlers_.begin(), handlers_.end(), [=](MessageHandler* x)
   {
     return x == handler;
   });
-  return DPE_OK;
+  return true;
 }
 
-int32_t MessageCenterImpl::add_sender_address(const char* address)
+int32_t MessageCenter::RegisterSender(const char* address)
 {
-  if (status_ == STATUS_RUNNING) return INVALID_CHANNEL_ID;
+  DCHECK_CURRENTLY_ON(base::ThreadPool::UI);
+  
   if (!address || !address[0]) return INVALID_CHANNEL_ID;
   
   for (auto& it: publishers_) if (it.second == address)
@@ -118,12 +121,15 @@ int32_t MessageCenterImpl::add_sender_address(const char* address)
   }
   
   publishers_.push_back({publisher, address});
+  
+  socket_address_.push_back({publisher, address});
+  
   return reinterpret_cast<int32_t>(publisher);
 }
 
-int32_t MessageCenterImpl::add_receive_address(const char* address)
+int32_t MessageCenter::RegisterReceiver(const char* address)
 {
-  if (status_ == STATUS_RUNNING) return INVALID_CHANNEL_ID;
+  DCHECK_CURRENTLY_ON(base::ThreadPool::UI);
   if (!address || !address[0]) return INVALID_CHANNEL_ID;
   
   void* subscriber = NULL;
@@ -138,6 +144,7 @@ int32_t MessageCenterImpl::add_receive_address(const char* address)
       if (rc != 0) break;
       ok = 1;
   }while (false);
+  
   if (!ok)
   {
     if (subscriber)
@@ -146,13 +153,27 @@ int32_t MessageCenterImpl::add_receive_address(const char* address)
     }
     return INVALID_CHANNEL_ID;
   }
+
+  zmq_mutex_.lock();
   subscribers_.push_back({subscriber, address});
+  zmq_mutex_.unlock();
+  
+  socket_address_.push_back({subscriber, address});
+  
+  for (int32_t id = 0; id < 3; ++id)
+  {
+    int32_t cmd = CMD_HELLO;
+    SendCtrlMessage((const char*)&cmd, sizeof(cmd));
+  }
+  
+  Sleep(0);
+  
   return reinterpret_cast<int32_t>(subscriber);
 }
 
-int32_t MessageCenterImpl::remove_channel(int32_t channel_id)
+bool MessageCenter::RemoveChannel(int32_t channel_id)
 {
-  if (status_ == STATUS_RUNNING) return DPE_FAILED;
+  DCHECK_CURRENTLY_ON(base::ThreadPool::UI);
   
   std::remove_if(publishers_.begin(), publishers_.end(),
     [=](std::pair<void*, std::string>& x)
@@ -160,17 +181,29 @@ int32_t MessageCenterImpl::remove_channel(int32_t channel_id)
       return reinterpret_cast<int32_t>(x.first) == channel_id;
     });
   
+  zmq_mutex_.lock();
   std::remove_if(subscribers_.begin(), subscribers_.end(),
     [=](std::pair<void*, std::string>& x)
     {
       return reinterpret_cast<int32_t>(x.first) == channel_id;
     });
+  zmq_mutex_.unlock();
   
-  return DPE_OK;
+  std::remove_if(socket_address_.begin(), socket_address_.end(),
+    [=](std::pair<void*, std::string>& x)
+    {
+      return reinterpret_cast<int32_t>(x.first) == channel_id;
+    });
+  
+  Sleep(0);
+  
+  return true;
 }
 
-const char* MessageCenterImpl::get_address_by_channel(int32_t channel_id)
+const char* MessageCenter::GetAddressByHandle(int32_t channel_id)
 {
+  DCHECK_CURRENTLY_ON(base::ThreadPool::UI);
+  
   void* channel = reinterpret_cast<void*>(channel_id);
   
   if (channel == zmq_ctrl_pub_ || channel == zmq_ctrl_pub_)
@@ -178,13 +211,7 @@ const char* MessageCenterImpl::get_address_by_channel(int32_t channel_id)
     return ctrl_address_.c_str();
   }
   
-  for (auto& it: publishers_)
-  if (it.first == channel)
-  {
-    return it.second.c_str();
-  }
-  
-  for (auto& it: subscribers_)
+  for (auto& it: socket_address_)
   if (it.first == channel)
   {
     return it.second.c_str();
@@ -193,48 +220,54 @@ const char* MessageCenterImpl::get_address_by_channel(int32_t channel_id)
   return "";
 }
 
-int32_t MessageCenterImpl::send_ctrl_message(const char* msg, int32_t length)
+int32_t MessageCenter::SendCtrlMessage(const char* msg, int32_t length)
 {
-  return send_message(reinterpret_cast<int32_t>(zmq_ctrl_pub_), msg, length);
+  return SendMessage(reinterpret_cast<int32_t>(zmq_ctrl_pub_), msg, length);
 }
 
-int32_t MessageCenterImpl::send_message(int32_t channel_id, const char* msg, int32_t length)
+int32_t MessageCenter::SendMessage(int32_t channel_id, const char* msg, int32_t length)
 {
-  if (status_ != STATUS_RUNNING) return DPE_FAILED;
-  if (!msg || length <= 0) return DPE_FAILED;
+  DCHECK_CURRENTLY_ON(base::ThreadPool::UI);
+  if (status_ != STATUS_RUNNING) return -1;
+  
+  if (!msg || length <= 0) return -1;
   
   void* sender = reinterpret_cast<void*>(channel_id);
   
   if (sender == zmq_ctrl_pub_)
   {
     int32_t rc = zmq_send(sender, (void*)msg, length, 0);
-    return rc == 0 ? DPE_OK : DPE_FAILED;
+    return rc == 0 ? 0 : -1;
   }
   
+  int32_t rc = -1;
   for (auto& it: publishers_)
   if (it.first == sender)
   {
-    int32_t rc = zmq_send(sender, (void*)msg, length, 0);
-    return rc == 0 ? DPE_OK : DPE_FAILED;
+    rc = zmq_send(sender, (void*)msg, length, 0);
+    break;
   }
-  return DPE_FAILED;
+  
+  return rc;
 }
 
-int32_t MessageCenterImpl::start()
+bool MessageCenter::Start()
 {
-  if (status_ != STATUS_PREPARE) return DPE_FAILED;
+  DCHECK_CURRENTLY_ON(base::ThreadPool::UI);
+  
+  if (status_ != STATUS_PREPARE) return false;
   
   ::ResetEvent(start_event_);
   ::ResetEvent(hello_event_);
   unsigned id = 0;
   thread_handle_ = (HANDLE)_beginthreadex(NULL, 0,
-      &MessageCenterImpl::ThreadMain, (void*)this, 0, &id);
+      &MessageCenter::ThreadMain, (void*)this, 0, &id);
   if (!thread_handle_)
   {
-    return DPE_FAILED;
+    return false;
   }
   
-  // step 1: wait for start event
+  // step 1: wait for Start event
   HANDLE handles[] = {thread_handle_, start_event_};
   DWORD result = ::WaitForMultipleObjects(2, handles, FALSE, -1);
   if (result != WAIT_OBJECT_0 + 1)
@@ -244,7 +277,7 @@ int32_t MessageCenterImpl::start()
       ::CloseHandle(thread_handle_);
     }
     thread_handle_ = NULL;
-    return DPE_FAILED;
+    return false;
   }
   
   status_ = STATUS_RUNNING;
@@ -254,13 +287,13 @@ int32_t MessageCenterImpl::start()
   for (int32_t tries = 0; tries < 60; ++tries)
   {
     int32_t msg = CMD_HELLO;
-    send_ctrl_message((const char*)&msg, sizeof (msg));
+    SendCtrlMessage((const char*)&msg, sizeof (msg));
     
     HANDLE handles[] = {thread_handle_, hello_event_};
     DWORD result = ::WaitForMultipleObjects(2, handles, FALSE, 50);
     if (result == WAIT_OBJECT_0 + 1)
     {
-      return DPE_OK;
+      return true;
     }
     else if (result == WAIT_TIMEOUT)
     {
@@ -271,25 +304,27 @@ int32_t MessageCenterImpl::start()
       // thread stopped, it is unexpected
       ::CloseHandle(thread_handle_);
       thread_handle_ = NULL;
-      return DPE_FAILED;
+      return false;
     }
   }
   // thread is still running
   // it is possible that we can not send CMD_QUIT,
   // because we can not send CMD_HELLO
-  stop();
+  Stop();
   status_ = STATUS_PREPARE;
-  return DPE_FAILED;
+  return true;
 }
 
-int32_t MessageCenterImpl::stop()
+bool   MessageCenter::Stop()
 {
-  if (status_ == STATUS_PREPARE) return DPE_FAILED;
-  if (status_ == STATUS_STOPPED) return DPE_OK;
+  DCHECK_CURRENTLY_ON(base::ThreadPool::UI);
+  
+  if (status_ == STATUS_PREPARE) return false;
+  if (status_ == STATUS_STOPPED) return true;
   
   // quit_flag_ = 1;
   int32_t cmd = CMD_QUIT;
-  send_ctrl_message((const char*)&cmd, sizeof(cmd));
+  SendCtrlMessage((const char*)&cmd, sizeof(cmd));
   
   DWORD result = ::WaitForMultipleObjects(1, &thread_handle_, FALSE, 3000);
   
@@ -304,19 +339,24 @@ int32_t MessageCenterImpl::stop()
   }
   ::CloseHandle(thread_handle_);
   thread_handle_ = NULL;
-  return DPE_OK;
+  return true;
 }
 
-unsigned __stdcall MessageCenterImpl::ThreadMain(void * arg)
+base::WeakPtr<MessageCenter> MessageCenter::GetWeakPtr()
 {
-  if (MessageCenterImpl* pThis = (MessageCenterImpl*)arg)
+  return weakptr_factory_.GetWeakPtr();
+}
+
+unsigned __stdcall MessageCenter::ThreadMain(void * arg)
+{
+  if (MessageCenter* pThis = (MessageCenter*)arg)
   {
     pThis->Run();
   }
   return 0;
 }
 
-unsigned    MessageCenterImpl::Run()
+unsigned    MessageCenter::Run()
 {
   zmq_pollitem_t  items[128];
   
@@ -327,6 +367,8 @@ unsigned    MessageCenterImpl::Run()
     items[0].events = ZMQ_POLLIN;
     
     int32_t top = 1;
+    
+    zmq_mutex_.lock();
     for (auto& it: subscribers_)
     {
       items[top].socket = it.first;
@@ -334,9 +376,10 @@ unsigned    MessageCenterImpl::Run()
       items[top].events = ZMQ_POLLIN;
       ++top;
     }
+    zmq_mutex_.unlock();
     
     int32_t rc = zmq_poll(items, top, id == 0 ? 1 : -1);
-    
+
     if (id == 0)
     {
       ::SetEvent(start_event_);
@@ -366,45 +409,42 @@ unsigned    MessageCenterImpl::Run()
   return 0;
 }
 
-void MessageCenterImpl::ProcessEvent(zmq_pollitem_t* item)
+void MessageCenter::ProcessEvent(zmq_pollitem_t* item)
 {
   if (!item) return;
   if (!item->revents) return;
   
-  zmq_msg_t msg;
-  zmq_msg_init(&msg);
+  zmq_msg_t* msg = new zmq_msg_t;
+  zmq_msg_init(msg);
+  bool should_destroy = true;
   do
   {
-    if (zmq_recvmsg(item->socket, &msg, ZMQ_DONTWAIT) <= 0) break;
+    if (zmq_recvmsg(item->socket, msg, ZMQ_DONTWAIT) <= 0) break;
+    
     if (item->socket == zmq_ctrl_sub_)
     {
-      const char* buffer = static_cast<const char*>(zmq_msg_data(&msg));
-      const int32_t size = static_cast<int32_t>(zmq_msg_size(&msg));
+      const char* buffer = static_cast<const char*>(zmq_msg_data(msg));
+      const int32_t size = static_cast<int32_t>(zmq_msg_size(msg));
       HandleCtrlMessage(buffer, size);
+      if (quit_flag_) break;
     }
-    if (quit_flag_) break;
-    
-    for (auto& it: handlers_)
+    else
     {
-      if (InterfacePtr<IMessageHandler> handler = it.promote())
-      {
-        if (handler->handle_message(
-              reinterpret_cast<int32_t>(item->socket),
-              item->socket == zmq_ctrl_sub_,
-              static_cast<const char*>(zmq_msg_data(&msg)),
-              static_cast<int32_t>(zmq_msg_size(&msg))
-            ))
-        {
-          break;
-        }
-      }
+      base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
+          base::Bind(&MessageCenter::HandleMessage, weakptr_factory_.GetWeakPtr(),
+          reinterpret_cast<int32_t>(item->socket), msg));
+      should_destroy = false;
     }
   } while (false);
   
-  zmq_msg_close(&msg);
+  if (should_destroy)
+  {
+    zmq_msg_close(msg);
+    delete msg;
+  }
 }
 
-void MessageCenterImpl::HandleCtrlMessage(const char* msg, int32_t length)
+void MessageCenter::HandleCtrlMessage(const char* msg, int32_t length)
 {
   if (length == sizeof(int32_t))
   {
@@ -417,7 +457,34 @@ void MessageCenterImpl::HandleCtrlMessage(const char* msg, int32_t length)
   }
 }
 
-std::string MessageCenterImpl::GetAddress(int32_t ip, int32_t port)
+void  MessageCenter::HandleMessage(base::WeakPtr<MessageCenter> center, int32_t socket, zmq_msg_t* msg)
+{
+  DCHECK_CURRENTLY_ON(base::ThreadPool::UI);
+  
+  if (MessageCenter* pThis = center.get())
+  {
+    pThis->HandleMessageImpl(socket, msg);
+  }
+  zmq_msg_close(msg);
+  delete msg;
+}
+
+void  MessageCenter::HandleMessageImpl(int32_t socket, zmq_msg_t* msg)
+{
+  for (auto it: handlers_)
+  {
+    if (it->handle_message(
+          socket,
+          static_cast<const char*>(zmq_msg_data(msg)),
+          static_cast<int32_t>(zmq_msg_size(msg))
+        ))
+    {
+      break;
+    }
+  }
+}
+
+std::string MessageCenter::GetAddress(int32_t ip, int32_t port)
 {
   char address[64];
   sprintf(address, "tcp://%d.%d.%d.%d:%d",
@@ -425,13 +492,13 @@ std::string MessageCenterImpl::GetAddress(int32_t ip, int32_t port)
   return address;
 }
 
-int32_t     MessageCenterImpl::GetCtrlIP()
+int32_t     MessageCenter::GetCtrlIP()
 {
   static const int32_t basic_ip = MAKE_IP(127, 234, 0, 1);
   return GetCurrentProcessId() + basic_ip;
 }
 
-int32_t    MessageCenterImpl::GetNextCtrlPort()
+int32_t    MessageCenter::GetNextCtrlPort()
 {
   if (++next_ctrl_port_ == 65536)
   {

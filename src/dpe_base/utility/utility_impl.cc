@@ -5,8 +5,6 @@
 #include <vector>
 #include <algorithm>
 
-#include "message_center_impl.h"
-
 namespace utility_impl
 {
 struct BufferImpl : public DPESingleInterfaceObjectRoot<IBuffer>
@@ -388,13 +386,6 @@ int32_t      CreateUtility(int32_t interface_id, void** pp)
         {
           auto& ptr = *reinterpret_cast<IThreadChecker**>(pp);
           ptr = new ThreadCheckerImpl();
-          ptr->AddRef();
-        }
-        break;
-    case INTERFACE_MESSAGE_CENTER:
-        {
-          auto& ptr = *reinterpret_cast<IMessageCenter**>(pp);
-          ptr = new MessageCenterImpl();
           ptr->AddRef();
         }
         break;

@@ -12,6 +12,7 @@ void quit_main_loop()
   base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
     base::Bind(will_quit));
 }
+static MessageCenter* zmq = NULL;
 int32_t dpe_base_main(void (*logic_main)())
 {
   {
@@ -23,15 +24,26 @@ int32_t dpe_base_main(void (*logic_main)())
   PLOG(INFO) << "InitializeThreadPool";
   base::ThreadPool::InitializeThreadPool();
   
+  zmq = new MessageCenter();
+  zmq->Start();
+  
   base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
         base::Bind(logic_main));
   
   PLOG(INFO) << "RunMainLoop";
   base::ThreadPool::RunMainLoop();
   
+  delete zmq;
+  zmq = NULL;
+  
   PLOG(INFO) << "DeinitializeThreadPool";
   base::ThreadPool::DeinitializeThreadPool();
   
   return 0;
+}
+MessageCenter* zmq_message_center()
+{
+  DCHECK_CURRENTLY_ON(base::ThreadPool::UI);
+  return zmq;
 }
 }

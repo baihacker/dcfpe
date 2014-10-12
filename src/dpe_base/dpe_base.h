@@ -6,10 +6,13 @@
 #include "dpe_base/utility_interface.h"
 #include "dpe_base/chromium_base.h"
 #include "dpe_base/thread_pool.h"
+#include "dpe_base/zmq_adapter.h"
 
 namespace base
 {
 DPE_BASE_EXPORT int32_t dpe_base_main(void (*logic_main)());
 DPE_BASE_EXPORT void quit_main_loop();
+DPE_BASE_EXPORT MessageCenter* zmq_message_center();
 }
+
 #endif

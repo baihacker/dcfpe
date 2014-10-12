@@ -14,6 +14,7 @@
       'sources':['publisher.cc'],
       'dependencies':[
         '<(DEPTH)\\dpe_base\\dpe_base.gyp:dpe_base',
+        '<(DEPTH)\\third_party\\chromium\\base\\base.gyp:base',
         ],
     },
     {
@@ -25,6 +26,7 @@
       'sources':['subscriber.cc'],
       'dependencies':[
         '<(DEPTH)\\dpe_base\\dpe_base.gyp:dpe_base',
+        '<(DEPTH)\\third_party\\chromium\\base\\base.gyp:base',
         ],
     },
   ]

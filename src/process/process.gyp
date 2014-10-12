@@ -7,13 +7,14 @@
   'targets':[
     {
       'target_name': 'process',
-      'type': '<(component)',
+      'type': 'static_library',
       'variables': {
         'use_zmq': 1,
       },
       'sources':['process_impl\\process_impl.cc'],
       'dependencies':[
           '<(DEPTH)\\dpe_base\\dpe_base.gyp:dpe_base',
+          '<(DEPTH)\\third_party\\chromium\\base\\base.gyp:base',
         ],
     },
     {
@@ -25,6 +26,7 @@
       'sources':['process_proxy\\process_proxy.cc'],
       'dependencies':[
           '<(DEPTH)\\dpe_base\\dpe_base.gyp:dpe_base',
+          '<(DEPTH)\\third_party\\chromium\\base\\base.gyp:base',
         ],
     },
   ]

@@ -8,7 +8,6 @@ int ProcessImpl::next_ip_ = 1;
 ProcessImpl::ProcessImpl() :
   process_status_(STATUS_PREPARE)
 {
-  CreateUtility(INTERFACE_MESSAGE_CENTER, msg_center_.storage());
 }
 
 ProcessImpl::~ProcessImpl()
