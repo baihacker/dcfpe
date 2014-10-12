@@ -1,5 +1,5 @@
-#ifndef SRC_DPE_BASE_CHROMIUM_BASE_H
-#define SRC_DPE_BASE_CHROMIUM_BASE_H
+#ifndef DPE_BASE_CHROMIUM_BASE_H_
+#define DPE_BASE_CHROMIUM_BASE_H_
 
 #include "third_party/chromium/base/base_export.h"
 #include "third_party/chromium/base/basictypes.h"

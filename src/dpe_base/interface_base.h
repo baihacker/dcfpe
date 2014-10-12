@@ -1,5 +1,5 @@
-#ifndef SRC_DPE_BASE_INTERFACE_BASE_H
-#define SRC_DPE_BASE_INTERFACE_BASE_H
+#ifndef DPE_BASE_INTERFACE_BASE_H_
+#define DPE_BASE_INTERFACE_BASE_H_
 
 #include <cstdint>
 #include <atomic>

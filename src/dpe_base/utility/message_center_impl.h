@@ -1,5 +1,5 @@
-#ifndef SRC_DPE_BASE_MESSAGE_CENTER_IMPL_H
-#define SRC_DPE_BASE_MESSAGE_CENTER_IMPL_H
+#ifndef DPE_BASE_MESSAGE_CENTER_IMPL_H_
+#define DPE_BASE_MESSAGE_CENTER_IMPL_H_
 
 #include "dpe_base/utility_interface.h"
 
