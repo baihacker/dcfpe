@@ -11,7 +11,7 @@
 
 namespace base
 {
-int32_t MessageCenter::next_ctrl_port_ = DEFAULT_CTRL_PORT;
+int32_t MessageCenter::next_available_port_ = MIN_PORT;
 
 MessageCenter::MessageCenter() :
   status_(STATUS_PREPARE),
@@ -25,7 +25,7 @@ MessageCenter::MessageCenter() :
   const int32_t ctrl_ip = GetCtrlIP();
   for (;;)
   {
-    ctrl_address_ = GetAddress(ctrl_ip, GetNextCtrlPort());
+    ctrl_address_ = GetAddress(ctrl_ip, GetNextAvailablePort());
     
     int ok = 0;
     do
@@ -100,75 +100,71 @@ bool MessageCenter::RemoveMessageHandler(MessageHandler* handler)
   return true;
 }
 
-int32_t MessageCenter::RegisterSender(const char* address)
+int32_t MessageCenter::RegisterChannel(const std::string& address, bool is_sender, bool is_bind)
 {
   DCHECK_CURRENTLY_ON(base::ThreadPool::UI);
   
-  if (!address || !address[0]) return INVALID_CHANNEL_ID;
-  
-  for (auto& it: publishers_) if (it.second == address)
+  if (is_sender)
   {
-    return reinterpret_cast<int32_t>(it.first);
-  }
-  
-  void* publisher = zmq_socket(zmq_context_, ZMQ_PUB);
-  if (!publisher) return INVALID_CHANNEL_ID;
-  int32_t rc = zmq_bind(publisher, address);
-  if (rc != 0)
-  {
-    zmq_close(publisher);
-    return INVALID_CHANNEL_ID;
-  }
-  
-  publishers_.push_back({publisher, address});
-  
-  socket_address_.push_back({publisher, address});
-  
-  return reinterpret_cast<int32_t>(publisher);
-}
-
-int32_t MessageCenter::RegisterReceiver(const char* address)
-{
-  DCHECK_CURRENTLY_ON(base::ThreadPool::UI);
-  if (!address || !address[0]) return INVALID_CHANNEL_ID;
-  
-  void* subscriber = NULL;
-  int32_t ok = 0;
-  do
-  {
-      subscriber = zmq_socket(zmq_context_, ZMQ_SUB);
-      if (!subscriber) break;
-      int32_t rc = zmq_connect(subscriber, address);
-      if (rc != 0) break;
-      rc = zmq_setsockopt(subscriber, ZMQ_SUBSCRIBE, "", 0);
-      if (rc != 0) break;
-      ok = 1;
-  }while (false);
-  
-  if (!ok)
-  {
-    if (subscriber)
+    for (auto& it: publishers_) if (it.second == address)
     {
-      zmq_close(subscriber);
+      return reinterpret_cast<int32_t>(it.first);
     }
-    return INVALID_CHANNEL_ID;
+    void* publisher = zmq_socket(zmq_context_, ZMQ_PUB);
+    if (!publisher) return INVALID_CHANNEL_ID;
+    
+    int32_t rc = is_bind ?
+                  zmq_bind(publisher, address.c_str()):
+                  zmq_connect(publisher, address.c_str());
+    if (rc != 0)
+    {
+      zmq_close(publisher);
+      return INVALID_CHANNEL_ID;
+    }
+    
+    publishers_.push_back({publisher, address});
+    socket_address_.push_back({publisher, address});
+    return reinterpret_cast<int32_t>(publisher);
   }
-
-  zmq_mutex_.lock();
-  subscribers_.push_back({subscriber, address});
-  zmq_mutex_.unlock();
-  
-  socket_address_.push_back({subscriber, address});
-  
-  for (int32_t id = 0; id < 3; ++id)
+  else
   {
-    int32_t cmd = CMD_HELLO;
-    SendCtrlMessage((const char*)&cmd, sizeof(cmd));
+    void* subscriber = NULL;
+    {
+      std::lock_guard<std::mutex> lock(zmq_mutex_);
+      for (auto& it: subscribers_) if (it.second == address)
+      {
+        return reinterpret_cast<int32_t>(it.first);
+      }
+      
+      subscriber = zmq_socket(zmq_context_, ZMQ_SUB);
+      if (!subscriber) return INVALID_CHANNEL_ID;
+      
+      int32_t rc = is_bind ?
+                    zmq_bind(subscriber, address.c_str()) : 
+                    zmq_connect(subscriber, address.c_str());
+      if (rc != 0)
+      {
+        zmq_close(subscriber);
+        return INVALID_CHANNEL_ID;
+      }
+      
+      rc = zmq_setsockopt(subscriber, ZMQ_SUBSCRIBE, "", 0);
+      if (rc != 0)
+      {
+        zmq_close(subscriber);
+        return INVALID_CHANNEL_ID;
+      }
+      subscribers_.push_back({subscriber, address});
+    }
+    socket_address_.push_back({subscriber, address});
+    
+    for (int32_t id = 0; id < 3; ++id)
+    {
+      int32_t cmd = CMD_HELLO;
+      SendCtrlMessage((const char*)&cmd, sizeof(cmd));
+    }
+    return reinterpret_cast<int32_t>(subscriber);
   }
-  
-  Sleep(0);
-  
-  return reinterpret_cast<int32_t>(subscriber);
 }
 
 bool MessageCenter::RemoveChannel(int32_t channel_id)
@@ -272,10 +268,11 @@ bool MessageCenter::Start()
   DWORD result = ::WaitForMultipleObjects(2, handles, FALSE, -1);
   if (result != WAIT_OBJECT_0 + 1)
   {
-    if (result == WAIT_OBJECT_0)
+    if (result != WAIT_OBJECT_0)
     {
-      ::CloseHandle(thread_handle_);
+      ::TerminateThread(thread_handle_, -1);
     }
+    ::CloseHandle(thread_handle_);
     thread_handle_ = NULL;
     return false;
   }
@@ -339,6 +336,7 @@ bool   MessageCenter::Stop()
   }
   ::CloseHandle(thread_handle_);
   thread_handle_ = NULL;
+  status_ = STATUS_STOPPED;
   return true;
 }
 
@@ -492,18 +490,27 @@ std::string MessageCenter::GetAddress(int32_t ip, int32_t port)
   return address;
 }
 
-int32_t     MessageCenter::GetCtrlIP()
+int32_t     MessageCenter::GetProcessIP()
 {
-  static const int32_t basic_ip = MAKE_IP(127, 234, 0, 1);
-  return GetCurrentProcessId() + basic_ip;
+  static const int32_t offset = ::GetCurrentProcessId() % 65535 + 1;
+  static const int32_t basic_ip = MAKE_IP(127, 233, 0, 0) | offset;
+  return basic_ip;
 }
 
-int32_t    MessageCenter::GetNextCtrlPort()
+int32_t     MessageCenter::GetCtrlIP()
 {
-  if (++next_ctrl_port_ == 65536)
+  static const int32_t offset = ::GetCurrentProcessId() % 65535 + 1;
+  static const int32_t basic_ip = MAKE_IP(127, 234, 0, 0) | offset;
+  return basic_ip;
+}
+
+int32_t    MessageCenter::GetNextAvailablePort()
+{
+  int32_t ret = next_available_port_;
+  if (++next_available_port_ == MAX_PORT)
   {
-    next_ctrl_port_ = DEFAULT_CTRL_PORT;
+    next_available_port_ = MIN_PORT;
   }
-  return next_ctrl_port_;
+  return ret;
 }
 }

@@ -2,17 +2,21 @@
 
 namespace base
 {
+
 static void will_quit()
 {
   DCHECK_CURRENTLY_ON(base::ThreadPool::UI);
   base::MessageLoop::current()->Quit();
 }
+
 void quit_main_loop()
 {
   base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
     base::Bind(will_quit));
 }
+
 static MessageCenter* zmq = NULL;
+
 int32_t dpe_base_main(void (*logic_main)())
 {
   {
@@ -41,9 +45,11 @@ int32_t dpe_base_main(void (*logic_main)())
   
   return 0;
 }
+
 MessageCenter* zmq_message_center()
 {
   DCHECK_CURRENTLY_ON(base::ThreadPool::UI);
   return zmq;
 }
+
 }

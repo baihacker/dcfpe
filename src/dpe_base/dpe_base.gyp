@@ -86,6 +86,7 @@
       'dependencies':[
           'dpe_base',
           '<(DEPTH)\\third_party\\chromium\\base\\base.gyp:base',
+          '<(DEPTH)\\process\\process.gyp:process',
         ],
     },
   ]

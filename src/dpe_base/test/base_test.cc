@@ -3,6 +3,7 @@
 #include <process.h>
 
 #include "dpe_base/dpe_base.h"
+#include "process/process.h"
 
 using namespace std;
 struct MessageHandler : public base::MessageHandler
@@ -16,11 +17,33 @@ virtual int32_t handle_message(int32_t handle, const char* msg, int32_t length)
   return 0;
 }
 };
+
 MessageHandler g_msg_handler;
 void HelloFile()
 {
   cerr << "hello FILE" << endl;
 }
+
+struct ProcessTest : public process::ProcessHost
+{
+  void OnStop(process::ProcessContext* context)
+  {
+    cerr << "process exit " << context->exit_code_ << endl;
+    p = NULL;
+    delete this;
+  }
+  
+  void RunTest()
+  {
+    p = new process::Process(this);
+    p->GetProcessOption().image_path_ = L"D:\\Projects\\a.exe";
+    p->Start();
+  }
+  
+  scoped_refptr<process::Process> p;
+};
+
+ProcessTest* test;
 
 void HelloUI()
 {
@@ -30,12 +53,15 @@ void HelloUI()
         base::Bind(HelloFile));
 
   base::MessageCenter* center = base::zmq_message_center();
-  int32_t p = center->RegisterSender("tcp://127.1.1.1:1234");
-  int32_t q = center->RegisterReceiver("tcp://127.1.1.1:1234");
-  //cerr << p << " " << q << endl;
+  int32_t p = center->RegisterChannel("tcp://127.1.1.1:1234", true, true);
+  int32_t q = center->RegisterChannel("tcp://127.1.1.1:1234", false, false);
+
+  Sleep(30);
   for (int i = 0; i < 3; ++i)
   cerr << base::zmq_message_center()->SendMessage(p, "123000", 7) << endl;
-  base::quit_main_loop();
+
+  test = new ProcessTest();
+  test->RunTest();
 }
 
 int main()

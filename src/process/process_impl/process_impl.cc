@@ -1,130 +1,303 @@
-#include "process_impl.h"
+#include "process/process.h"
+
 #include <process.h>
 
 namespace process{
-
-int ProcessImpl::next_ip_ = 1;
-
-ProcessImpl::ProcessImpl() :
-  process_status_(STATUS_PREPARE)
+ProcessContext::ProcessContext()
 {
+  job_ = NULL;
+  memset(&job_cp_, 0, sizeof (job_cp_));
+  memset(&process_info_, 0, sizeof (process_info_));
+  exit_code_ = -1;
+  exit_reason_ = EXIT_REASON_UNKNOWN;
 }
 
-ProcessImpl::~ProcessImpl()
+ProcessContext::~ProcessContext()
 {
+  DeinitContext();
 }
 
-int32_t ProcessImpl::AddObserver(IProcessObserver* observer)
+bool ProcessContext::InitContext()
 {
-  for (auto it: observers_) if (observer == it)
+  DeinitContext();
+  
+  job_ = CreateJobObject(NULL, NULL);
+  job_cp_.CompletionPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
+  job_cp_.CompletionKey = 0;
+  SetInformationJobObject(job_, JobObjectAssociateCompletionPortInformation, &job_cp_, sizeof(job_cp_));
+  
+  return true;
+}
+
+bool ProcessContext::DeinitContext()
+{
+  if (job_)
   {
-    return DPE_OK;
+    ::CloseHandle(job_);
+    job_ = NULL;
   }
-  observer->AddRef();
-  observers_.push_back(observer);
-  return DPE_OK;
-}
-
-int32_t ProcessImpl::RemoveObserver(IProcessObserver* observer)
-{
-  std::remove_if(observers_.begin(), observers_.end(),
-    [=](IProcessObserver* x)
-    {
-      if (x == observer)
-      {
-        x->Release();
-        return 1;
-      }
-      return 0;
-    }
-    );
-  return DPE_FAILED;
-}
-
-int32_t ProcessImpl::SetImagePath(const wchar_t* image)
-{
-  if (process_status_ != STATUS_PREPARE)
+  if (job_cp_.CompletionPort)
   {
-    return DPE_FAILED;
+    ::CloseHandle(job_cp_.CompletionPort);
+  }
+  if (process_info_.hThread)
+  {
+    ::CloseHandle(process_info_.hThread);
+  }
+  if (process_info_.hProcess)
+  {
+    ::CloseHandle(process_info_.hThread);
+  }
+  memset(&job_cp_, 0, sizeof (job_cp_));
+  memset(&process_info_, 0, sizeof(process_info_));
+  exit_code_ = -1;
+  exit_reason_ = EXIT_REASON_UNKNOWN;
+  
+  return true;
+}
+
+Process::Process(ProcessHost* host) :
+  process_status_(PROCESS_STATUS_PREPARE),
+  host_(host),
+  thread_handle_(NULL),
+  weakptr_factory_(this)
+{
+  DCHECK(host_);
+
+  start_event_ = ::CreateEvent(NULL, TRUE, FALSE, NULL);
+}
+
+Process::~Process()
+{
+  Stop();
+  ::CloseHandle(start_event_);
+}
+
+std::wstring  Process::MakeCmdLine()
+{
+  if (process_option_.image_path_.empty()) return L"";
+  
+  std::wstring cmd = L"\"" + process_option_.image_path_ + L"\"";
+  
+  if (!process_option_.argument_.empty())
+  {
+    cmd += L" " + process_option_.argument_;
   }
   
-  if (image && image[0])
+  for (auto& item: process_option_.argument_list_)
   {
-    image_path_ = image;
-    return DPE_OK;
-  }
-  return DPE_FAILED;
-}
-
-int32_t ProcessImpl::SetArgument(const wchar_t* arg)
-{
-  if (process_status_ != STATUS_PREPARE)
-  {
-    return DPE_FAILED;
+    cmd += L" \"" + item + L"\"";
   }
   
-  if (arg)
-  {
-    argument_ = arg;
-    return DPE_OK;
-  }
-  return DPE_FAILED;
+  return cmd;
 }
 
-int32_t ProcessImpl::AppendArgumentItem(const wchar_t* arg_item)
+unsigned __stdcall Process::ThreadMain(void * arg)
 {
-  if (process_status_ != STATUS_PREPARE)
+  if (Process* pThis = (Process*)arg)
   {
-    return DPE_FAILED;
+    pThis->Run();
   }
-  
-  if (arg_item)
-  {
-    if (arg_item[0])
-    {
-      argument_list_.push_back(arg_item);
-    }
-    return DPE_OK;
-  }
-  return DPE_FAILED;
-}
-
-int32_t ProcessImpl::Start()
-{
   return 0;
 }
 
-
-int32_t ProcessImpl::Stop()
+unsigned      Process::Run()
 {
-  if (process_status_ != STATUS_STOPPED)
+  ::SetEvent(start_event_);
+  ResumeThread(context_->process_info_.hThread);
+  for(;;)
   {
-    return DPE_OK;
+    DWORD dwBytes;
+    ULONG_PTR CompKey;
+    LPOVERLAPPED po;
+    GetQueuedCompletionStatus(context_->job_cp_.CompletionPort, &dwBytes, &CompKey, &po, INFINITE);
+    
+    bool should_terminate_process = false;
+    bool should_exit = false;
+    do
+    {
+      if (dwBytes == 0xffffffff)
+      {
+        should_terminate_process = true;
+        context_->exit_reason_ = EXIT_REASON_TEIMINATED;    // todo: more reason details
+        break;
+      }
+      switch (dwBytes)
+      {
+      case JOB_OBJECT_MSG_EXIT_PROCESS:
+        {
+          should_exit = true;
+          context_->exit_reason_ = EXIT_REASON_EXIT;
+          break;
+        }
+      case  JOB_OBJECT_MSG_ABNORMAL_EXIT_PROCESS:
+        {
+          should_terminate_process = true;
+          context_->exit_reason_ = EXIT_REASON_EXCEPTION;
+          break;
+        }
+      }
+    } while (false);
+    
+    if (should_terminate_process)
+    {
+       ::TerminateProcess(context_->process_info_.hProcess, -1);
+       ::WaitForSingleObject(context_->process_info_.hProcess, 200);
+       context_->exit_code_ = -1;
+       
+    }
+    
+    if (should_terminate_process || should_exit)
+    {
+      DWORD code = -1;
+      if (GetExitCodeProcess(context_->process_info_.hProcess, &code))
+      {
+        context_->exit_code_ = static_cast<int32_t>(code);
+      }
+      else
+      {
+        context_->exit_code_ = -1;
+      }
+      break;
+    }
   }
-  if (process_status_ != STATUS_RUNNING)
+  base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
+    base::Bind(&Process::OnThreadExit, weakptr_factory_.GetWeakPtr()));
+  return 0;
+}
+
+bool Process::Start()
+{
+  DCHECK_CURRENTLY_ON(base::ThreadPool::UI);
+  
+  if (process_status_ != PROCESS_STATUS_PREPARE)
   {
-    return DPE_FAILED;
+    return false;
+  }
+  std::wstring cmdline = MakeCmdLine();
+  
+  if (cmdline.empty()) return false;
+  
+  std::list<std::function<void ()> > clean_resource;
+  context_ = new ProcessContext();
+  if (!context_->InitContext()) return false;
+  clean_resource.push_front([&](){context_ = NULL;});
+
+  STARTUPINFO si = { sizeof(si) };
+  if (CreateProcess(NULL, (wchar_t*)cmdline.c_str(),
+                    NULL, NULL, TRUE, CREATE_SUSPENDED, NULL, NULL, &si, &context_->process_info_) == 0)
+  {
+    for (auto& it: clean_resource) it();
+    return false;
+  }
+
+  AssignProcessToJobObject(context_->job_, context_->process_info_.hProcess);
+
+  ::ResetEvent(start_event_);
+  unsigned id = 0;
+  thread_handle_ = (HANDLE)_beginthreadex(NULL, 0,
+      &Process::ThreadMain, (void*)this, 0, &id);
+  if (!thread_handle_)
+  {
+    for (auto& it: clean_resource) it();
+    return false;
+  }
+  clean_resource.push_front(
+    [&](){
+      ::CloseHandle(thread_handle_);
+      thread_handle_ = NULL;
+    }
+  );
+
+  HANDLE handles[] = {thread_handle_, start_event_};
+  DWORD result = ::WaitForMultipleObjects(2, handles, FALSE, -1);
+  if (result != WAIT_OBJECT_0 + 1)
+  {
+    if (result != WAIT_OBJECT_0)
+    {
+      ::TerminateThread(thread_handle_, -1);
+    }
+    for (auto& it: clean_resource) it();
+    return false;
   }
   
-  return DPE_OK;
+  process_status_ = PROCESS_STATUS_RUNNING;
+  
+  return true;
 }
 
-int32_t ProcessImpl::GetNextIP()
+void   Process::OnThreadExit(base::WeakPtr<Process> p)
 {
-  if (next_ip_ < MAX_IP_ADDRESS)
+  if (Process* pThis = p.get())
   {
-    next_ip_++;
+    pThis->OnThreadExitImpl();
   }
-  next_ip_ = 1;
-  return MAX_IP_ADDRESS;
 }
 
-std::string GetAddress(int32_t ip)
+void   Process::OnThreadExitImpl()
 {
-  char address[64];
-  sprintf(address, "tcp://%d.%d.%d.%d:%d",
-      ip>>24, (ip>>16)&255, (ip>>8)&255, ip&255, IPC_PORT);
-  return address;
+  DWORD result = ::WaitForMultipleObjects(1, &thread_handle_, FALSE, 100);
+  
+  if (result == WAIT_TIMEOUT)
+  {
+    ::TerminateThread(thread_handle_, -1);
+    ::WaitForMultipleObjects(1, &thread_handle_, FALSE, 100);
+  }
+  else if (result == WAIT_OBJECT_0)
+  {
+    //
+  }
+  
+  ::CloseHandle(thread_handle_);
+  thread_handle_ = NULL;
+  process_status_ = PROCESS_STATUS_STOPPED;
+  
+  // todo notify host
+  host_->OnStop(context_);
+}
+
+bool Process::Stop()
+{
+  DCHECK_CURRENTLY_ON(base::ThreadPool::UI);
+  
+  if (process_status_ == PROCESS_STATUS_STOPPED)
+  {
+    return true;
+  }
+  if (process_status_ == PROCESS_STATUS_PREPARE)
+  {
+    return false;
+  }
+  
+  PostQueuedCompletionStatus(context_->job_cp_.CompletionPort, 0xffffffff, NULL, NULL);
+  DWORD result = ::WaitForMultipleObjects(1, &thread_handle_, FALSE, 3000);
+  
+  if (result == WAIT_TIMEOUT)
+  {
+    ::TerminateThread(thread_handle_, -1);
+    ::WaitForMultipleObjects(1, &thread_handle_, FALSE, 3000);
+    context_->exit_code_ = -1;
+  }
+  else if (result == WAIT_OBJECT_0)
+  {
+    //
+  }
+  
+  ::CloseHandle(thread_handle_);
+  thread_handle_ = NULL;
+
+  process_status_ = PROCESS_STATUS_STOPPED;
+  
+  return true;
+}
+
+ProcessContext* Process::GetProcessContext()
+{
+  if (process_status_ == PROCESS_STATUS_PREPARE)
+  {
+    return NULL;
+  }
+  return context_;
 }
 
 }

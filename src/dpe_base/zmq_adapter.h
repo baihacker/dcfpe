@@ -12,12 +12,12 @@
 #include "third_party/zmq/include/zmq.h"
 #include "third_party/zmq/include/zmq_utils.h"
 
-#define MAKE_IP(a, b, c, d) (((a) << 24) | ((b) << 16) | ((c) << 8) | (d));
+#define MAKE_IP(a, b, c, d) (((a) << 24) | ((b) << 16) | ((c) << 8) | (d))
 
 namespace base
 {
-const int32_t DEFAULT_CTRL_PORT = 20000;
-
+const int32_t MIN_PORT = 20000;
+const int32_t MAX_PORT = 40000;
 enum
 {
   INVALID_CHANNEL_ID = -1
@@ -52,8 +52,7 @@ public:
   bool          AddMessageHandler(MessageHandler* handler);
   bool          RemoveMessageHandler(MessageHandler* handler);
   
-  int32_t       RegisterSender(const char* address);
-  int32_t       RegisterReceiver(const char* address);
+  int32_t       RegisterChannel(const std::string& address, bool is_sender, bool is_bind);
   bool          RemoveChannel(int32_t channel_id);
   const char*   GetAddressByHandle(int32_t channel_id);
   
@@ -74,11 +73,14 @@ private:
   static  void  HandleMessage(base::WeakPtr<MessageCenter> center, int32_t socket, zmq_msg_t* msg);
   void          HandleMessageImpl(int32_t socket, zmq_msg_t* msg);
   
-private:
+public:
+  // address management
   static std::string GetAddress(int32_t ip, int32_t port);
-  static int32_t     GetCtrlIP();
-  static int32_t     GetNextCtrlPort();
+  static int32_t     GetNextAvailablePort();
+  static int32_t     GetProcessIP();
   
+public:
+  static int32_t     GetCtrlIP();
 private:
   std::vector<MessageHandler*>  handlers_;
   int32_t                       status_;
@@ -104,8 +106,8 @@ private:
   std::mutex                    zmq_mutex_;         // we lock subscribers_ only
   
   base::WeakPtrFactory<MessageCenter> weakptr_factory_;
-  std::vector<int> orz_size;
-  static int32_t                next_ctrl_port_;
+
+  static int32_t                next_available_port_;
 };
 }
 #endif

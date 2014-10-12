@@ -6,7 +6,7 @@ int main()
 {
 	void* context = zmq_ctx_new();
 	void* recver = zmq_socket(context, ZMQ_SUB);
-	int rc = zmq_connect(recver, "tcp://127.0.0.1:3357");
+	int rc = zmq_bind(recver, "tcp://127.0.0.1:3357");
 	zmq_setsockopt (recver, ZMQ_SUBSCRIBE, "", 0);
 	for (;;)
 	{
