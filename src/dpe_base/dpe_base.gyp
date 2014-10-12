@@ -41,8 +41,23 @@
       'target_name': 'dpe_base',
       'type': 'static_library',
       'sources':[
+        #chromium
+        'chromium_base.h',
+        
+        #interface
+        'interface_base.h',
+        'utility_interface.h',
         'utility\\utility_impl.cc',
-        'utility\\message_center_impl.cc'
+        'utility\\message_center_impl.cc',
+        
+        #thread pool
+        'thread_pool.h',
+        'thread_pool\\thread_pool_impl.h',
+        'thread_pool\\thread_pool_impl.cc',
+        
+        #main
+        'dpe_base.h',
+        'dpe_base.cc',
         ],
       'dependencies':[
           '<(DEPTH)\\third_party\\chromium\\base\\base.gyp:base',
@@ -50,17 +65,6 @@
       # if a module dependences on dpe_base, then it depends on base
       'export_dependent_settings': [
           '<(DEPTH)\\third_party\\chromium\\base\\base.gyp:base',
-        ],
-    },
-    {
-      'target_name': 'thread_pool',
-      'type': 'static_library',
-      'sources':[
-        'thread_pool\\thread_pool_impl.h',
-        'thread_pool\\thread_pool_impl.cc',
-        ],
-      'dependencies':[
-          'dpe_base',
         ],
     },
     {
@@ -72,7 +76,6 @@
       'sources':['test\\base_test.cc'],
       'dependencies':[
           'dpe_base',
-          'thread_pool',
         ],
     },
   ]
