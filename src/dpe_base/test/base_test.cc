@@ -5,21 +5,24 @@
 #include <windows.h>
 #include <process.h>
 using namespace std;
+
 void SayHello()
 {
-  cerr << GetCurrentThreadId() << endl;
   cerr << "hello world" << endl;
 }
 void will_quit()
 {
-  cerr << GetCurrentThreadId() << endl;
+  DCHECK_CURRENTLY_ON(base::ThreadPool::UI);
   base::MessageLoop::current()->Quit();
 }
 int main()
 {
-  cerr << GetCurrentThreadId() << endl;
+  //auto x = logging::LoggingSettings();
+  //x.logging_dest = logging::LOG_TO_SYSTEM_DEBUG_LOG;
+  //logging::BaseInitLoggingImpl(x);
+  DLOG(INFO) << "orz";
   base::ThreadPool::InitializeThreadPool();
-  base::ThreadPool::PostTask(base::ThreadPool::FILE, FROM_HERE,
+  base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
     base::Bind(SayHello));
   base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
     base::Bind(will_quit));
