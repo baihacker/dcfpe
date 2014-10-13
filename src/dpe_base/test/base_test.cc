@@ -32,11 +32,18 @@ struct ProcessTest : public process::ProcessHost
     p = NULL;
     delete this;
   }
-  
+  void OnOutput(bool is_std_out, const char* buffer, int32_t size)
+  {
+    cerr << "process output:" << endl;
+    cerr << buffer << endl;
+  }
   void RunTest()
   {
     p = new process::Process(this);
     p->GetProcessOption().image_path_ = L"D:\\Projects\\a.exe";
+    p->GetProcessOption().redirect_std_inout_ = true;
+    p->GetProcessOption().treat_err_as_out_ = false;
+    
     p->Start();
   }
   

@@ -1,11 +1,30 @@
 #include "process/process.h"
 
 #include <process.h>
-
+#include <iostream>
+using namespace std;
 namespace process{
+
+ULONG_PTR  JOB_COMPLETE_KEY = 0;
+ULONG_PTR  STD_OUT_COMPLETE_KEY = 1;
+ULONG_PTR  STD_ERR_COMPLETE_KEY = 2;
+ULONG_PTR  STD_IN_COMPLETE_KEY = 3;
+
+ProcessOption::ProcessOption() :
+  redirect_std_inout_(false),
+  treat_err_as_out_(true)
+{
+}
+
+ProcessOption::~ProcessOption()
+{
+}
+
 ProcessContext::ProcessContext()
 {
   job_ = NULL;
+  memset(&si_, 0, sizeof (si_));
+  si_.cb = sizeof (si_);
   memset(&job_cp_, 0, sizeof (job_cp_));
   memset(&process_info_, 0, sizeof (process_info_));
   exit_code_ = -1;
@@ -17,14 +36,68 @@ ProcessContext::~ProcessContext()
   DeinitContext();
 }
 
-bool ProcessContext::InitContext()
+bool ProcessContext::InitContext(ProcessOption& option)
 {
   DeinitContext();
   
   job_ = CreateJobObject(NULL, NULL);
-  job_cp_.CompletionPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
-  job_cp_.CompletionKey = 0;
+  job_cp_.CompletionPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 1);
+  job_cp_.CompletionKey = reinterpret_cast<void*>(JOB_COMPLETE_KEY);
   SetInformationJobObject(job_, JobObjectAssociateCompletionPortInformation, &job_cp_, sizeof(job_cp_));
+  SECURITY_ATTRIBUTES saAttr;
+  saAttr.nLength = sizeof(SECURITY_ATTRIBUTES); 
+  saAttr.bInheritHandle = TRUE; 
+  saAttr.lpSecurityDescriptor = NULL; 
+  
+  if (option.redirect_std_inout_)
+  {
+    std_out_read_ = new base::PipeServer(base::PIPE_OPEN_MODE_INBOUND, base::PIPE_DATA_BYTE);
+    std_out_write_ = std_out_read_->CreateClientAndConnect(true, true);
+    
+    DCHECK(std_out_read_);
+    DCHECK(std_out_write_);
+    
+    std_in_write_ = new base::PipeServer(base::PIPE_OPEN_MODE_OUTBOUND, base::PIPE_DATA_BYTE);
+    std_in_read_ = std_in_write_->CreateClientAndConnect(true, true);
+    
+    DCHECK(std_in_write_);
+    DCHECK(std_in_read_);
+    
+    si_.hStdOutput = std_out_write_->Handle();
+    si_.hStdInput = std_in_read_->Handle();
+
+    if (option.treat_err_as_out_)
+    {
+      si_.hStdError = std_out_write_->Handle();
+    }
+    else
+    {
+      std_err_read_ = new base::PipeServer(base::PIPE_OPEN_MODE_INBOUND, base::PIPE_DATA_BYTE);
+      std_err_write_ = std_err_read_->CreateClientAndConnect(true, true);
+      
+      DCHECK(std_err_read_);
+      DCHECK(std_err_write_);
+      
+      si_.hStdError = std_err_write_->Handle();
+    }
+    si_.dwFlags |= STARTF_USESTDHANDLES;
+    
+    if (std_out_read_)
+    {
+      CreateIoCompletionPort(std_out_read_->Handle(), job_cp_.CompletionPort,
+        STD_OUT_COMPLETE_KEY, 1);
+    }
+    if (std_err_read_)
+    {
+      CreateIoCompletionPort(std_err_read_->Handle(), job_cp_.CompletionPort,
+        STD_ERR_COMPLETE_KEY, 1);
+    }
+    if (std_in_write_)
+    {
+      CreateIoCompletionPort(std_in_write_->Handle(), job_cp_.CompletionPort,
+        STD_IN_COMPLETE_KEY, 1);
+    }
+  }
   
   return true;
 }
@@ -48,8 +121,11 @@ bool ProcessContext::DeinitContext()
   {
     ::CloseHandle(process_info_.hThread);
   }
+  memset(&si_, 0, sizeof (si_));
+  si_.cb = sizeof (si_);
   memset(&job_cp_, 0, sizeof (job_cp_));
   memset(&process_info_, 0, sizeof(process_info_));
+  
   exit_code_ = -1;
   exit_reason_ = EXIT_REASON_UNKNOWN;
   
@@ -100,11 +176,25 @@ unsigned __stdcall Process::ThreadMain(void * arg)
   }
   return 0;
 }
-
+#if 0
+ULONG_PTR  STD_OUT_COMPLETE_KEY = 1;
+ULONG_PTR  STD_ERR_COMPLETE_KEY = 2;
+ULONG_PTR  STD_IN_COMPLETE_KEY = 3;
+#endif
 unsigned      Process::Run()
 {
   ::SetEvent(start_event_);
+  
+  if (context_->std_out_read_)
+  {
+    context_->std_out_read_->Read();
+  }
+  if (context_->std_err_read_) 
+  {
+    context_->std_err_read_->Read();
+  }
   ResumeThread(context_->process_info_.hThread);
+  
   for(;;)
   {
     DWORD dwBytes;
@@ -116,6 +206,44 @@ unsigned      Process::Run()
     bool should_exit = false;
     do
     {
+      if (CompKey == STD_OUT_COMPLETE_KEY ||
+          CompKey == STD_ERR_COMPLETE_KEY)
+      {
+        scoped_refptr<base::PipeServer> p = CompKey == STD_OUT_COMPLETE_KEY ?
+                    context_->std_out_read_ : context_->std_err_read_;
+        
+        if (!p->WaitForPendingIO(0))
+        {
+          // a sync ReadFile invoke CompletionPort
+          break;
+        }
+        auto& s = p->ReadBuffer();
+        int32_t len = p->ReadSize();
+        base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
+            base::Bind(&Process::OnProcessOutput,
+                    weakptr_factory_.GetWeakPtr(),
+                    CompKey == STD_OUT_COMPLETE_KEY,
+                    std::string(s.begin(), s.begin() + len)
+                    )
+                 );
+        for (;;)
+        {
+          if (!p->Read()) break;
+          if (!p->HasPendingIO())
+          {
+            break;
+          }
+          else
+          {
+            break;
+          }
+        }
+        break;
+      }
+      if (CompKey == STD_IN_COMPLETE_KEY)
+      {
+        break;
+      }
       if (dwBytes == 0xffffffff)
       {
         should_terminate_process = true;
@@ -161,6 +289,7 @@ unsigned      Process::Run()
       break;
     }
   }
+
   base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
     base::Bind(&Process::OnThreadExit, weakptr_factory_.GetWeakPtr()));
   return 0;
@@ -178,14 +307,15 @@ bool Process::Start()
   
   if (cmdline.empty()) return false;
   
-  std::list<std::function<void ()> > clean_resource;
+  
   context_ = new ProcessContext();
-  if (!context_->InitContext()) return false;
+  if (!context_->InitContext(process_option_)) return false;
+  
+  std::list<std::function<void ()> > clean_resource;
   clean_resource.push_front([&](){context_ = NULL;});
 
-  STARTUPINFO si = { sizeof(si) };
   if (CreateProcess(NULL, (wchar_t*)cmdline.c_str(),
-                    NULL, NULL, TRUE, CREATE_SUSPENDED, NULL, NULL, &si, &context_->process_info_) == 0)
+                    NULL, NULL, TRUE, CREATE_SUSPENDED, NULL, NULL, &context_->si_, &context_->process_info_) == 0)
   {
     for (auto& it: clean_resource) it();
     return false;
@@ -254,6 +384,19 @@ void   Process::OnThreadExitImpl()
   
   // todo notify host
   host_->OnStop(context_);
+}
+
+void Process::OnProcessOutput(base::WeakPtr<Process> p, bool is_std_out, const std::string& buffer)
+{
+  if (Process* pThis = p.get())
+  {
+    pThis->OnProcessOutputImpl(is_std_out, buffer);
+  }
+}
+
+void Process::OnProcessOutputImpl(bool is_std_out, const std::string& buffer)
+{
+  host_->OnOutput(is_std_out, buffer.c_str(), buffer.size());
 }
 
 bool Process::Stop()

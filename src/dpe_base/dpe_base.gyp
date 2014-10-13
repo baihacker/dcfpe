@@ -63,6 +63,12 @@
         'thread_pool\\thread_pool_impl.h',
         'thread_pool\\thread_pool_impl.cc',
         
+        # io
+        'io_handler.h',
+        'io\\io_handler.cc',
+        'pipe.h',
+        'io\\pipe.cc',
+        
         # zmq adapter
         'zmq\\zmq_adapter.cc',
         'zmq_adapter.h'

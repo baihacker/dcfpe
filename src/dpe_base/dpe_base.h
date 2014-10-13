@@ -7,6 +7,8 @@
 #include "dpe_base/chromium_base.h"
 #include "dpe_base/thread_pool.h"
 #include "dpe_base/zmq_adapter.h"
+#include "dpe_base/io_handler.h"
+#include "dpe_base/pipe.h"
 
 namespace base
 {

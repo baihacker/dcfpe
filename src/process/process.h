@@ -1,12 +1,13 @@
 #ifndef PROCESS_PROCESS_H
 #define PROCESS_PROCESS_H
 
-#include "dpe_base/dpe_base.h"
-
 #include <vector>
 #include <string>
 
 #include <windows.h>
+
+#include "dpe_base/dpe_base.h"
+
 /*
   Process is owned by its host. Process has a background thread
     which will receive message from completion port
@@ -35,10 +36,15 @@ enum
 
 struct ProcessOption
 {
+  ProcessOption();
+  ~ProcessOption();
   // cmd = "image_path_" argument "argument_list_[0]" "argument_list_[1]" ...
   std::wstring                          image_path_;
   std::wstring                          argument_;
   std::vector<std::wstring>             argument_list_;
+  bool                                  redirect_std_inout_;
+  bool                                  treat_err_as_out_;
+  int32_t                               output_buffer_size_;
 };
 
 class ProcessContext : public base::RefCounted<ProcessContext>
@@ -46,14 +52,21 @@ class ProcessContext : public base::RefCounted<ProcessContext>
 public:
   ProcessContext();
   ~ProcessContext();
-  bool InitContext();
+  bool InitContext(ProcessOption& option);
   bool DeinitContext();
   
+  STARTUPINFO                           si_;
   PROCESS_INFORMATION                   process_info_;
   JOBOBJECT_ASSOCIATE_COMPLETION_PORT   job_cp_;
   HANDLE                                job_;
   int32_t                               exit_code_;
   int32_t                               exit_reason_;
+  scoped_refptr<base::PipeServer>       std_out_read_;
+  scoped_refptr<base::IOHandler>        std_out_write_;
+  scoped_refptr<base::PipeServer>       std_err_read_;
+  scoped_refptr<base::IOHandler>        std_err_write_;
+  scoped_refptr<base::PipeServer>       std_in_write_;
+  scoped_refptr<base::IOHandler>        std_in_read_;
 };
 
 class ProcessHost
@@ -61,6 +74,7 @@ class ProcessHost
 public:
   virtual ~ProcessHost(){};
   virtual void OnStop(ProcessContext* exit_code) = 0;
+  virtual void OnOutput(bool is_std_out, const char* buffer, int32_t size) = 0;
 };
 
 class Process : public base::RefCounted<Process>
@@ -82,7 +96,8 @@ private:
   
   static void   OnThreadExit(base::WeakPtr<Process> p);
   void          OnThreadExitImpl();
-
+  static void   OnProcessOutput(base::WeakPtr<Process> p, bool is_std_out, const std::string& buffer);
+  void          OnProcessOutputImpl(bool is_std_out, const std::string& buffer);
 private:
   ProcessHost*                          host_;
   int32_t                               process_status_;
