@@ -1,18 +1,25 @@
 #include "process/process.h"
 
 #include <process.h>
-#include <iostream>
-using namespace std;
+
 namespace process{
 
-ULONG_PTR  JOB_COMPLETE_KEY = 0;
-ULONG_PTR  STD_OUT_COMPLETE_KEY = 1;
-ULONG_PTR  STD_ERR_COMPLETE_KEY = 2;
-ULONG_PTR  STD_IN_COMPLETE_KEY = 3;
+static ULONG_PTR kJobCompleteKey = 0;
+static ULONG_PTR kStdOutCompleteKey = 1;
+static ULONG_PTR kStdErrCompleteKey = 2;
+static ULONG_PTR kStdInCompleteKey = 3;
+static ULONG_PTR kForceStopKey = 4;
+static ULONG_PTR kTimeOutKey = 5;
 
 ProcessOption::ProcessOption() :
   redirect_std_inout_(false),
-  treat_err_as_out_(true)
+  treat_err_as_out_(true),
+  create_sub_process_(true),
+  output_buffer_size_(0),
+  job_time_limit_(0),
+  job_memory_limit_(0),
+  process_memory_limit_(0),
+  output_limit_(0)
 {
 }
 
@@ -29,6 +36,10 @@ ProcessContext::ProcessContext()
   memset(&process_info_, 0, sizeof (process_info_));
   exit_code_ = -1;
   exit_reason_ = EXIT_REASON_UNKNOWN;
+  output_size_ = 0;
+  time_usage_ = 0;
+  time_usage_user_ = 0;
+  time_usage_kernel_ = 0;
 }
 
 ProcessContext::~ProcessContext()
@@ -41,16 +52,73 @@ bool ProcessContext::InitContext(ProcessOption& option)
   DeinitContext();
   
   job_ = CreateJobObject(NULL, NULL);
-  job_cp_.CompletionPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 1);
-  job_cp_.CompletionKey = reinterpret_cast<void*>(JOB_COMPLETE_KEY);
-  SetInformationJobObject(job_, JobObjectAssociateCompletionPortInformation, &job_cp_, sizeof(job_cp_));
-  SECURITY_ATTRIBUTES saAttr;
-  saAttr.nLength = sizeof(SECURITY_ATTRIBUTES); 
-  saAttr.bInheritHandle = TRUE; 
-  saAttr.lpSecurityDescriptor = NULL; 
+  {
+    /*
+      1. The sub process created by the destination process will be added into the job since
+          we do not set the JOB_OBJECT_LIMIT_BREAKAWAY_OK flag.
+    
+      2. The sub process will be killed if current process does not exist. (job handled is closed automatic)
+      3. Do not display unhandled exception dialogue when exception happens.
+    */
+    JOBOBJECT_EXTENDED_LIMIT_INFORMATION jeli = {0};
+    jeli.BasicLimitInformation.LimitFlags =
+                 JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE |
+                 JOB_OBJECT_LIMIT_DIE_ON_UNHANDLED_EXCEPTION;
+    if (option.job_time_limit_ > 0)
+    {
+      jeli.BasicLimitInformation.LimitFlags |= JOB_OBJECT_LIMIT_JOB_TIME;
+      jeli.BasicLimitInformation.PerJobUserTimeLimit.QuadPart = option.job_time_limit_ * 10000LL;
+    }
+    if (option.job_memory_limit_ > 0)
+    {
+      jeli.BasicLimitInformation.LimitFlags |= JOB_OBJECT_LIMIT_JOB_MEMORY;
+      jeli.JobMemoryLimit = option.job_memory_limit_;
+    }
+    if (option.process_memory_limit_ > 0)
+    {
+      jeli.BasicLimitInformation.LimitFlags |= JOB_OBJECT_LIMIT_PROCESS_MEMORY;
+      jeli.ProcessMemoryLimit = option.process_memory_limit_;
+    }
+    SetInformationJobObject(job_,JobObjectExtendedLimitInformation, &jeli, sizeof(jeli));
+  }
+  {
+    /*
+      UI restrictions
+    */
+    JOBOBJECT_BASIC_UI_RESTRICTIONS uir = {0};  
+    uir.UIRestrictionsClass = 
+                JOB_OBJECT_UILIMIT_EXITWINDOWS |
+                JOB_OBJECT_UILIMIT_HANDLES |
+                JOB_OBJECT_UILIMIT_SYSTEMPARAMETERS |
+                JOB_OBJECT_UILIMIT_DISPLAYSETTINGS |
+                JOB_OBJECT_UILIMIT_DESKTOP;
+    SetInformationJobObject(job_, JobObjectBasicUIRestrictions, &uir, sizeof(uir));
+  }
+  {
+    /*
+      TLE notification
+    */
+    JOBOBJECT_END_OF_JOB_TIME_INFORMATION jl = {0};
+    jl.EndOfJobTimeAction = JOB_OBJECT_POST_AT_END_OF_JOB;
+    SetInformationJobObject(job_, JobObjectEndOfJobTimeInformation, &jl, sizeof(jl));
+  }
+  {
+    /*
+      Job notifications
+    */
+    job_cp_.CompletionPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 1);
+    job_cp_.CompletionKey = reinterpret_cast<void*>(kJobCompleteKey);
+
+    SetInformationJobObject(job_, JobObjectAssociateCompletionPortInformation, &job_cp_, sizeof(job_cp_));
+  }
   
   if (option.redirect_std_inout_)
   {
+    SECURITY_ATTRIBUTES saAttr = {0};
+    saAttr.nLength = sizeof(SECURITY_ATTRIBUTES); 
+    saAttr.bInheritHandle = TRUE; 
+    saAttr.lpSecurityDescriptor = NULL; 
+  
     std_out_read_ = new base::PipeServer(base::PIPE_OPEN_MODE_INBOUND, base::PIPE_DATA_BYTE);
     std_out_write_ = std_out_read_->CreateClientAndConnect(true, true);
     
@@ -85,17 +153,17 @@ bool ProcessContext::InitContext(ProcessOption& option)
     if (std_out_read_)
     {
       CreateIoCompletionPort(std_out_read_->Handle(), job_cp_.CompletionPort,
-        STD_OUT_COMPLETE_KEY, 1);
+        kStdOutCompleteKey, 1);
     }
     if (std_err_read_)
     {
       CreateIoCompletionPort(std_err_read_->Handle(), job_cp_.CompletionPort,
-        STD_ERR_COMPLETE_KEY, 1);
+        kStdErrCompleteKey, 1);
     }
     if (std_in_write_)
     {
       CreateIoCompletionPort(std_in_write_->Handle(), job_cp_.CompletionPort,
-        STD_IN_COMPLETE_KEY, 1);
+        kStdInCompleteKey, 1);
     }
   }
   
@@ -119,7 +187,7 @@ bool ProcessContext::DeinitContext()
   }
   if (process_info_.hProcess)
   {
-    ::CloseHandle(process_info_.hThread);
+    ::CloseHandle(process_info_.hProcess);
   }
   memset(&si_, 0, sizeof (si_));
   si_.cb = sizeof (si_);
@@ -128,7 +196,18 @@ bool ProcessContext::DeinitContext()
   
   exit_code_ = -1;
   exit_reason_ = EXIT_REASON_UNKNOWN;
+
+  std_out_read_ = NULL;
+  std_out_write_ = NULL;
+  std_err_read_ = NULL;
+  std_err_write_ = NULL;
+  std_in_write_ = NULL;
+  std_in_read_ = NULL;
   
+  output_size_ = 0;
+  time_usage_ = 0;
+  time_usage_user_ = 0;
+  time_usage_kernel_ = 0;
   return true;
 }
 
@@ -146,6 +225,7 @@ Process::Process(ProcessHost* host) :
 Process::~Process()
 {
   Stop();
+  context_ = NULL;
   ::CloseHandle(start_event_);
 }
 
@@ -170,18 +250,20 @@ std::wstring  Process::MakeCmdLine()
 
 unsigned __stdcall Process::ThreadMain(void * arg)
 {
+  unsigned ret = -1;
   if (Process* pThis = (Process*)arg)
   {
-    pThis->Run();
+    ret = pThis->Run();
   }
-  return 0;
+  return ret;
 }
-#if 0
-ULONG_PTR  STD_OUT_COMPLETE_KEY = 1;
-ULONG_PTR  STD_ERR_COMPLETE_KEY = 2;
-ULONG_PTR  STD_IN_COMPLETE_KEY = 3;
-#endif
-unsigned      Process::Run()
+
+static int64_t FileTimeToQuadWord(PFILETIME pft) 
+{
+	return (Int64ShllMod32(pft->dwHighDateTime, 32) | pft->dwLowDateTime);
+}
+
+unsigned  Process::Run()
 {
   ::SetEvent(start_event_);
   
@@ -193,90 +275,156 @@ unsigned      Process::Run()
   {
     context_->std_err_read_->Read();
   }
-  ResumeThread(context_->process_info_.hThread);
   
+  ResumeThread(context_->process_info_.hThread);
+  DWORD start_time = ::GetTickCount();
   for(;;)
   {
     DWORD dwBytes;
     ULONG_PTR CompKey;
     LPOVERLAPPED po;
-    GetQueuedCompletionStatus(context_->job_cp_.CompletionPort, &dwBytes, &CompKey, &po, INFINITE);
+    GetQueuedCompletionStatus(
+      context_->job_cp_.CompletionPort,
+        &dwBytes,
+        &CompKey,
+        &po,
+        INFINITE);
     
-    bool should_terminate_process = false;
     bool should_exit = false;
-    do
+
+    if (CompKey == kStdOutCompleteKey ||
+        CompKey == kStdErrCompleteKey)
     {
-      if (CompKey == STD_OUT_COMPLETE_KEY ||
-          CompKey == STD_ERR_COMPLETE_KEY)
+      scoped_refptr<base::PipeServer> pio = 
+            CompKey == kStdOutCompleteKey ?
+              context_->std_out_read_ :
+              context_->std_err_read_;
+      
+      if (!pio->WaitForPendingIO(0))
       {
-        scoped_refptr<base::PipeServer> p = CompKey == STD_OUT_COMPLETE_KEY ?
-                    context_->std_out_read_ : context_->std_err_read_;
+        // a sync ReadFile invoke CompletionPort
+        ;
+      }
+      else
+      {
+        auto& s = pio->ReadBuffer();
+        int32_t len = pio->ReadSize();
         
-        if (!p->WaitForPendingIO(0))
+        if (CompKey == kStdOutCompleteKey)
         {
-          // a sync ReadFile invoke CompletionPort
-          break;
+          context_->output_size_ += len;
         }
-        auto& s = p->ReadBuffer();
-        int32_t len = p->ReadSize();
-        base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
-            base::Bind(&Process::OnProcessOutput,
-                    weakptr_factory_.GetWeakPtr(),
-                    CompKey == STD_OUT_COMPLETE_KEY,
-                    std::string(s.begin(), s.begin() + len)
-                    )
-                 );
-        for (;;)
-        {
-          if (!p->Read()) break;
-          if (!p->HasPendingIO())
-          {
-            break;
-          }
-          else
-          {
-            break;
-          }
-        }
-        break;
-      }
-      if (CompKey == STD_IN_COMPLETE_KEY)
-      {
-        break;
-      }
-      if (dwBytes == 0xffffffff)
-      {
-        should_terminate_process = true;
-        context_->exit_reason_ = EXIT_REASON_TEIMINATED;    // todo: more reason details
-        break;
-      }
-      switch (dwBytes)
-      {
-      case JOB_OBJECT_MSG_EXIT_PROCESS:
+        if (process_option_.output_limit_ > 0 &&
+          context_->output_size_ > process_option_.output_limit_)
         {
           should_exit = true;
-          context_->exit_reason_ = EXIT_REASON_EXIT;
+          context_->exit_reason_ = EXIT_REASON_OLE;
+        }
+        else
+        {
+          base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
+              base::Bind(&Process::OnProcessOutput,
+                      weakptr_factory_.GetWeakPtr(),
+                      CompKey == kStdOutCompleteKey,
+                      std::string(s.begin(), s.begin() + len)
+                      )
+                   );
+          for (;;)
+          {
+            if (!pio->Read()) break;
+            if (!pio->HasPendingIO())
+            {
+              break;
+            }
+            else
+            {
+              break;
+            }
+          }
+        }
+      }
+    }
+    else if (CompKey == kStdInCompleteKey)
+    {
+      ;
+    }
+    else if (CompKey == kForceStopKey)
+    {
+      should_exit = true;
+      context_->exit_reason_ = EXIT_REASON_TEIMINATED;
+    }
+    else if (CompKey == kTimeOutKey)
+    {
+      should_exit = true;
+      context_->exit_reason_ = EXIT_REASON_TLE;
+    }
+    else if (CompKey == kJobCompleteKey)
+    {
+      switch (dwBytes)
+      {
+      case JOB_OBJECT_MSG_ABNORMAL_EXIT_PROCESS:
+        {
+          DWORD id = (DWORD)po;
+          if (id == context_->process_info_.dwProcessId)
+          {
+            should_exit = true;
+            context_->exit_reason_ = EXIT_REASON_EXCEPTION;
+          }
           break;
         }
-      case  JOB_OBJECT_MSG_ABNORMAL_EXIT_PROCESS:
+      case JOB_OBJECT_MSG_EXIT_PROCESS:
         {
-          should_terminate_process = true;
-          context_->exit_reason_ = EXIT_REASON_EXCEPTION;
+          DWORD id = (DWORD)po;
+          if (id == context_->process_info_.dwProcessId)
+          {
+            should_exit = true;
+            context_->exit_reason_ = EXIT_REASON_EXIT;
+          }
+          break;
+        }
+      case JOB_OBJECT_MSG_NEW_PROCESS:
+        {
+          if (!process_option_.create_sub_process_)
+          {
+            should_exit = true;
+            context_->exit_reason_ = EXIT_REASON_CREATE_NEW_PROCESS;
+          }
+          break;
+        }
+      case JOB_OBJECT_MSG_END_OF_JOB_TIME:
+        {
+          should_exit = true;
+          context_->exit_reason_ = EXIT_REASON_XTLE;
+          break;
+        }
+      case JOB_OBJECT_MSG_JOB_MEMORY_LIMIT:
+        {
+          should_exit = true;
+          context_->exit_reason_ = EXIT_REASON_MLE;
+          break;
+        }
+      case JOB_OBJECT_MSG_PROCESS_MEMORY_LIMIT:
+        {
+          should_exit = true;
+          context_->exit_reason_ = EXIT_REASON_PMLE;
           break;
         }
       }
-    } while (false);
-    
-    if (should_terminate_process)
-    {
-       ::TerminateProcess(context_->process_info_.hProcess, -1);
-       ::WaitForSingleObject(context_->process_info_.hProcess, 200);
-       context_->exit_code_ = -1;
-       
     }
-    
-    if (should_terminate_process || should_exit)
+
+    if (should_exit)
     {
+      
+      ::CloseHandle(context_->job_);
+      context_->job_ = NULL;
+      ::WaitForSingleObject(context_->process_info_.hProcess, -1);
+      {
+        context_->time_usage_ = ::GetTickCount() - start_time;
+        FILETIME ct, et, kt, ut;
+        ::GetProcessTimes(context_->process_info_.hProcess, &ct, &et, &kt, &ut);
+        context_->time_usage_user_ = FileTimeToQuadWord(&ut) / 10000;
+        context_->time_usage_kernel_ = FileTimeToQuadWord(&kt) / 10000;
+      }
       DWORD code = -1;
       if (GetExitCodeProcess(context_->process_info_.hProcess, &code))
       {
@@ -284,14 +432,15 @@ unsigned      Process::Run()
       }
       else
       {
-        context_->exit_code_ = -1;
+        context_->exit_code_ = -331012005;
       }
       break;
     }
   }
-
+  
   base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
     base::Bind(&Process::OnThreadExit, weakptr_factory_.GetWeakPtr()));
+  
   return 0;
 }
 
@@ -307,15 +456,25 @@ bool Process::Start()
   
   if (cmdline.empty()) return false;
   
-  
   context_ = new ProcessContext();
   if (!context_->InitContext(process_option_)) return false;
   
   std::list<std::function<void ()> > clean_resource;
   clean_resource.push_front([&](){context_ = NULL;});
 
-  if (CreateProcess(NULL, (wchar_t*)cmdline.c_str(),
-                    NULL, NULL, TRUE, CREATE_SUSPENDED, NULL, NULL, &context_->si_, &context_->process_info_) == 0)
+  if (CreateProcess(NULL,
+                    (wchar_t*)cmdline.c_str(),
+                    NULL,
+                    NULL,
+                    // Handle inherit, because we will redirect stdin, stdout, stderr
+                    TRUE,
+                    // suspend
+                    // Remove the child process from the job current process associated with if necessary
+                    CREATE_SUSPENDED | CREATE_BREAKAWAY_FROM_JOB,
+                    NULL, 
+                    NULL,
+                    &context_->si_,
+                    &context_->process_info_) == 0)
   {
     for (auto& it: clean_resource) it();
     return false;
@@ -351,6 +510,12 @@ bool Process::Start()
     return false;
   }
   
+  if (process_option_.job_time_limit_ > 0)
+  {
+    base::ThreadPool::PostDelayedTask(base::ThreadPool::UI, FROM_HERE,
+      base::Bind(&Process::OnProcessTimeOut, weakptr_factory_.GetWeakPtr()),
+      base::TimeDelta::FromMilliseconds(process_option_.job_time_limit_));
+  }
   process_status_ = PROCESS_STATUS_RUNNING;
   
   return true;
@@ -399,6 +564,23 @@ void Process::OnProcessOutputImpl(bool is_std_out, const std::string& buffer)
   host_->OnOutput(is_std_out, buffer.c_str(), buffer.size());
 }
 
+void Process::OnProcessTimeOut(base::WeakPtr<Process> p)
+{
+  if (Process* pThis = p.get())
+  {
+    pThis->OnProcessTimeOutImpl();
+  }
+}
+
+void Process::OnProcessTimeOutImpl()
+{
+  if (process_status_ == PROCESS_STATUS_RUNNING)
+  {
+    PostQueuedCompletionStatus(
+      context_->job_cp_.CompletionPort, 0, kTimeOutKey, NULL);
+  }
+}
+
 bool Process::Stop()
 {
   DCHECK_CURRENTLY_ON(base::ThreadPool::UI);
@@ -412,7 +594,8 @@ bool Process::Stop()
     return false;
   }
   
-  PostQueuedCompletionStatus(context_->job_cp_.CompletionPort, 0xffffffff, NULL, NULL);
+  PostQueuedCompletionStatus(
+    context_->job_cp_.CompletionPort, 0, kForceStopKey, NULL);
   DWORD result = ::WaitForMultipleObjects(1, &thread_handle_, FALSE, 3000);
   
   if (result == WAIT_TIMEOUT)

@@ -13,7 +13,6 @@ virtual int32_t handle_message(int32_t handle, const char* msg, int32_t length)
   cerr << "begin message" << endl;
   cerr << msg << endl;
   cerr << "end message" << endl;
-  
   return 0;
 }
 };
@@ -28,7 +27,12 @@ struct ProcessTest : public process::ProcessHost
 {
   void OnStop(process::ProcessContext* context)
   {
-    cerr << "process exit " << context->exit_code_ << endl;
+    cerr << "process exit " << endl;
+    cerr << "exit reason " << context->exit_reason_ <<endl;
+    cerr << "exit code " << context->exit_code_ << endl;
+    cerr << "output size " << context->output_size_ << endl;
+    cerr << "time usage " << context->time_usage_ << endl;
+    cerr << "time usage user " << context->time_usage_user_ << endl;
     p = NULL;
     delete this;
   }
@@ -43,7 +47,8 @@ struct ProcessTest : public process::ProcessHost
     p->GetProcessOption().image_path_ = L"D:\\Projects\\a.exe";
     p->GetProcessOption().redirect_std_inout_ = true;
     p->GetProcessOption().treat_err_as_out_ = false;
-    
+    p->GetProcessOption().job_time_limit_ = 1000;
+    //p->GetProcessOption().job_memory_limit_ = 100*1024*1024;
     p->Start();
   }
   
