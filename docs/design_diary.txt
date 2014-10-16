@@ -1,0 +1,100 @@
+*******************************************************************************
+Oct 16, 2014
+
+Changes and new ideas:
+I make a brief component list in the last design. In the design, there are two
+type of processes "Host" and "Worker", they connect to each other. A job contains
+three type of process "H process", "W process", "R process". They form a "MapReduce"
+computer framework. There two type of entities on our virtual network (overlapped
+network), it is not a good design.
+
+We have only one type of entity on the virtual network, which is called a 
+DPE-Service. DPE-Services connet with each other and form a virtual network.
+When a user wants to start a compute job, he sends requets to available DPE-Serices.
+When a DPE-Service receive the request, it accepts the request and allocates a compute
+resource and send the address of the resource back to the request DPE-Service.
+Now, there are several compute resources on the network and they form a compute
+network. When the job finishes, the compute network dies. We can not only support
+"Compute Resource", but also other resources. A resource is owned by a DPE-Service.
+A resource is used by other DPE-Service. A resource has its own security management.
+The owner of a resource and the resource may be on different computers.
+
+Overrall speaking, DPE-Service looks like a virtual computer, and the computers
+form a network. A computer creates and shares its resources. Compute is one of
+the resources.
+
+Does the relationship between DPE-service and a physics computer have a one-to-one
+map? No. DPE-Service has two type of work mode. The first is a computer will own
+at most a DPE-Serivce. The first is a computer can own two or more DPE-Service.
+It does not matter. The basic node of our network is DPE-Service, we do not care
+wheter two DPE-Services are on the same computer. But when we allocate resource,
+we will avoid from allocating two of the same resource on the same computer.
+
+Virtual Network:
+A DPE-Service have a service which receive request from other DPE-Service and send
+the reponse back(REQ-REP mode). However, they are the same as HTTP-Services except
+that they can discover each other on LAN. I do want to work on the problem anymore.
+Leave it in the future.
+
+What we have is a virtual network with resource sharing.
+
+Process Model (Details):
+As I mentioned above, we have a process called DPE-Service. It server for other
+DPE-Service. It is controlled by zero, one, two or more DPE-Client. A DPE-Client
+may be a GUI-Application, a AcviteX Control, a NP Control, a Script. If a DPE-Service
+works in a one-to-on map mode, we say the DPE-Client is the owner of the DPE-Service.
+Otherwise, it is shared by the DPE-Clients and can work with zero DPE-Client.
+
+What's the IPC pattern between DPE-Service and DPE-Client?
+I think REQ-REP mode with nodifications is enough.
+
+Network Model (Details):
+A computer may be on different network. So DPE-Service can provide its service
+on different network. We can config it (by configuration files) or control it
+(by DPE-Client), so it will work on the network we desire.
+
+
+
+*******************************************************************************
+Sep 05, 2014
+
+
+Brief Component List:
+====================
+
+Host:
+* Discover workers from LAN.
+* Discover workers from server. 
+* Add workers manual.
+* Comunnicate with Worker
+* Maintain the H process and R process.
+* Maintain the worker list. (View Workers, Network Quality, Worker ability(memory limit, process count limitation), Worker status(Memory usage, CPU usage, process count))
+* Distribute task effectively, and manage them. Reliable.
+* Receive tasks from H process and distribute them to W process. (H process -> Host -> Worker -> W process)
+* Receive result from W process and send them to R process. (W process -> Worker -> Host -> R process)
+
+Worker:
+* Announce it is joining or leaving the LAN.
+* Register it on the server.
+* Communicate with Host.
+* Maintain the W process.
+* Receive tasks from Worker and pass them to W process.
+* Receive result from W process and send them to Host.
+
+H process:
+* Generate tasks and send to Host
+
+W process:
+* Compute and send result to Worker
+
+R process:
+* Receive results from Host and combine them.
+
+Other:
+======
+
+* Main language is C++11. It is possible to use python, lua, php, javascript.
+* Basic network libary: ZMQ
+* Worker will protect the W process. (sandbox)
+* Trust mechanism between Host and Worker. (It is possible that the worker will receive a virus from Host).
+* I do not when to release the first version because I am very lazy.
