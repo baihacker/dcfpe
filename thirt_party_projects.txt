@@ -1,3 +1,0 @@
-chromium:37.0.2062.99,https://src.chromium.org/chrome/releases/37.0.2062.99
-gyp:revision:1977,http://gyp.googlecode.com/svn/trunk
-wtl:8.1-12085
