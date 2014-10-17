@@ -17,17 +17,5 @@
           '<(DEPTH)\\third_party\\chromium\\base\\base.gyp:base',
         ],
     },
-    {
-      'target_name': 'process_proxy',
-      'type': 'executable',
-      'variables': {
-        'use_zmq': 1,
-      },
-      'sources':['process_proxy\\process_proxy.cc'],
-      'dependencies':[
-          '<(DEPTH)\\dpe_base\\dpe_base.gyp:dpe_base',
-          '<(DEPTH)\\third_party\\chromium\\base\\base.gyp:base',
-        ],
-    },
   ]
 }

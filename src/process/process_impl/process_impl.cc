@@ -1,7 +1,8 @@
 #include "process/process.h"
 
 #include <process.h>
-
+#include <iostream>
+using namespace std;
 namespace process{
 
 static ULONG_PTR kJobCompleteKey = 0;
@@ -12,9 +13,12 @@ static ULONG_PTR kForceStopKey = 4;
 static ULONG_PTR kTimeOutKey = 5;
 
 ProcessOption::ProcessOption() :
+  inherit_env_var_(true),
   redirect_std_inout_(false),
   treat_err_as_out_(true),
   create_sub_process_(true),
+  leave_current_job_(true),
+  allow_sub_process_breakaway_job_(false),
   output_buffer_size_(0),
   job_time_limit_(0),
   job_memory_limit_(0),
@@ -55,7 +59,8 @@ bool ProcessContext::InitContext(ProcessOption& option)
   {
     /*
       1. The sub process created by the destination process will be added into the job since
-          we do not set the JOB_OBJECT_LIMIT_BREAKAWAY_OK flag.
+          we if allow_sub_process_breakaway_job_ = true. Otherwise, we give the permission
+          of creating subprocess not in the job to the created process.
     
       2. The sub process will be killed if current process does not exist. (job handled is closed automatic)
       3. Do not display unhandled exception dialogue when exception happens.
@@ -64,6 +69,10 @@ bool ProcessContext::InitContext(ProcessOption& option)
     jeli.BasicLimitInformation.LimitFlags =
                  JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE |
                  JOB_OBJECT_LIMIT_DIE_ON_UNHANDLED_EXCEPTION;
+    if (option.allow_sub_process_breakaway_job_)
+    {
+      jeli.BasicLimitInformation.LimitFlags |= JOB_OBJECT_LIMIT_BREAKAWAY_OK;
+    }
     if (option.job_time_limit_ > 0)
     {
       jeli.BasicLimitInformation.LimitFlags |= JOB_OBJECT_LIMIT_JOB_TIME;
@@ -229,7 +238,7 @@ Process::~Process()
   ::CloseHandle(start_event_);
 }
 
-std::wstring  Process::MakeCmdLine()
+std::wstring  Process::MakeCmdLine() const
 {
   if (process_option_.image_path_.empty()) return L"";
   
@@ -246,6 +255,108 @@ std::wstring  Process::MakeCmdLine()
   }
   
   return cmd;
+}
+
+std::vector<std::pair<std::wstring, std::wstring> >
+Process::CurrentEnvironmentVariable() const
+{
+  std::vector<std::pair<std::wstring, std::wstring> > ret;
+  wchar_t* v = ::GetEnvironmentStringsW();
+  if (!v) return ret;
+  
+  for (wchar_t* i = v; *i; ++i)
+  {
+    int32_t len = wcslen(i);
+    int eq = 0;
+    while (eq < len && i[eq] != '=') ++eq;
+    if (eq < len)
+    {
+      ret.push_back({std::wstring(i, i+eq), std::wstring(i+eq+1, i+len)});
+    }
+    i += len;
+  }
+  FreeEnvironmentStrings(v);
+  return ret;
+}
+
+std::wstring Process::MakeEnvironmentVariable()
+{
+  if (!process_option_.inherit_env_var_ &&
+      process_option_.env_var_keep_.empty() &&
+      process_option_.env_var_merge_.empty() &&
+      process_option_.env_var_replace_.empty())
+  {
+    return L"";
+  }
+  
+  decltype(process_option_.env_var_keep_) temp;
+
+  if (process_option_.inherit_env_var_)
+  {
+    auto ce = CurrentEnvironmentVariable();
+    for (auto& iter: ce) temp.push_back(iter);
+  }
+  
+  for (auto& iter: process_option_.env_var_keep_)
+  {
+    bool found = false;
+    for (auto& it: temp)
+    if (base::StringEqualCaseInsensitive(iter.first, it.first))
+    {
+      found = true;
+      break;
+    }
+    if (!found)
+    {
+      temp.push_back(iter);
+    }
+  }
+  
+  for (auto& iter: process_option_.env_var_merge_)
+  {
+    bool found = false;
+    for (auto& it: temp)
+    if (base::StringEqualCaseInsensitive(iter.first, it.first))
+    {
+      it.second = iter.second + it.second;
+      found = true;
+      break;
+    }
+    if (!found)
+    {
+      temp.push_back(iter);
+    }
+  }
+
+  for (auto& iter: process_option_.env_var_replace_)
+  {
+    bool found = false;
+    for (auto& it: temp)
+    if (base::StringEqualCaseInsensitive(iter.first, it.first))
+    {
+      it.second = iter.second;
+      found = true;
+      break;
+    }
+    if (!found)
+    {
+      temp.push_back(iter);
+    }
+  }
+
+  std::wstring ret;
+  for (auto& iter: temp)
+  {
+    if (!ret.empty())
+    {
+      ret.append(1, L'\0');
+    }
+    ret.append(iter.first.begin(), iter.first.end());
+    ret.append(1, L'=');
+    ret.append(iter.second.begin(), iter.second.end());
+  }
+  ret.append(2, L'\0');
+  return ret;
 }
 
 unsigned __stdcall Process::ThreadMain(void * arg)
@@ -462,17 +573,25 @@ bool Process::Start()
   std::list<std::function<void ()> > clean_resource;
   clean_resource.push_front([&](){context_ = NULL;});
 
+  DWORD cf = CREATE_SUSPENDED;
+  if (process_option_.leave_current_job_)
+  {
+    // Remove the child process from the job current process associated with if necessary.
+    // We always succeed because of the security policy. Unfortunately, it may fail.
+    cf |= CREATE_BREAKAWAY_FROM_JOB;
+  }
+
+  std::wstring ev = MakeEnvironmentVariable();
+  std::wstring cd = process_option_.current_directory_;
   if (CreateProcess(NULL,
                     (wchar_t*)cmdline.c_str(),
                     NULL,
                     NULL,
                     // Handle inherit, because we will redirect stdin, stdout, stderr
                     TRUE,
-                    // suspend
-                    // Remove the child process from the job current process associated with if necessary
-                    CREATE_SUSPENDED | CREATE_BREAKAWAY_FROM_JOB,
-                    NULL, 
-                    NULL,
+                    cf,
+                    ev.empty() ? NULL : (void*)ev.c_str(), 
+                    cd.empty() ? NULL : cd.c_str(),
                     &context_->si_,
                     &context_->process_info_) == 0)
   {

@@ -43,7 +43,31 @@
       'variables': {
         'use_zmq': 1,
       },
-      'sources':['main\\main.cc'],
+      'sources':[
+          'main\\main.cc',
+          'main\\dpe_service.h',
+          'main\\dpe_service.cc',
+          'main\\zserver.h',
+          'main\\zserver.cc',
+        ],
+      'dependencies':[
+          '<(DEPTH)\\dpe_base\\dpe_base.gyp:dpe_base',
+          '<(DEPTH)\\third_party\\chromium\\base\\base.gyp:base',
+          '<(DEPTH)\\process\\process.gyp:process',
+        ],
+      'msvs_settings': {
+      'VCLinkerTool': {
+        #'SubSystem': 'Windows',
+      },
+    },
+    },
+    {
+      'target_name': 'base_test',
+      'type': 'executable',
+      'variables': {
+        'use_zmq': 1,
+      },
+      'sources':['base_test\\base_test.cc'],
       'dependencies':[
           '<(DEPTH)\\dpe_base\\dpe_base.gyp:dpe_base',
           '<(DEPTH)\\third_party\\chromium\\base\\base.gyp:base',

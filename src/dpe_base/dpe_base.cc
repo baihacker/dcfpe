@@ -53,3 +53,27 @@ MessageCenter* zmq_message_center()
 }
 
 }
+
+namespace base
+{
+bool StringEqualCaseInsensitive(const std::wstring& x, const std::wstring& y)
+{
+  const int n = x.size();
+  const int m = y.size();
+  if (n != m) return false;
+  for (int i = 0; i < n; ++i)
+  if (tolower(x[i]) != tolower(y[i]))
+    return false;
+  return true;
+}
+bool StringEqualCaseInsensitive(const std::string& x, const std::string& y)
+{
+  const int n = x.size();
+  const int m = y.size();
+  if (n != m) return false;
+  for (int i = 0; i < n; ++i)
+  if (tolower(x[i]) != tolower(y[i]))
+    return false;
+  return true;
+}
+}

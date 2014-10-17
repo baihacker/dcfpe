@@ -17,4 +17,10 @@ DPE_BASE_EXPORT void quit_main_loop();
 DPE_BASE_EXPORT MessageCenter* zmq_message_center();
 }
 
+namespace base
+{
+DPE_BASE_EXPORT bool StringEqualCaseInsensitive(const std::wstring& x, const std::wstring& y);
+DPE_BASE_EXPORT bool StringEqualCaseInsensitive(const std::string& x, const std::string& y);
+}
+
 #endif

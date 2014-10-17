@@ -82,18 +82,5 @@
           '<(DEPTH)\\third_party\\chromium\\base\\base.gyp:base',
         ],
     },
-    {
-      'target_name': 'base_test',
-      'type': 'executable',
-      'variables': {
-        'use_zmq': 1,
-      },
-      'sources':['test\\base_test.cc'],
-      'dependencies':[
-          'dpe_base',
-          '<(DEPTH)\\third_party\\chromium\\base\\base.gyp:base',
-          '<(DEPTH)\\process\\process.gyp:process',
-        ],
-    },
   ]
 }

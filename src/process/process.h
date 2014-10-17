@@ -44,11 +44,27 @@ struct ProcessOption
   std::wstring                    argument_;
   std::vector<std::wstring>       argument_list_;
   std::wstring                    current_directory_;
-
+  
+  // environment variable
+  bool                            inherit_env_var_;
+  std::vector<std::pair<std::wstring, std::wstring> >
+                                  env_var_keep_;
+  std::vector<std::pair<std::wstring, std::wstring> >
+                                  env_var_merge_;
+  std::vector<std::pair<std::wstring, std::wstring> >
+                                  env_var_replace_;
+  // redirect
   bool                            redirect_std_inout_;
   bool                            treat_err_as_out_;
-  bool                            create_sub_process_;
   
+  // job and sub process limitation
+  bool                            leave_current_job_;
+  bool                            create_sub_process_;
+  // if true, then we can make sure that all the sub process are in the job.
+  // otherwise, it depends on the creation flag when calling CreateProcess
+  bool                            allow_sub_process_breakaway_job_;
+  
+  // general limitation
   int32_t                         output_buffer_size_;    // Byte
   int64_t                         job_time_limit_;        // ms, job time limits
   int64_t                         job_memory_limit_;      // Byte
@@ -105,7 +121,12 @@ public:
   ProcessContext* GetProcessContext();
   
 private:
-  std::wstring  MakeCmdLine();
+  std::wstring  MakeCmdLine() const;
+  std::vector<std::pair<std::wstring, std::wstring> >
+                CurrentEnvironmentVariable() const;
+  std::wstring  MakeEnvironmentVariable();
+  
+private:
   static unsigned __stdcall ThreadMain(void * arg);
   unsigned      Run();
   
