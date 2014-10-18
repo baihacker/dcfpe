@@ -70,9 +70,11 @@
         'io\\pipe.cc',
         
         # zmq adapter
+        'zmq_adapter.h',
         'zmq\\zmq_adapter.cc',
-        'zmq_adapter.h'
-        
+        'zmq\\msg_center.cc',
+        'zmq\\zmq_server.cc',
+        'zmq\\zmq_client.cc',
         
         # main
         'dpe_base.h',

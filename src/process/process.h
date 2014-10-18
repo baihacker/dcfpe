@@ -60,7 +60,7 @@ struct ProcessOption
   // job and sub process limitation
   bool                            leave_current_job_;
   bool                            create_sub_process_;
-  // if true, then we can make sure that all the sub process are in the job.
+  // if false, then we can make sure that all the sub process are in the job.
   // otherwise, it depends on the creation flag when calling CreateProcess
   bool                            allow_sub_process_breakaway_job_;
   

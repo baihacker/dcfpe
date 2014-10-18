@@ -15,7 +15,9 @@ void quit_main_loop()
     base::Bind(will_quit));
 }
 
-static MessageCenter* zmq = NULL;
+static MessageCenter* msg_center_impl = NULL;
+static ZMQServer* zmq_server_impl = NULL;
+static ZMQClient* zmq_client_impl = NULL;
 
 int32_t dpe_base_main(void (*logic_main)())
 {
@@ -28,8 +30,14 @@ int32_t dpe_base_main(void (*logic_main)())
   PLOG(INFO) << "InitializeThreadPool";
   base::ThreadPool::InitializeThreadPool();
   
-  zmq = new MessageCenter();
-  zmq->Start();
+  msg_center_impl = new MessageCenter();
+  msg_center_impl->Start();
+  
+  zmq_server_impl = new ZMQServer();
+  zmq_server_impl->Start();
+  
+  zmq_client_impl = new ZMQClient();
+  zmq_client_impl->Start();
   
   base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
         base::Bind(logic_main));
@@ -37,8 +45,14 @@ int32_t dpe_base_main(void (*logic_main)())
   PLOG(INFO) << "RunMainLoop";
   base::ThreadPool::RunMainLoop();
   
-  delete zmq;
-  zmq = NULL;
+  delete zmq_client_impl;
+  zmq_client_impl = NULL;
+  
+  delete zmq_server_impl;
+  zmq_server_impl = NULL;
+  
+  delete msg_center_impl;
+  msg_center_impl = NULL;
   
   PLOG(INFO) << "DeinitializeThreadPool";
   base::ThreadPool::DeinitializeThreadPool();
@@ -49,7 +63,19 @@ int32_t dpe_base_main(void (*logic_main)())
 MessageCenter* zmq_message_center()
 {
   DCHECK_CURRENTLY_ON(base::ThreadPool::UI);
-  return zmq;
+  return msg_center_impl;
+}
+
+ZMQServer* zmq_server()
+{
+  DCHECK_CURRENTLY_ON(base::ThreadPool::UI);
+  return zmq_server_impl;
+}
+
+ZMQClient* zmq_client()
+{
+  DCHECK_CURRENTLY_ON(base::ThreadPool::UI);
+  return zmq_client_impl;
 }
 
 }

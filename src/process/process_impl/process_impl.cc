@@ -1,8 +1,7 @@
 #include "process/process.h"
 
 #include <process.h>
-#include <iostream>
-using namespace std;
+
 namespace process{
 
 static ULONG_PTR kJobCompleteKey = 0;
@@ -288,7 +287,7 @@ std::wstring Process::MakeEnvironmentVariable()
   {
     return L"";
   }
-  
+
   decltype(process_option_.env_var_keep_) temp;
 
   if (process_option_.inherit_env_var_)
