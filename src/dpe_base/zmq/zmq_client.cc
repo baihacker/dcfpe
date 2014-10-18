@@ -188,7 +188,7 @@ bool ZMQClient::SendRequest(const std::string& address, const char* buffer, int3
     req.callback_ = callback;
     req.address_ = address;
     req.request_time_ = GetTickCount();
-    req.time_out_ = timeout >= 0 ? timeout : 0;
+    req.time_out_ = timeout > 0 ? timeout : 0;
     context_.push_back(req);
   }
   for (int32_t id = 0; id < 3; ++id)

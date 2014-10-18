@@ -280,7 +280,7 @@ Process::CurrentEnvironmentVariable() const
 
 std::wstring Process::MakeEnvironmentVariable()
 {
-  if (!process_option_.inherit_env_var_ &&
+  if (process_option_.inherit_env_var_ &&
       process_option_.env_var_keep_.empty() &&
       process_option_.env_var_merge_.empty() &&
       process_option_.env_var_replace_.empty())
@@ -293,7 +293,7 @@ std::wstring Process::MakeEnvironmentVariable()
   if (process_option_.inherit_env_var_)
   {
     auto ce = CurrentEnvironmentVariable();
-    for (auto& iter: ce) temp.push_back(iter);
+    for (auto& iter: ce) if (!iter.first.empty()) temp.push_back(iter);
   }
   
   for (auto& iter: process_option_.env_var_keep_)
@@ -582,6 +582,11 @@ bool Process::Start()
 
   std::wstring ev = MakeEnvironmentVariable();
   std::wstring cd = process_option_.current_directory_;
+
+  if (!ev.empty())
+  {
+	  cf |= CREATE_UNICODE_ENVIRONMENT;
+  }
   if (CreateProcess(NULL,
                     (wchar_t*)cmdline.c_str(),
                     NULL,

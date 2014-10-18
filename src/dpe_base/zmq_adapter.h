@@ -190,7 +190,6 @@ private:
 };
 
 // zmq client
-
 struct ZMQResponse : public base::RefCounted<ZMQResponse>
 {
   enum

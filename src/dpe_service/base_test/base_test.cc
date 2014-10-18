@@ -10,6 +10,7 @@ struct MessageHandler : public base::MessageHandler
 {
 virtual int32_t handle_message(int32_t handle, const std::string& data)
 {
+  cerr << "time" << clock() << endl;
   cerr << "begin message" << endl;
   cerr << data << endl;
   cerr << "end message" << endl;
@@ -21,6 +22,7 @@ struct ORZServer : public base::RequestHandler
 {
 virtual std::string handle_request(base::ServerContext& context)
 {
+  cerr << "time" << clock() << endl;
   cerr << "begin request" << endl;
   cerr << context.data_ << endl;
   cerr << "end request" << endl;
@@ -31,6 +33,7 @@ virtual std::string handle_request(base::ServerContext& context)
 
 void handle_response(scoped_refptr<base::ZMQResponse> rep)
 {
+  cerr << "time" << clock() << endl;
   cerr << "begin response" << endl;
   cerr << rep->data_ << endl;
   cerr << "end response" << endl;
@@ -67,9 +70,9 @@ struct ProcessTest : public process::ProcessHost
     p->GetProcessOption().image_path_ = L"D:\\Projects\\a.exe";
     p->GetProcessOption().redirect_std_inout_ = true;
     p->GetProcessOption().treat_err_as_out_ = false;
-    p->GetProcessOption().job_time_limit_ = 1000;
+    p->GetProcessOption().job_time_limit_ = 5000;
     //p->GetProcessOption().job_memory_limit_ = 100*1024*1024;
-    p->Start();
+    cerr << p->Start() << endl;
   }
   
   scoped_refptr<process::Process> p;
