@@ -4,6 +4,9 @@
 #include <process.h>
 #include "dpe_base/thread_pool.h"
 
+#include "third_party/zmq/include/zmq.h"
+#include "third_party/zmq/include/zmq_utils.h"
+
 namespace base
 {
 MessageCenter::MessageCenter() :
@@ -378,14 +381,22 @@ unsigned    MessageCenter::Run()
     
     if (rc > 0)
     {
-      for (int32_t i = 0; i < top; ++i)
+      if (items[0].revents)
       {
-        ProcessEvent(items+i);
-        if (quit_flag_)
-        {
-          break;
-        }
+        ProcessCtrlMessage();
       }
+
+      if (quit_flag_)
+      {
+        break;
+      }
+      
+      std::vector<void*> signal_sockets;
+      for (int32_t i = 1; i < top; ++i) if (items[i].revents)
+      {
+        signal_sockets.push_back(items[i].socket);
+      }
+      ProcessEvent(signal_sockets);
     }
     else if (rc < 0)
     {
@@ -400,48 +411,52 @@ unsigned    MessageCenter::Run()
   return 0;
 }
 
-void MessageCenter::ProcessEvent(zmq_pollitem_t* item)
+void MessageCenter::ProcessCtrlMessage()
 {
-  if (!item) return;
-  if (!item->revents) return;
-  
   zmq_msg_t msg;
   zmq_msg_init(&msg);
-  
+
   do
   {
-    if (zmq_recvmsg(item->socket, &msg, ZMQ_DONTWAIT) <= 0) break;
-
+    if (zmq_recvmsg(zmq_ctrl_sub_, &msg, ZMQ_DONTWAIT) <= 0) break;
+    
     const char* buffer = static_cast<const char*>(zmq_msg_data(&msg));
     const int32_t size = static_cast<int32_t>(zmq_msg_size(&msg));
-    std::string data(buffer, buffer+size);
-
-    if (item->socket == zmq_ctrl_sub_)
+    if (size == sizeof(int32_t))
     {
-      HandleCtrlMessage(data);
-      if (quit_flag_) break;
-    }
-    else
-    {
-      base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
-          base::Bind(&MessageCenter::HandleMessage, weakptr_factory_.GetWeakPtr(),
-          reinterpret_cast<int32_t>(item->socket), data));
+      int32_t cmd = *(int32_t*)buffer;
+       switch (cmd)
+       {
+         case CMD_QUIT: quit_flag_ = 1; break;
+         case CMD_HELLO: ::SetEvent(hello_event_); break;
+       }
     }
   } while (false);
-
+  
   zmq_msg_close(&msg);
 }
 
-void MessageCenter::HandleCtrlMessage(const std::string& data)
+void MessageCenter::ProcessEvent(const std::vector<void*>& signal_sockets)
 {
-  if (data.size() == sizeof(int32_t))
+  for (auto it: signal_sockets)
   {
-    int32_t cmd = *(int32_t*)data.c_str();
-    switch (cmd)
+    zmq_msg_t msg;
+    zmq_msg_init(&msg);
+    
+    do
     {
-      case CMD_QUIT: quit_flag_ = 1; break;
-      case CMD_HELLO: ::SetEvent(hello_event_); break;
-    }
+      if (zmq_recvmsg(it, &msg, ZMQ_DONTWAIT) <= 0) break;
+
+      const char* buffer = static_cast<const char*>(zmq_msg_data(&msg));
+      const int32_t size = static_cast<int32_t>(zmq_msg_size(&msg));
+      std::string data(buffer, buffer+size);
+
+      base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
+          base::Bind(&MessageCenter::HandleMessage, weakptr_factory_.GetWeakPtr(),
+          reinterpret_cast<int32_t>(it), data));
+    } while (false);
+
+    zmq_msg_close(&msg);
   }
 }
 

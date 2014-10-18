@@ -85,8 +85,8 @@ private:
 private:
   static unsigned __stdcall ThreadMain(void * arg);
   unsigned      Run();
-  void          ProcessEvent(zmq_pollitem_t* item);
-  void          HandleCtrlMessage(const std::string& data);
+  void          ProcessCtrlMessage();
+  void          ProcessEvent(const std::vector<void*>& signal_sockets);
   static  void  HandleMessage(base::WeakPtr<MessageCenter> center, int32_t socket, const std::string& data);
   void          HandleMessageImpl(int32_t socket, const std::string& data);
 

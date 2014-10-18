@@ -21,7 +21,7 @@ private:
   void StopImpl();
   
 private:
-  int32_t handle_message(int32_t handle, const char* msg, int32_t length) override;
+  int32_t handle_message(int32_t handle, const std::string& data) override;
 private:
   std::string ipc_sub_address_;
   int32_t     ipc_sub_handle_;

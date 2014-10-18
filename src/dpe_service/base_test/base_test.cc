@@ -8,16 +8,36 @@
 using namespace std;
 struct MessageHandler : public base::MessageHandler
 {
-virtual int32_t handle_message(int32_t handle, const char* msg, int32_t length)
+virtual int32_t handle_message(int32_t handle, const std::string& data)
 {
   cerr << "begin message" << endl;
-  cerr << msg << endl;
+  cerr << data << endl;
   cerr << "end message" << endl;
   return 0;
 }
 };
 
-MessageHandler g_msg_handler;
+struct ORZServer : public base::RequestHandler
+{
+virtual std::string handle_request(base::ServerContext& context)
+{
+  cerr << "begin request" << endl;
+  cerr << context.data_ << endl;
+  cerr << "end request" << endl;
+  
+  return "I received";
+}
+};
+
+void handle_response(scoped_refptr<base::ZMQResponse> rep)
+{
+  cerr << "begin response" << endl;
+  cerr << rep->data_ << endl;
+  cerr << "end response" << endl;
+}
+
+MessageHandler  g_msg_handler;
+ORZServer       g_server;
 void HelloFile()
 {
   cerr << "hello FILE" << endl;
@@ -65,8 +85,8 @@ void HelloUI()
         base::Bind(HelloFile));
 
   base::MessageCenter* center = base::zmq_message_center();
-  int32_t p = center->RegisterChannel("tcp://127.1.1.1:1234", true, true);
-  int32_t q = center->RegisterChannel("tcp://127.1.1.1:1234", false, false);
+  int32_t p = center->RegisterChannel(base::CHANNEL_TYPE_PUB, "tcp://127.1.1.1:1234", true);
+  int32_t q = center->RegisterChannel(base::CHANNEL_TYPE_SUB, "tcp://127.1.1.1:1234", false);
 
   Sleep(30);
   for (int i = 0; i < 3; ++i)
@@ -74,6 +94,14 @@ void HelloUI()
 
   test = new ProcessTest();
   test->RunTest();
+  
+  auto* s = base::zmq_server();
+  s->StartServer("tcp://127.1.1.1:12345", &g_server);
+  Sleep(30);
+  
+  auto* c = base::zmq_client();
+  c->SendRequest("tcp://127.1.1.1:12345", "hello server",
+    13, base::Bind(&handle_response), 0);
 }
 
 int main()

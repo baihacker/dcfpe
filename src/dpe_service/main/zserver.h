@@ -20,7 +20,7 @@ public:
   bool Start(int32_t ip);
   bool Stop();
 private:
-  int32_t handle_message(int32_t handle, const char* msg, int32_t length) override;
+  int32_t handle_message(int32_t handle, const std::string& data) override;
 public:
   // remote message handling: bind and receive and send
   int32_t     server_state_;

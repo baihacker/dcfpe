@@ -46,7 +46,7 @@ void DPEService::StopImpl()
   base::quit_main_loop();
 }
 
-int32_t DPEService::handle_message(int32_t handle, const char* msg, int32_t length)
+int32_t DPEService::handle_message(int32_t handle, const std::string& data)
 {
   return 0;
 }

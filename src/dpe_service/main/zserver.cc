@@ -22,7 +22,7 @@ bool ZServer::Start(const std::string& address)
   if (server_state_ == ZSERVER_RUNNING) return address == server_address_;
   base::MessageCenter* mc = base::zmq_message_center();
 
-  server_handle_ = mc->RegisterChannel(address, false, true);
+  server_handle_ = mc->RegisterChannel(base::CHANNEL_TYPE_SUB, address, true);
 
   if (server_handle_ == base::INVALID_CHANNEL_ID) return false;
   mc->AddMessageHandler(this);
@@ -36,7 +36,7 @@ bool ZServer::Start(const std::string& address)
 bool ZServer::Start(int32_t ip)
 {
   base::MessageCenter* mc = base::zmq_message_center();
-  return Start(mc->GetAddress(ip, kServerPort));
+  return Start(base::AddressHelper::MakeZMQTCPAddress(ip, kServerPort));
 }
 
 bool ZServer::Stop()
@@ -80,7 +80,7 @@ response =
 }
 
 */
-int32_t ZServer::handle_message(int32_t handle, const char* msg, int32_t length)
+int32_t ZServer::handle_message(int32_t handle, const std::string& data)
 {
   if (handle != server_handle_) return 0;
 
