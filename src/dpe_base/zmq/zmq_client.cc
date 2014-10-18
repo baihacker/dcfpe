@@ -275,7 +275,6 @@ unsigned ZMQClient::Run()
     
     if (rc >= 0)
     {
-
       if (items[0].revents)
       {
         ProcessCtrlMessage();
@@ -334,8 +333,27 @@ void ZMQClient::ProcessCtrlMessage()
 
 void ZMQClient::ProcessEvent(const std::vector<void*>& signal_sockets)
 {
-  std::set<void*> sockets;
-  for (auto it: signal_sockets) sockets.insert(it);
+  std::map<void*, std::string> sockets;
+  for (auto it: signal_sockets)
+  {
+    std::string data;
+
+    zmq_msg_t msg;
+    zmq_msg_init(&msg);
+
+    do
+    {
+      if (zmq_recvmsg(it, &msg, ZMQ_DONTWAIT) <= 0) break;
+      const char* buffer = static_cast<const char*>(zmq_msg_data(&msg));
+      const int32_t size = static_cast<int32_t>(zmq_msg_size(&msg));
+      std::string(buffer, buffer+size).swap(data);
+    } while (false);
+
+    zmq_msg_close(&msg);
+
+    sockets[it] = std::move(data);
+  }
+
   int32_t curr_time = GetTickCount();
   std::vector<std::pair<ZMQCallBack, scoped_refptr<ZMQResponse> > > responses;
   {
@@ -345,32 +363,10 @@ void ZMQClient::ProcessEvent(const std::vector<void*>& signal_sockets)
       // case 1: have message
       if (sockets.count(iter->zmq_socket_))
       {
-        int32_t ec = ZMQResponse::ZMQ_REP_ERROR_UNKNOWN;
-        std::string data;
-
-        zmq_msg_t msg;
-        zmq_msg_init(&msg);
-        
-        do
-        {
-          if (zmq_recvmsg(iter->zmq_socket_, &msg, ZMQ_DONTWAIT) <= 0)
-          {
-            ec = ZMQResponse::ZMQ_REP_ERROR;
-            break;
-          }
-
-          const char* buffer = static_cast<const char*>(zmq_msg_data(&msg));
-          int32_t size = static_cast<int32_t>(zmq_msg_size(&msg));
-          std::string(buffer, size).swap(data);
-
-        } while (false);
-          
-        zmq_msg_close(&msg);
-
         zmq_close(iter->zmq_socket_);
 
         scoped_refptr<ZMQResponse> rep = new ZMQResponse();
-        rep->data_ = std::move(data);
+        rep->data_ = std::move(sockets[iter->zmq_socket_]);
         responses.push_back({iter->callback_, rep});
 
         iter = context_.erase(iter);

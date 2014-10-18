@@ -9,12 +9,10 @@
 
 #include "dpe_base/chromium_base.h"
 
-#include "third_party/zmq/include/zmq.h"
-#include "third_party/zmq/include/zmq_utils.h"
 
 namespace base
 {
-
+// Address
 #define MAKE_IP(a, b, c, d) (((a) << 24) | ((b) << 16) | ((c) << 8) | (d))
 const int32_t kMinPort = 20000;
 const int32_t kMaxPort = 40000;
@@ -32,11 +30,6 @@ private:
 
 enum
 {
-  INVALID_CHANNEL_ID = -1
-};
-
-enum
-{
   STATUS_PREPARE,
   STATUS_RUNNING,
   STATUS_STOPPED,
@@ -46,6 +39,8 @@ enum
   CMD_HELLO = 0x00,
   CMD_QUIT = 0x01,
 };
+
+// message center
 class MessageHandler
 {
 public:
@@ -55,9 +50,15 @@ virtual int32_t handle_message(int32_t handle, const std::string& data) = 0;
 
 enum
 {
+  INVALID_CHANNEL_ID = -1
+};
+
+enum
+{
   CHANNEL_TYPE_PUB,
   CHANNEL_TYPE_SUB,
 };
+
 class MessageCenter
 {
 public:
@@ -117,6 +118,7 @@ private:
   base::WeakPtrFactory<MessageCenter> weakptr_factory_;
 };
 
+// zmq server
 enum
 {
     STATE_LISTENING,
@@ -186,6 +188,8 @@ private:
   std::mutex                    context_mutex_;
   base::WeakPtrFactory<ZMQServer> weakptr_factory_;
 };
+
+// zmq client
 
 struct ZMQResponse : public base::RefCounted<ZMQResponse>
 {

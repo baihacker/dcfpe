@@ -190,6 +190,7 @@ bool ZMQServer::Stop()
 bool ZMQServer::StartServer(const std::string& address, RequestHandler* handler)
 {
   DCHECK_CURRENTLY_ON(base::ThreadPool::UI);
+  
   if (handler == NULL) return false;
 
   {
@@ -222,6 +223,7 @@ bool ZMQServer::StartServer(const std::string& address, RequestHandler* handler)
 bool ZMQServer::StopServer(RequestHandler* handler)
 {
   DCHECK_CURRENTLY_ON(base::ThreadPool::UI);
+  
   if (handler == NULL) return false;
   {
     std::lock_guard<std::mutex> lock(context_mutex_);
@@ -299,7 +301,7 @@ unsigned ZMQServer::Run()
       std::vector<void*> signal_sockets;
       for (int32_t i = 1; i < top; ++i) if (items[i].revents)
       {
-          signal_sockets.push_back(items[i].socket);
+        signal_sockets.push_back(items[i].socket);
       }
       ProcessEvent(signal_sockets);
     }
