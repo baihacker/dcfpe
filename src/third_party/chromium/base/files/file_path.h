@@ -163,11 +163,16 @@ class BASE_EXPORT FilePath {
   static const CharType kExtensionSeparator;
 
   FilePath();
+  
   FilePath(const FilePath& that);
+  FilePath(FilePath&& that);
+  
   explicit FilePath(const StringType& path);
   ~FilePath();
+  
   FilePath& operator=(const FilePath& that);
-
+  FilePath& FilePath::operator=(FilePath&& that);
+  
   bool operator==(const FilePath& that) const;
 
   bool operator!=(const FilePath& that) const;

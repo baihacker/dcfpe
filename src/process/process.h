@@ -39,15 +39,15 @@ struct ProcessOption
 {
   ProcessOption();
   ~ProcessOption();
-  std::wstring                    image_path_;
+  base::FilePath                    image_path_;
   // cmd = "image_path_" "argument_list_[0]" "argument_list_[1]"
   //      argument_list_r_[0] argument_list_r_[1]...
-  std::vector<std::wstring>       argument_list_;
-  std::vector<std::wstring>       argument_list_r_;
-  std::wstring                    current_directory_;
+  std::vector<NativeString>         argument_list_;
+  std::vector<NativeString>         argument_list_r_;
+  base::FilePath                    current_directory_;
   
   // environment variable
-  typedef std::vector<std::pair<std::wstring, std::wstring> > env_var_list_t;
+  typedef std::vector<std::pair<NativeString, NativeString> > env_var_list_t;
   bool                            inherit_env_var_;
   env_var_list_t                  env_var_keep_;
   env_var_list_t                  env_var_merge_;
@@ -99,7 +99,7 @@ public:
   int64_t                               time_usage_user_;
   int64_t                               time_usage_kernel_;
   
-  std::wstring                          cmd_line_;
+  NativeString                          cmd_line_;
 };
 
 class ProcessHost
@@ -107,7 +107,7 @@ class ProcessHost
 public:
   virtual ~ProcessHost(){};
   virtual void OnStop(ProcessContext* exit_code) = 0;
-  virtual void OnOutput(bool is_std_out, const char* buffer, int32_t size) = 0;
+  virtual void OnOutput(bool is_std_out, const std::string& data) = 0;
 };
 
 class Process : public base::RefCounted<Process>
@@ -123,10 +123,10 @@ public:
   ProcessContext* GetProcessContext();
   
 private:
-  std::wstring  MakeCmdLine() const;
-  std::vector<std::pair<std::wstring, std::wstring> >
+  NativeString  MakeCmdLine() const;
+  std::vector<std::pair<NativeString, NativeString> >
                 CurrentEnvironmentVariable() const;
-  std::wstring  MakeEnvironmentVariable();
+  NativeString  MakeEnvironmentVariable();
   
 private:
   static unsigned __stdcall ThreadMain(void * arg);

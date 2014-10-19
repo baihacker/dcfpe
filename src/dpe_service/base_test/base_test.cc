@@ -59,15 +59,15 @@ struct ProcessTest : public process::ProcessHost
     p = NULL;
     delete this;
   }
-  void OnOutput(bool is_std_out, const char* buffer, int32_t size)
+  void OnOutput(bool is_std_out, const std::string& data)
   {
     cerr << "process output:" << endl;
-    cerr << buffer << endl;
+    cerr << data << endl;
   }
   void RunTest()
   {
     p = new process::Process(this);
-    p->GetProcessOption().image_path_ = L"D:\\Projects\\a.exe";
+    p->GetProcessOption().image_path_ = base::FilePath(L"D:\\Projects\\a.exe");
     p->GetProcessOption().redirect_std_inout_ = true;
     p->GetProcessOption().treat_err_as_out_ = false;
     p->GetProcessOption().job_time_limit_ = 5000;

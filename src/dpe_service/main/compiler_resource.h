@@ -22,7 +22,7 @@ enum
   ARCH_X64,
 };
 
-int32_t DetectLanguage(const std::vector<std::wstring>& filepath);
+int32_t DetectLanguage(const std::vector<base::FilePath>& filepath);
 
 struct CompileJob;
 struct CompilerCallback
@@ -38,16 +38,16 @@ public:
   ~CompileJob();
 
   int32_t                     language_;
-  std::wstring                compiler_;
+  std::string                 compiler_;
   
-  std::wstring                current_directory_;
-  std::wstring                output_directory_;
-  std::vector<std::wstring>   source_files_;
-  std::wstring                output_file_;
+  base::FilePath              current_directory_;
+  base::FilePath              output_directory_;
+  std::vector<base::FilePath> source_files_;
+  base::FilePath              output_file_;
   int32_t                     optimization_option_;
 
-  std::wstring                cflags_;
-  std::wstring                lflags_;
+  NativeString                cflags_;
+  NativeString                lflags_;
 
   // about compile result
   std::string                 compiler_output_;
@@ -56,8 +56,8 @@ public:
   CompilerCallback*           callback_;
 
   // how to run the result
-  std::wstring                image_path_;
-  std::vector<std::wstring>   arguments_;
+  base::FilePath              image_path_;
+  std::vector<NativeString>   arguments_;
 };
 
 struct CompilerResource : public ResourceBase
@@ -73,12 +73,12 @@ struct CompilerResource : public ResourceBase
 
 struct CompilerConfiguration
 {
-  typedef std::vector<std::pair<std::wstring, std::wstring> > env_var_list_t;
-  std::wstring      name_;
-  std::wstring      type_;
-  std::wstring      image_dir_;
+  typedef std::vector<std::pair<NativeString, NativeString> > env_var_list_t;
+  std::string       name_;
+  std::string       type_;
+  base::FilePath    image_dir_;
   int32_t           arch_;
-  std::wstring      version_;
+  std::string       version_;
   env_var_list_t    env_var_keep_;
   env_var_list_t    env_var_merge_;
   env_var_list_t    env_var_replace_;

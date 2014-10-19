@@ -176,6 +176,8 @@ FilePath::FilePath() {
 
 FilePath::FilePath(const FilePath& that) : path_(that.path_) {
 }
+FilePath::FilePath(FilePath&& that) : path_(std::move(that.path_)) {
+}
 
 FilePath::FilePath(const StringType& path) : path_(path) {
   StringType::size_type nul_pos = path_.find(kStringTerminator);
@@ -188,6 +190,11 @@ FilePath::~FilePath() {
 
 FilePath& FilePath::operator=(const FilePath& that) {
   path_ = that.path_;
+  return *this;
+}
+
+FilePath& FilePath::operator=(FilePath&& that) {
+  path_ = std::move(that.path_);
   return *this;
 }
 

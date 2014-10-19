@@ -1605,6 +1605,53 @@ Index: base/base.gypi
      ],
    },
  }
+Index: base/files/file_path.cc
+===================================================================
+--- base/files/file_path.cc	(revision 4)
++++ base/files/file_path.cc	(working copy)
+@@ -176,6 +176,8 @@
+ 
+ FilePath::FilePath(const FilePath& that) : path_(that.path_) {
+ }
++FilePath::FilePath(FilePath&& that) : path_(std::move(that.path_)) {
++}
+ 
+ FilePath::FilePath(const StringType& path) : path_(path) {
+   StringType::size_type nul_pos = path_.find(kStringTerminator);
+@@ -191,6 +193,11 @@
+   return *this;
+ }
+ 
++FilePath& FilePath::operator=(FilePath&& that) {
++  path_ = std::move(that.path_);
++  return *this;
++}
++
+ bool FilePath::operator==(const FilePath& that) const {
+ #if defined(FILE_PATH_USES_DRIVE_LETTERS)
+   return EqualDriveLetterCaseInsensitive(this->path_, that.path_);
+Index: base/files/file_path.h
+===================================================================
+--- base/files/file_path.h	(revision 4)
++++ base/files/file_path.h	(working copy)
+@@ -163,11 +163,16 @@
+   static const CharType kExtensionSeparator;
+ 
+   FilePath();
++  
+   FilePath(const FilePath& that);
++  FilePath(FilePath&& that);
++  
+   explicit FilePath(const StringType& path);
+   ~FilePath();
++  
+   FilePath& operator=(const FilePath& that);
+-
++  FilePath& FilePath::operator=(FilePath&& that);
++  
+   bool operator==(const FilePath& that) const;
+ 
+   bool operator!=(const FilePath& that) const;
 Index: base/gtest_prod_util.h
 ===================================================================
 --- base/gtest_prod_util.h	(revision 4)

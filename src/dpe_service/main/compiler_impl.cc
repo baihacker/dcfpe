@@ -37,11 +37,11 @@ void BasicCompiler::OnStop(process::ProcessContext* exit_code)
   compile_process_ = NULL;
 }
 
-void BasicCompiler::OnOutput(bool is_std_out, const char* buffer, int32_t size)
+void BasicCompiler::OnOutput(bool is_std_out, const std::string& data)
 {
-  if (buffer && curr_job_)
+  if (curr_job_)
   {
-    curr_job_->compiler_output_.append(buffer, buffer+size);
+    curr_job_->compiler_output_.append(data.begin(), data.end());
   }
 }
 
@@ -68,23 +68,24 @@ bool MingwCompiler::StartCompile(CompileJob* job)
   compile_process_ = new process::Process(this);
 
   auto& po = compile_process_->GetProcessOption();
-  po.image_path_ = base::FilePath(context_.image_dir_).Append(
-    job->language_ == PL_C ? L"gcc.exe" : L"g++.exe").value();
+  po.image_path_ = context_.image_dir_.Append(
+    job->language_ == PL_C ? L"gcc.exe" : L"g++.exe");
   po.inherit_env_var_ = true;
   po.env_var_keep_ = context_.env_var_keep_;
   po.env_var_merge_ = context_.env_var_merge_;
   po.env_var_replace_ = context_.env_var_replace_;
   po.current_directory_ = job->current_directory_;
 
-  po.argument_list_ = job->source_files_;
+  po.argument_list_.clear();
+  for (auto& it : job->source_files_) po.argument_list_.push_back(it.value());
 
   if (job->output_file_.empty())
   {
-    job->output_file_ = base::FilePath(job->source_files_[0]).ReplaceExtension(L".exe").value();
+    job->output_file_ = job->source_files_[0].ReplaceExtension(L".exe");
   }
 
   po.argument_list_.push_back(L"-o");
-  po.argument_list_.push_back(job->output_file_);
+  po.argument_list_.push_back(job->output_file_.value());
 
   if (job->optimization_option_ > 0)
   {
@@ -101,7 +102,6 @@ bool MingwCompiler::StartCompile(CompileJob* job)
       po.argument_list_.push_back(L"-O3");
     }
   }
-
 
   if (!job->cflags_.empty())
   {
@@ -136,7 +136,7 @@ bool MingwCompiler::GenerateCmdline(CompileJob* job)
 
   if (job->output_file_.empty())
   {
-    job->output_file_ = base::FilePath(job->source_files_[0]).ReplaceExtension(L".exe").value();
+    job->output_file_ = job->source_files_[0].ReplaceExtension(L".exe");
   }
 
   job->image_path_ = job->output_file_;
@@ -167,21 +167,22 @@ bool VCCompiler::StartCompile(CompileJob* job)
   compile_process_ = new process::Process(this);
 
   auto& po = compile_process_->GetProcessOption();
-  po.image_path_ = base::FilePath(context_.image_dir_).Append(L"cl.exe").value();
+  po.image_path_ = context_.image_dir_.Append(L"cl.exe");
   po.inherit_env_var_ = true;
   po.env_var_keep_ = context_.env_var_keep_;
   po.env_var_merge_ = context_.env_var_merge_;
   po.env_var_replace_ = context_.env_var_replace_;
   po.current_directory_ = job->current_directory_;
 
-  po.argument_list_ = job->source_files_;
+  po.argument_list_.clear();
+  for (auto& it : job->source_files_) po.argument_list_.push_back(it.value());
 
   if (job->output_file_.empty())
   {
-    job->output_file_ = base::FilePath(job->source_files_[0]).ReplaceExtension(L".exe").value();
+    job->output_file_ = job->source_files_[0].ReplaceExtension(L".exe");
   }
 
-  po.argument_list_.push_back(L"/Fe"+job->output_file_);
+  po.argument_list_.push_back(L"/Fe"+job->output_file_.value());
 
   if (job->optimization_option_ > 0)
   {
@@ -234,7 +235,7 @@ bool VCCompiler::GenerateCmdline(CompileJob* job)
 
   if (job->output_file_.empty())
   {
-    job->output_file_ = base::FilePath(job->source_files_[0]).ReplaceExtension(L".exe").value();
+    job->output_file_ = job->source_files_[0].ReplaceExtension(L".exe");
   }
 
   job->image_path_ = job->output_file_;
@@ -265,22 +266,23 @@ bool GHCCompiler::StartCompile(CompileJob* job)
   compile_process_ = new process::Process(this);
 
   auto& po = compile_process_->GetProcessOption();
-  po.image_path_ = base::FilePath(context_.image_dir_).Append(L"ghc.exe").value();
+  po.image_path_ = context_.image_dir_.Append(L"ghc.exe");
   po.inherit_env_var_ = true;
   po.env_var_keep_ = context_.env_var_keep_;
   po.env_var_merge_ = context_.env_var_merge_;
   po.env_var_replace_ = context_.env_var_replace_;
   po.current_directory_ = job->current_directory_;
 
-  po.argument_list_ = job->source_files_;
+  po.argument_list_.clear();
+  for (auto& it : job->source_files_) po.argument_list_.push_back(it.value());
 
   if (job->output_file_.empty())
   {
-    job->output_file_ = base::FilePath(job->source_files_[0]).ReplaceExtension(L".exe").value();
+    job->output_file_ = job->source_files_[0].ReplaceExtension(L".exe");
   }
 
   po.argument_list_.push_back(L"-o");
-  po.argument_list_.push_back(job->output_file_);
+  po.argument_list_.push_back(job->output_file_.value());
 #if 0
   if (job->optimization_option_ > 0)
   {
@@ -327,7 +329,7 @@ bool GHCCompiler::GenerateCmdline(CompileJob* job)
 
   if (job->output_file_.empty())
   {
-    job->output_file_ = base::FilePath(job->source_files_[0]).ReplaceExtension(L".exe").value();
+    job->output_file_ = job->source_files_[0].ReplaceExtension(L".exe");
   }
 
   job->image_path_ = job->output_file_;
@@ -369,8 +371,8 @@ bool PythonCompiler::GenerateCmdline(CompileJob* job)
     job->output_file_ = job->source_files_[0];
   }
 
-  job->image_path_ = base::FilePath(context_.image_dir_).Append(L"python.exe").value();
-  job->arguments_.push_back(job->output_file_);
+  job->image_path_ = context_.image_dir_.Append(L"python.exe");
+  job->arguments_.push_back(job->output_file_.value());
 
   return true;
 }
@@ -395,8 +397,8 @@ bool PypyCompiler::GenerateCmdline(CompileJob* job)
     job->output_file_ = job->source_files_[0];
   }
 
-  job->image_path_ = base::FilePath(context_.image_dir_).Append(L"pypy.exe").value();
-  job->arguments_.push_back(job->output_file_);
+  job->image_path_ = context_.image_dir_.Append(L"pypy.exe");
+  job->arguments_.push_back(job->output_file_.value());
 
   return true;
 }
@@ -406,7 +408,7 @@ namespace ds
 {
 struct Ext2Lang
 {
-  const wchar_t* ext;
+  const NativeChar* ext;
   int32_t         lang;
 };
 
@@ -421,12 +423,12 @@ static Ext2Lang info[] =
 {L".hs", PL_HASKELL},
 };
 
-int32_t DetectLanguage(const std::vector<std::wstring>& filepath)
+int32_t DetectLanguage(const std::vector<base::FilePath>& filepath)
 {
   static const int32_t info_size = sizeof(info) / sizeof(info[0]);
   for (auto& item: filepath)
   {
-    std::wstring ext = base::FilePath(item).Extension();
+    NativeString ext = item.Extension();
     for (auto& it : info)
     {
       if (base::StringEqualCaseInsensitive(ext, it.ext))

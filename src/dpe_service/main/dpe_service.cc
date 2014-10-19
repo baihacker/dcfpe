@@ -25,14 +25,14 @@ void DPEService::Start()
   // todo: register ipc channel
   ZServer* test_server = new ZServer();
   test_server->Start(MAKE_IP(127, 0, 0, 1));
-#if 0
-  LoadCompilers(L"D:\\compilers.json");
+#if 1
+  LoadCompilers(base::FilePath(L"D:\\compilers.json"));
 
-  cl = CreateCompiler(L"ghc", L"", ARCH_UNKNOWN, PL_HASKELL);
+  cl = CreateCompiler("ghc", "", ARCH_UNKNOWN, PL_HASKELL);
   cj = new CompileJob();
-  cj->current_directory_ = L"D:\\projects";
-  cj->source_files_.push_back(L"D:\\projects\\test.hs");
-  cj->output_file_ = L"test.exe";
+  cj->current_directory_ = base::FilePath(L"D:\\projects");
+  cj->source_files_.push_back(base::FilePath(L"D:\\projects\\test.hs"));
+  cj->output_file_ = base::FilePath(L"test.exe");
   cj->language_ = PL_HASKELL;
   //cj->cflags_ = L"/EHsc";
   
@@ -69,24 +69,24 @@ int32_t DPEService::handle_message(int32_t handle, const std::string& data)
 }
 
 scoped_refptr<CompilerResource> DPEService::CreateCompiler(
-    const std::wstring& type, const std::wstring& version, int32_t arch, 
-    int32_t language, const std::vector<std::wstring>& source_file)
+    const std::string& type, const std::string& version, int32_t arch, 
+    int32_t language, const std::vector<base::FilePath>& source_file)
 {
   if (language == PL_UNKNOWN) language = DetectLanguage(source_file);
   if (language == PL_UNKNOWN) return NULL;
 
-  if (base::StringEqualCaseInsensitive(type, L"mingw") ||
-      base::StringEqualCaseInsensitive(type, L"vc"))
+  if (base::StringEqualCaseInsensitive(type, "mingw") ||
+      base::StringEqualCaseInsensitive(type, "vc"))
   {
     if (language != PL_C && language != PL_CPP) return NULL;
   }
 
-  if (base::StringEqualCaseInsensitive(type, L"ghc"))
+  if (base::StringEqualCaseInsensitive(type, "ghc"))
   {
     if (language != PL_HASKELL) return NULL;
   }
 
-  if (base::StringEqualCaseInsensitive(type, L"python"))
+  if (base::StringEqualCaseInsensitive(type, "python"))
   {
     if (language != PL_PYTHON) return NULL;
   }
@@ -98,23 +98,23 @@ scoped_refptr<CompilerResource> DPEService::CreateCompiler(
 
       if (arch != ARCH_UNKNOWN && arch != it.arch_) continue;
 
-      if (base::StringEqualCaseInsensitive(it.type_, L"mingw"))
+      if (base::StringEqualCaseInsensitive(it.type_, "mingw"))
       {
         return new MingwCompiler(it);
       }
-      else if (base::StringEqualCaseInsensitive(it.type_, L"vc"))
+      else if (base::StringEqualCaseInsensitive(it.type_, "vc"))
       {
         return new VCCompiler(it);
       }
-      else if (base::StringEqualCaseInsensitive(it.type_, L"ghc"))
+      else if (base::StringEqualCaseInsensitive(it.type_, "ghc"))
       {
         return new GHCCompiler(it);
       }
-      else if (base::StringEqualCaseInsensitive(it.type_, L"python"))
+      else if (base::StringEqualCaseInsensitive(it.type_, "python"))
       {
         return new PythonCompiler(it);
       }
-      else if (base::StringEqualCaseInsensitive(it.type_, L"pypy"))
+      else if (base::StringEqualCaseInsensitive(it.type_, "pypy"))
       {
         return new PypyCompiler(it);
       }
@@ -143,11 +143,12 @@ ParseEnvVar(base::DictionaryValue* val)
   }
   return ret;
 }
-void DPEService::LoadCompilers(const std::wstring& file)
+
+void DPEService::LoadCompilers(const base::FilePath& file)
 {
   std::string data;
 
-  if (!base::ReadFileToString(base::FilePath(file), &data)) return;
+  if (!base::ReadFileToString(file, &data)) return;
   base::Value* root = base::JSONReader::Read(data.c_str(), base::JSON_ALLOW_TRAILING_COMMAS);
   if (!root) return;
 
@@ -165,7 +166,7 @@ void DPEService::LoadCompilers(const std::wstring& file)
       std::string val;
       if (dv->GetString("type", &val))
       {
-        config.type_ = base::SysUTF8ToWide(val);
+        config.type_ = val;
       }
       else
       {
@@ -174,20 +175,20 @@ void DPEService::LoadCompilers(const std::wstring& file)
 
       if (dv->GetString("name", &val))
       {
-        config.name_ = base::SysUTF8ToWide(val);
+        config.name_ = val;
       }
       else
       {
-        config.name_ = L"Unknown";
+        config.name_ = "Unknown";
       }
       
       if (dv->GetString("version", &val))
       {
-        config.version_ = base::SysUTF8ToWide(val);
+        config.version_ = val;
       }
       if (dv->GetString("image_dir", &val))
       {
-        config.image_dir_ = base::SysUTF8ToWide(val);
+        config.image_dir_ = base::FilePath(base::SysUTF8ToWide(val));
       }
       if (dv->GetString("arch", &val))
       {

@@ -11,7 +11,7 @@ public:
   BasicCompiler(const CompilerConfiguration& context);
   ~BasicCompiler();
   void OnStop(process::ProcessContext* exit_code) override;
-  void OnOutput(bool is_std_out, const char* buffer, int32_t size) override;
+  void OnOutput(bool is_std_out, const std::string& data) override;
   int32               GetArchitecture() const override{return context_.arch_;}
   
 protected:

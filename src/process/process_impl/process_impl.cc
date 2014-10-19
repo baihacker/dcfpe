@@ -237,11 +237,11 @@ Process::~Process()
   ::CloseHandle(start_event_);
 }
 
-std::wstring  Process::MakeCmdLine() const
+NativeString  Process::MakeCmdLine() const
 {
   if (process_option_.image_path_.empty()) return L"";
   
-  std::wstring cmd = L"\"" + process_option_.image_path_ + L"\"";
+  NativeString cmd = L"\"" + process_option_.image_path_.value() + L"\"";
   
   for (auto& item: process_option_.argument_list_)
   if (!item.empty())
@@ -258,10 +258,10 @@ std::wstring  Process::MakeCmdLine() const
   return cmd;
 }
 
-std::vector<std::pair<std::wstring, std::wstring> >
+std::vector<std::pair<NativeString, NativeString> >
 Process::CurrentEnvironmentVariable() const
 {
-  std::vector<std::pair<std::wstring, std::wstring> > ret;
+  std::vector<std::pair<NativeString, NativeString> > ret;
   wchar_t* v = ::GetEnvironmentStringsW();
   if (!v) return ret;
   
@@ -272,7 +272,7 @@ Process::CurrentEnvironmentVariable() const
     while (eq < len && i[eq] != '=') ++eq;
     if (eq < len)
     {
-      ret.push_back({std::wstring(i, i+eq), std::wstring(i+eq+1, i+len)});
+      ret.push_back({NativeString(i, i+eq), NativeString(i+eq+1, i+len)});
     }
     i += len;
   }
@@ -280,7 +280,7 @@ Process::CurrentEnvironmentVariable() const
   return ret;
 }
 
-std::wstring Process::MakeEnvironmentVariable()
+NativeString Process::MakeEnvironmentVariable()
 {
   if (process_option_.inherit_env_var_ &&
       process_option_.env_var_keep_.empty() &&
@@ -345,7 +345,7 @@ std::wstring Process::MakeEnvironmentVariable()
     }
   }
 
-  std::wstring ret;
+  NativeString ret;
   for (auto& iter: temp)
   {
     if (!ret.empty())
@@ -564,7 +564,7 @@ bool Process::Start()
   {
     return false;
   }
-  std::wstring cmdline = MakeCmdLine();
+  NativeString cmdline = MakeCmdLine();
   
   if (cmdline.empty()) return false;
   
@@ -582,8 +582,8 @@ bool Process::Start()
     cf |= CREATE_BREAKAWAY_FROM_JOB;
   }
 
-  std::wstring ev = MakeEnvironmentVariable();
-  std::wstring cd = process_option_.current_directory_;
+  NativeString ev = MakeEnvironmentVariable();
+  NativeString cd = process_option_.current_directory_.value();
 
   if (!ev.empty())
   {
@@ -687,7 +687,7 @@ void Process::OnProcessOutput(base::WeakPtr<Process> p, bool is_std_out, const s
 
 void Process::OnProcessOutputImpl(bool is_std_out, const std::string& buffer)
 {
-  host_->OnOutput(is_std_out, buffer.c_str(), buffer.size());
+  host_->OnOutput(is_std_out, buffer);
 }
 
 void Process::OnProcessTimeOut(base::WeakPtr<Process> p)

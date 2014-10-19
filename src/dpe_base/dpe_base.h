@@ -1,6 +1,8 @@
 #ifndef DPE_BASE_DPE_BASE_H_
 #define DPE_BASE_DPE_BASE_H_
 
+#include "dpe_base/native_string.h"
+
 #include "dpe_base/dpe_base_export.h"
 #include "dpe_base/interface_base.h"
 #include "dpe_base/utility_interface.h"

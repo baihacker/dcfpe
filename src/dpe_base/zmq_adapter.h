@@ -9,7 +9,6 @@
 
 #include "dpe_base/chromium_base.h"
 
-
 namespace base
 {
 // Address

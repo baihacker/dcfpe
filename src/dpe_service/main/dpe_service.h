@@ -22,12 +22,12 @@ public:
 private:
   void StopImpl();
   scoped_refptr<CompilerResource> CreateCompiler(
-    const std::wstring& type, const std::wstring& version, int32_t arch, 
-    int32_t language, const std::vector<std::wstring>& source_file = std::vector<std::wstring>());
+    const std::string& type, const std::string& version, int32_t arch, 
+    int32_t language, const std::vector<base::FilePath>& source_file = std::vector<base::FilePath>());
   
 private:
   int32_t handle_message(int32_t handle, const std::string& data) override;
-  void DPEService::LoadCompilers(const std::wstring& file);
+  void DPEService::LoadCompilers(const base::FilePath& file);
 
 private:
   std::string ipc_sub_address_;
