@@ -28,13 +28,13 @@ void DPEService::Start()
 #if 0
   LoadCompilers(L"D:\\compilers.json");
 
-  cl = CreateCompiler(L"vc", L"", ARCH_UNKNOWN, PL_CPP);
+  cl = CreateCompiler(L"ghc", L"", ARCH_UNKNOWN, PL_HASKELL);
   cj = new CompileJob();
   cj->current_directory_ = L"D:\\projects";
-  cj->source_files_.push_back(L"D:\\projects\\orz.c");
-  cj->output_file_ = L"orddddddz.exe";
-  cj->language_ = PL_CPP;
-  cj->cflags_ = L"/EHsc";
+  cj->source_files_.push_back(L"D:\\projects\\test.hs");
+  cj->output_file_ = L"test.exe";
+  cj->language_ = PL_HASKELL;
+  //cj->cflags_ = L"/EHsc";
   
   cl->StartCompile(cj);
 #endif
@@ -81,6 +81,11 @@ scoped_refptr<CompilerResource> DPEService::CreateCompiler(
     if (language != PL_C && language != PL_CPP) return NULL;
   }
 
+  if (base::StringEqualCaseInsensitive(type, L"ghc"))
+  {
+    if (language != PL_HASKELL) return NULL;
+  }
+
   if (base::StringEqualCaseInsensitive(type, L"python"))
   {
     if (language != PL_PYTHON) return NULL;
@@ -100,6 +105,10 @@ scoped_refptr<CompilerResource> DPEService::CreateCompiler(
       else if (base::StringEqualCaseInsensitive(it.type_, L"vc"))
       {
         return new VCCompiler(it);
+      }
+      else if (base::StringEqualCaseInsensitive(it.type_, L"ghc"))
+      {
+        return new GHCCompiler(it);
       }
       else if (base::StringEqualCaseInsensitive(it.type_, L"python"))
       {

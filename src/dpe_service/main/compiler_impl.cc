@@ -242,6 +242,99 @@ bool VCCompiler::GenerateCmdline(CompileJob* job)
   return true;
 }
 
+GHCCompiler::GHCCompiler(const CompilerConfiguration& context) :
+  BasicCompiler(context)
+{
+
+}
+
+GHCCompiler::~GHCCompiler()
+{
+
+}
+
+bool GHCCompiler::StartCompile(CompileJob* job)
+{
+  if (!job || curr_job_) return false;
+
+  if (job->source_files_.empty()) return false;
+  if (job->language_ == PL_UNKNOWN) job->language_ = DetectLanguage(job->source_files_);
+  if (job->language_ == PL_UNKNOWN) return false;
+  if (job->language_ != PL_HASKELL) return false;
+
+  compile_process_ = new process::Process(this);
+
+  auto& po = compile_process_->GetProcessOption();
+  po.image_path_ = base::FilePath(context_.image_dir_).Append(L"ghc.exe").value();
+  po.inherit_env_var_ = true;
+  po.env_var_keep_ = context_.env_var_keep_;
+  po.env_var_merge_ = context_.env_var_merge_;
+  po.env_var_replace_ = context_.env_var_replace_;
+  po.current_directory_ = job->current_directory_;
+
+  po.argument_list_ = job->source_files_;
+
+  if (job->output_file_.empty())
+  {
+    job->output_file_ = base::FilePath(job->source_files_[0]).ReplaceExtension(L".exe").value();
+  }
+
+  po.argument_list_.push_back(L"-o");
+  po.argument_list_.push_back(job->output_file_);
+#if 0
+  if (job->optimization_option_ > 0)
+  {
+    if (job->optimization_option_ == 1)
+    {
+      po.argument_list_.push_back(L"/O1");
+    }
+    else if (job->optimization_option_ == 2)
+    {
+      po.argument_list_.push_back(L"/O2");
+    }
+    else
+    {
+      po.argument_list_.push_back(L"/O3");
+    }
+  }
+#endif
+  std::string().swap(job->compiler_output_);
+
+  po.redirect_std_inout_ = true;
+  po.treat_err_as_out_ = true;
+  po.create_sub_process_ = true;
+  po.treat_err_as_out_ = true;
+  po.allow_sub_process_breakaway_job_ = true;
+
+  bool ret = compile_process_->Start();
+  if (ret)
+  {
+    curr_job_ = job;
+    job->compile_process_ = compile_process_;
+    PLOG(INFO) << "compile command:\n" << base::SysWideToUTF8(compile_process_->GetProcessContext()->cmd_line_);
+  }
+  else
+  {
+    compile_process_ = NULL;
+  }
+
+  return ret;
+}
+
+bool GHCCompiler::GenerateCmdline(CompileJob* job)
+{
+  if (!job) return false;
+
+  if (job->output_file_.empty())
+  {
+    job->output_file_ = base::FilePath(job->source_files_[0]).ReplaceExtension(L".exe").value();
+  }
+
+  job->image_path_ = job->output_file_;
+
+  return true;
+}
+
 PythonCompiler::PythonCompiler(const CompilerConfiguration& context) :
   BasicCompiler(context)
 {

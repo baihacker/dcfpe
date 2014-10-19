@@ -41,6 +41,16 @@ public:
   bool                GenerateCmdline(CompileJob* job) override;
 };
 
+class GHCCompiler : public BasicCompiler
+{
+public:
+  GHCCompiler(const CompilerConfiguration& context);
+  ~GHCCompiler();
+
+  bool                StartCompile(CompileJob* job) override;
+  bool                GenerateCmdline(CompileJob* job) override;
+};
+
 class PythonCompiler : public BasicCompiler
 {
 public:

@@ -1,0 +1,52 @@
+[
+{
+"name" : "mingw",
+"type" : "mingw",
+"image_dir" : "D:\\DevSoft\\MinGW\\bin",
+"arch" : "x64",
+"version" : "4.8.1",
+"env_var_keep" : {},
+"env_var_merge" : {},
+"env_var_replace" : {},
+},
+{
+"name" : "python",
+"type" : "python",
+"image_dir" : "C:\\Python27",
+"arch" : "x86",
+"version" : "2.7.3",
+"env_var_keep" : {},
+"env_var_merge" : {},
+"env_var_replace" : {},
+},
+{
+"name" : "ghc",
+"type" : "ghc",
+"image_dir" : "",
+"arch" : "x86",
+"version" : "2014.2.0.0",
+"env_var_keep" : {},
+"env_var_merge" : {"path":"D:\\DevSoft\\Haskell Platform\\2014.2.0.0\\bin"},
+"env_var_replace" : {},
+},
+{
+"name" : "vc10",
+"type" : "vc",
+"image_dir" : "D:\\DevSoft\\Microsoft Visual Studio 10.0\\VC\\bin",
+"arch" : "x86",
+"version" : "10.0",
+"env_var_keep" : {},
+"env_var_merge" :
+  {
+  "path" :
+        "C:\\Program Files (x86)\\Microsoft F#\\v4.0\\;D:\\DevSoft\\Microsoft Visual Studio 10.0\\VSTSDB\\Deploy;D:\\DevSoft\\Microsoft Visual Studio 10.0\\Common7\\IDE\\;D:\\DevSoft\\Microsoft Visual Studio 10.0\\VC\\BIN;D:\\DevSoft\\Microsoft Visual Studio 10.0\\Common7\\Tools;C:\\Windows\\Microsoft.NET\\Framework\\v4.0.30319;C:\\Windows\\Microsoft.NET\\Framework\\v3.5;D:\\DevSoft\\Microsoft Visual Studio 10.0\\VC\\VCPackages;C:\\Program Files (x86)\\HTML Help Workshop;D:\\DevSoft\\Microsoft Visual Studio 10.0\\Team Tools\\Performance Tools;C:\\Program Files (x86)\\Microsoft SDKs\\Windows\\v7.0A\\bin\\NETFX 4.0 Tools;C:\\Program Files (x86)\\Microsoft SDKs\\Windows\\v7.0A\\bin;",
+  "LIB" :
+        "D:\\DevSoft\\Microsoft Visual Studio 10.0\\VC\\LIB;D:\\DevSoft\\Microsoft Visual Studio 10.0\\VC\\ATLMFC\\LIB;C:\\Program Files (x86)\\Microsoft SDKs\\Windows\\v7.0A\\lib;",
+  "LIBPATH" :
+        "C:\\Windows\\Microsoft.NET\\Framework\\v4.0.30319;C:\\Windows\\Microsoft.NET\\Framework\\v3.5;D:\\DevSoft\\Microsoft Visual Studio 10.0\\VC\\LIB;D:\\DevSoft\\Microsoft Visual Studio 10.0\\VC\\ATLMFC\\LIB;",
+  "INCLUDE" :
+        "D:\\DevSoft\\Microsoft Visual Studio 10.0\\VC\\INCLUDE;D:\\DevSoft\\Microsoft Visual Studio 10.0\\VC\\ATLMFC\\INCLUDE;C:\\Program Files (x86)\\Microsoft SDKs\\Windows\\v7.0A\\include;"
+  },
+"env_var_replace" : {},
+},
+]
