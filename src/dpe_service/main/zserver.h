@@ -1,10 +1,12 @@
-#ifndef DPE_SERVICE_ZSERVER_H_
-#define DPE_SERVICE_ZSERVER_H_
+#ifndef DPE_SERVICE_MAIN_ZSERVER_H_
+#define DPE_SERVICE_MAIN_ZSERVER_H_
+
 #include "dpe_base/dpe_base.h"
+
 namespace ds
 {
 static const int32_t kServerPort = 5678;
-class ZServer : public base::MessageHandler
+class ZServer : public base::RequestHandler
 {
 public:
   enum
@@ -20,12 +22,11 @@ public:
   bool Start(int32_t ip);
   bool Stop();
 private:
-  int32_t handle_message(int32_t handle, const std::string& data) override;
+  std::string handle_request(base::ServerContext& context) override;
 public:
   // remote message handling: bind and receive and send
   int32_t     server_state_;
   std::string server_address_;
-  int32_t     server_handle_;
 };
 }
 

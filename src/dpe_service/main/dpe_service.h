@@ -3,6 +3,8 @@
 
 #include "dpe_base/dpe_base.h"
 #include "dpe_service/main/zserver.h"
+#include "dpe_service/main/resource.h"
+#include "dpe_service/main/compiler_resource.h"
 
 namespace ds
 {
@@ -19,13 +21,19 @@ public:
   
 private:
   void StopImpl();
+  scoped_refptr<CompilerResource> CreateCompiler(
+    const std::wstring& type, const std::wstring& version, int32_t arch, 
+    int32_t language, const std::vector<std::wstring>& source_file = std::vector<std::wstring>());
   
 private:
   int32_t handle_message(int32_t handle, const std::string& data) override;
+  void DPEService::LoadCompilers(const std::wstring& file);
+
 private:
   std::string ipc_sub_address_;
   int32_t     ipc_sub_handle_;
   std::vector<ZServer*> server_list_;
+  std::vector<CompilerConfiguration>  compilers_;
 };
 }
 

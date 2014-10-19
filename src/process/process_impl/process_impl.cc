@@ -243,14 +243,16 @@ std::wstring  Process::MakeCmdLine() const
   
   std::wstring cmd = L"\"" + process_option_.image_path_ + L"\"";
   
-  if (!process_option_.argument_.empty())
-  {
-    cmd += L" " + process_option_.argument_;
-  }
-  
   for (auto& item: process_option_.argument_list_)
+  if (!item.empty())
   {
     cmd += L" \"" + item + L"\"";
+  }
+  
+  for (auto& item: process_option_.argument_list_r_)
+  if (!item.empty())
+  {
+    cmd += L" " + item;
   }
   
   return cmd;
@@ -585,8 +587,9 @@ bool Process::Start()
 
   if (!ev.empty())
   {
-	  cf |= CREATE_UNICODE_ENVIRONMENT;
+    cf |= CREATE_UNICODE_ENVIRONMENT;
   }
+  context_->cmd_line_ = cmdline;
   if (CreateProcess(NULL,
                     (wchar_t*)cmdline.c_str(),
                     NULL,

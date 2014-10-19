@@ -40,19 +40,19 @@ struct ProcessOption
   ProcessOption();
   ~ProcessOption();
   std::wstring                    image_path_;
-  // cmd = "image_path_" argument "argument_list_[0]" "argument_list_[1]" ...
-  std::wstring                    argument_;
+  // cmd = "image_path_" "argument_list_[0]" "argument_list_[1]"
+  //      argument_list_r_[0] argument_list_r_[1]...
   std::vector<std::wstring>       argument_list_;
+  std::vector<std::wstring>       argument_list_r_;
   std::wstring                    current_directory_;
   
   // environment variable
+  typedef std::vector<std::pair<std::wstring, std::wstring> > env_var_list_t;
   bool                            inherit_env_var_;
-  std::vector<std::pair<std::wstring, std::wstring> >
-                                  env_var_keep_;
-  std::vector<std::pair<std::wstring, std::wstring> >
-                                  env_var_merge_;
-  std::vector<std::pair<std::wstring, std::wstring> >
-                                  env_var_replace_;
+  env_var_list_t                  env_var_keep_;
+  env_var_list_t                  env_var_merge_;
+  env_var_list_t                  env_var_replace_;
+  
   // redirect
   bool                            redirect_std_inout_;
   bool                            treat_err_as_out_;
@@ -98,6 +98,8 @@ public:
   int64_t                               time_usage_;
   int64_t                               time_usage_user_;
   int64_t                               time_usage_kernel_;
+  
+  std::wstring                          cmd_line_;
 };
 
 class ProcessHost

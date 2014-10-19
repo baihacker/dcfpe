@@ -49,6 +49,11 @@
           'main\\dpe_service.cc',
           'main\\zserver.h',
           'main\\zserver.cc',
+          
+          'main\\resource.h',
+          'main\\compiler_resource.h',
+          'main\\compiler_impl.h',
+          'main\\compiler_impl.cc',
         ],
       'dependencies':[
           '<(DEPTH)\\dpe_base\\dpe_base.gyp:dpe_base',

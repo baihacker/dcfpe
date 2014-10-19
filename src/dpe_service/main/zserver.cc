@@ -6,8 +6,7 @@ using namespace std;
 namespace ds
 {
 ZServer::ZServer() :
-  server_state_(ZSERVER_IDLE),
-  server_handle_(base::INVALID_CHANNEL_ID)
+  server_state_(ZSERVER_IDLE)
 {
 
 }
@@ -20,22 +19,18 @@ ZServer::~ZServer()
 bool ZServer::Start(const std::string& address)
 {
   if (server_state_ == ZSERVER_RUNNING) return address == server_address_;
-  base::MessageCenter* mc = base::zmq_message_center();
+  auto s = base::zmq_server();
 
-  server_handle_ = mc->RegisterChannel(base::CHANNEL_TYPE_SUB, address, true);
-
-  if (server_handle_ == base::INVALID_CHANNEL_ID) return false;
-  mc->AddMessageHandler(this);
+  if (!s->StartServer(address, this)) return false;
 
   server_address_ = address;
   server_state_ = ZSERVER_RUNNING;
 
-  return false;
+  return true;
 }
 
 bool ZServer::Start(int32_t ip)
 {
-  base::MessageCenter* mc = base::zmq_message_center();
   return Start(base::AddressHelper::MakeZMQTCPAddress(ip, kServerPort));
 }
 
@@ -43,12 +38,10 @@ bool ZServer::Stop()
 {
   if (server_state_ == ZSERVER_IDLE) return true;
 
-  base::MessageCenter* mc = base::zmq_message_center();
+  auto s = base::zmq_server();
 
-  mc->RemoveMessageHandler(this);
-  mc->RemoveChannel(server_handle_);
+  s->StopServer(this);
 
-  server_handle_ = base::INVALID_CHANNEL_ID;
   std::string().swap(server_address_);
   server_state_ = ZSERVER_IDLE;
 
@@ -80,14 +73,12 @@ response =
 }
 
 */
-int32_t ZServer::handle_message(int32_t handle, const std::string& data)
+std::string ZServer::handle_request(base::ServerContext& context)
 {
-  if (handle != server_handle_) return 0;
-
   const char* test_text = R"({"key":"value"})";
   cerr << test_text << endl;
   base::Value* v = base::JSONReader::Read(test_text);
-  if (!v) return 1;
+  if (!v) return "";
   
   base::DictionaryValue* dv = NULL;
   if (v->GetAsDictionary(&dv))
@@ -98,6 +89,6 @@ int32_t ZServer::handle_message(int32_t handle, const std::string& data)
       cerr << val << endl;
     }
   }
-  return 1;
+  return "";
 }
 }
