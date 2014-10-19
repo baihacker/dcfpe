@@ -74,11 +74,11 @@ struct CompilerResource : public ResourceBase
 struct CompilerConfiguration
 {
   typedef std::vector<std::pair<NativeString, NativeString> > env_var_list_t;
-  std::string       name_;
-  std::string       type_;
+  NativeString      name_;
+  NativeString      type_;
   base::FilePath    image_dir_;
   int32_t           arch_;
-  std::string       version_;
+  NativeString      version_;
   env_var_list_t    env_var_keep_;
   env_var_list_t    env_var_merge_;
   env_var_list_t    env_var_replace_;

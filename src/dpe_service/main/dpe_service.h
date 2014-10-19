@@ -22,7 +22,7 @@ public:
 private:
   void StopImpl();
   scoped_refptr<CompilerResource> CreateCompiler(
-    const std::string& type, const std::string& version, int32_t arch, 
+    const NativeString& type, const NativeString& version, int32_t arch, 
     int32_t language, const std::vector<base::FilePath>& source_file = std::vector<base::FilePath>());
   
 private:

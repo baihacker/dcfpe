@@ -25,6 +25,11 @@ namespace base
 {
 DPE_BASE_EXPORT bool StringEqualCaseInsensitive(const std::wstring& x, const std::wstring& y);
 DPE_BASE_EXPORT bool StringEqualCaseInsensitive(const std::string& x, const std::string& y);
+
+std::wstring NativeToWide(const NativeString& x);
+std::string NativeToUTF8(const NativeString& x);
+NativeString WideToNative(const std::wstring& x);
+NativeString UTF8ToNative(const std::string& x);
 }
 
 #endif

@@ -102,4 +102,15 @@ bool StringEqualCaseInsensitive(const std::string& x, const std::string& y)
     return false;
   return true;
 }
+#if defined(OS_WIN)
+  std::wstring NativeToWide(const NativeString& x) {return x;}
+  std::string NativeToUTF8(const NativeString& x) {return base::SysWideToUTF8(x);}
+  NativeString WideToNative(const std::wstring& x) {return x;}
+  NativeString UTF8ToNative(const std::string& x) {return base::SysUTF8ToWide(x);}
+#elif defined(OS_POSIX)
+  std::wstring NativeToWide(const NativeString& x) {return base::SysUTF8ToWide(x);}
+  std::string NativeToUTF8(const NativeString& x) {return x;}
+  NativeString WideToNative(const std::wstring& x) {return base::SysWideToUTF8(x);}
+  NativeString UTF8ToNative(const std::string& x) {return x;}
+#endif
 }

@@ -28,7 +28,7 @@ void DPEService::Start()
 #if 1
   LoadCompilers(base::FilePath(L"D:\\compilers.json"));
 
-  cl = CreateCompiler("ghc", "", ARCH_UNKNOWN, PL_HASKELL);
+  cl = CreateCompiler(L"ghc", L"", ARCH_UNKNOWN, PL_HASKELL);
   cj = new CompileJob();
   cj->current_directory_ = base::FilePath(L"D:\\projects");
   cj->source_files_.push_back(base::FilePath(L"D:\\projects\\test.hs"));
@@ -69,24 +69,24 @@ int32_t DPEService::handle_message(int32_t handle, const std::string& data)
 }
 
 scoped_refptr<CompilerResource> DPEService::CreateCompiler(
-    const std::string& type, const std::string& version, int32_t arch, 
+    const NativeString& type, const NativeString& version, int32_t arch, 
     int32_t language, const std::vector<base::FilePath>& source_file)
 {
   if (language == PL_UNKNOWN) language = DetectLanguage(source_file);
   if (language == PL_UNKNOWN) return NULL;
 
-  if (base::StringEqualCaseInsensitive(type, "mingw") ||
-      base::StringEqualCaseInsensitive(type, "vc"))
+  if (base::StringEqualCaseInsensitive(type, L"mingw") ||
+      base::StringEqualCaseInsensitive(type, L"vc"))
   {
     if (language != PL_C && language != PL_CPP) return NULL;
   }
 
-  if (base::StringEqualCaseInsensitive(type, "ghc"))
+  if (base::StringEqualCaseInsensitive(type, L"ghc"))
   {
     if (language != PL_HASKELL) return NULL;
   }
 
-  if (base::StringEqualCaseInsensitive(type, "python"))
+  if (base::StringEqualCaseInsensitive(type, L"python"))
   {
     if (language != PL_PYTHON) return NULL;
   }
@@ -98,23 +98,23 @@ scoped_refptr<CompilerResource> DPEService::CreateCompiler(
 
       if (arch != ARCH_UNKNOWN && arch != it.arch_) continue;
 
-      if (base::StringEqualCaseInsensitive(it.type_, "mingw"))
+      if (base::StringEqualCaseInsensitive(it.type_, L"mingw"))
       {
         return new MingwCompiler(it);
       }
-      else if (base::StringEqualCaseInsensitive(it.type_, "vc"))
+      else if (base::StringEqualCaseInsensitive(it.type_, L"vc"))
       {
         return new VCCompiler(it);
       }
-      else if (base::StringEqualCaseInsensitive(it.type_, "ghc"))
+      else if (base::StringEqualCaseInsensitive(it.type_, L"ghc"))
       {
         return new GHCCompiler(it);
       }
-      else if (base::StringEqualCaseInsensitive(it.type_, "python"))
+      else if (base::StringEqualCaseInsensitive(it.type_, L"python"))
       {
         return new PythonCompiler(it);
       }
-      else if (base::StringEqualCaseInsensitive(it.type_, "pypy"))
+      else if (base::StringEqualCaseInsensitive(it.type_, L"pypy"))
       {
         return new PypyCompiler(it);
       }
@@ -136,8 +136,8 @@ ParseEnvVar(base::DictionaryValue* val)
     {
       ret.push_back(
         {
-          base::SysUTF8ToWide(iter.key()),
-          base::SysUTF8ToWide(val)
+          base::UTF8ToNative(iter.key()),
+          base::UTF8ToNative(val)
         });
     }
   }
@@ -166,7 +166,7 @@ void DPEService::LoadCompilers(const base::FilePath& file)
       std::string val;
       if (dv->GetString("type", &val))
       {
-        config.type_ = val;
+        config.type_ = base::UTF8ToNative(val);
       }
       else
       {
@@ -175,20 +175,20 @@ void DPEService::LoadCompilers(const base::FilePath& file)
 
       if (dv->GetString("name", &val))
       {
-        config.name_ = val;
+        config.name_ = base::UTF8ToNative(val);
       }
       else
       {
-        config.name_ = "Unknown";
+        config.name_ = L"Unknown";
       }
       
       if (dv->GetString("version", &val))
       {
-        config.version_ = val;
+        config.version_ = base::UTF8ToNative(val);
       }
       if (dv->GetString("image_dir", &val))
       {
-        config.image_dir_ = base::FilePath(base::SysUTF8ToWide(val));
+        config.image_dir_ = base::FilePath(base::UTF8ToNative(val));
       }
       if (dv->GetString("arch", &val))
       {
