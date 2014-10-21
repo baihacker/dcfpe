@@ -25,7 +25,7 @@ IOHandler::IOHandler(HANDLE io_handle, int32_t io_flag, int32_t buffer_size) :
   
   if (io_flag & IO_FLAG_WRITE)
   {
-    write_buffer_.resize(buffer_size_);
+    //write_buffer_.resize(buffer_size_);
     write_size_ = 0;
   }
   
@@ -77,8 +77,9 @@ bool IOHandler::Write(const char* buffer, int32_t size)
   
   if (!(io_flag_ & IO_FLAG_READ)) return false;
   if (!buffer || size <= 0) return false;
-  if (size > static_cast<int32_t>(write_buffer_.size())) return false;
-  memcpy((char*)write_buffer_.c_str(), buffer, size);
+  //if (size > static_cast<int32_t>(write_buffer_.size())) return false;
+  //memcpy((char*)write_buffer_.c_str(), buffer, size);
+  std::string(buffer, buffer+size).swap(write_buffer_);
   
   overlap_.Offset = overlap_.OffsetHigh = 0;
   

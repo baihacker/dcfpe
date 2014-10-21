@@ -46,10 +46,12 @@ PipeServer::PipeServer(int32_t open_mode, int32_t pipe_mode, int32_t buffer_size
   if (open_mode_ != PIPE_OPEN_MODE_OUTBOUND)
   {
     read_buffer_.resize(buffer_size_+64);
+    read_ = 0;
   }
   if (open_mode_ != PIPE_OPEN_MODE_INBOUND)
   {
-    write_buffer_.resize(buffer_size_+64);
+    //write_buffer_.resize(buffer_size_+64);
+    write_ = 0;
   }
 }
 
@@ -247,8 +249,9 @@ bool PipeServer::Write(const char* buffer, int32_t size)
   if (open_mode_ == PIPE_OPEN_MODE_INBOUND) return false;
   
   if (!buffer || size <= 0) return false;
-  if (size > static_cast<int32_t>(write_buffer_.size())) return false;
-  memcpy((char*)write_buffer_.c_str(), buffer, size);
+  //if (size > static_cast<int32_t>(write_buffer_.size())) return false;
+  //memcpy((char*)write_buffer_.c_str(), buffer, size);
+  std::string(buffer, buffer+size).swap(write_buffer_);
   
   overlap_.Offset = overlap_.OffsetHigh = 0;
   
