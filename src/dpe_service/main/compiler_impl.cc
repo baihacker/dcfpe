@@ -1,5 +1,6 @@
 #include "dpe_service/main/compiler_impl.h"
-
+#include <iostream>
+using namespace std;
 namespace ds
 {
 
@@ -24,20 +25,30 @@ BasicCompiler::BasicCompiler(const CompilerConfiguration& context) :
 
 BasicCompiler::~BasicCompiler()
 {
-  compile_process_->Stop();
+  if (compile_process_)
+  {
+    compile_process_->Stop();
+  }
 }
 
-void BasicCompiler::OnStop(process::ProcessContext* exit_code)
+void BasicCompiler::OnStop(process::Process* p, process::ProcessContext* exit_code)
 {
   if (!curr_job_) return;
-  PLOG(INFO) << "compiler output:\n" << curr_job_->compiler_output_;
+  
+  LOG(INFO) << "compiler output:\n" << curr_job_->compiler_output_;
+  
   GenerateCmdline(curr_job_);
-  if (curr_job_->callback_) curr_job_->callback_->OnCompileFinished(curr_job_);
+  
+  auto cj = curr_job_;
+
   curr_job_ = NULL;
   compile_process_ = NULL;
+
+  if (cj->callback_) cj->callback_->OnCompileFinished(cj);
+  
 }
 
-void BasicCompiler::OnOutput(bool is_std_out, const std::string& data)
+void BasicCompiler::OnOutput(process::Process* p, bool is_std_out, const std::string& data)
 {
   if (curr_job_)
   {
@@ -120,7 +131,7 @@ bool MingwCompiler::StartCompile(CompileJob* job)
   {
     curr_job_ = job;
     job->compile_process_ = compile_process_;
-    PLOG(INFO) << "compile command:\n" << base::SysWideToUTF8(compile_process_->GetProcessContext()->cmd_line_);
+    LOG(INFO) << "compile command:\n" << base::SysWideToUTF8(compile_process_->GetProcessContext()->cmd_line_);
   }
   else
   {
@@ -190,17 +201,14 @@ bool VCCompiler::StartCompile(CompileJob* job)
     {
       po.argument_list_.push_back(L"/O1");
     }
-    else if (job->optimization_option_ == 2)
+    else
     {
       po.argument_list_.push_back(L"/O2");
     }
-    else
-    {
-      po.argument_list_.push_back(L"/O3");
-    }
   }
 
-  po.argument_list_.push_back(job->language_ == PL_C ? L"TC" : L"/TP");
+  po.argument_list_.push_back(job->language_ == PL_C ? L"/TC" : L"/TP");
+  
   if (!job->cflags_.empty())
   {
     po.argument_list_r_.push_back(job->cflags_);
@@ -219,7 +227,7 @@ bool VCCompiler::StartCompile(CompileJob* job)
   {
     curr_job_ = job;
     job->compile_process_ = compile_process_;
-    PLOG(INFO) << "compile command:\n" << base::SysWideToUTF8(compile_process_->GetProcessContext()->cmd_line_);
+    LOG(INFO) << "compile command:\n" << base::SysWideToUTF8(compile_process_->GetProcessContext()->cmd_line_);
   }
   else
   {
@@ -283,6 +291,7 @@ bool GHCCompiler::StartCompile(CompileJob* job)
 
   po.argument_list_.push_back(L"-o");
   po.argument_list_.push_back(job->output_file_.value());
+  
 #if 0
   if (job->optimization_option_ > 0)
   {
@@ -313,7 +322,7 @@ bool GHCCompiler::StartCompile(CompileJob* job)
   {
     curr_job_ = job;
     job->compile_process_ = compile_process_;
-    PLOG(INFO) << "compile command:\n" << base::SysWideToUTF8(compile_process_->GetProcessContext()->cmd_line_);
+    LOG(INFO) << "compile command:\n" << base::SysWideToUTF8(compile_process_->GetProcessContext()->cmd_line_);
   }
   else
   {

@@ -1,6 +1,10 @@
 #include "dpe_service/main/dpe_service.h"
 
 #include "dpe_service/main/compiler_impl.h"
+#include "dpe_service/main/dpe_device_impl.h"
+#include "dpe_service/main/dpe_controller.h"
+
+#include <Shlobj.h>
 
 #include <iostream>
 using namespace std;
@@ -11,32 +15,62 @@ namespace ds
 *******************************************************************************
 */
 DPEService::DPEService() :
-  compilers_(NULL)
+  compilers_(NULL),
+  ipc_sub_handle_(base::INVALID_CHANNEL_ID)
 {
 }
 
 DPEService::~DPEService()
 {
 }
-scoped_refptr<CompilerResource> cl;
-scoped_refptr<CompileJob>       cj;
+
+DPEController* ctrl;
 void DPEService::Start()
 {
-  // todo: register ipc channel
-  ZServer* test_server = new ZServer();
-  test_server->Start(MAKE_IP(127, 0, 0, 1));
-#if 1
+  LoadConfig();
   LoadCompilers(base::FilePath(L"D:\\compilers.json"));
 
-  cl = CreateCompiler(L"ghc", L"", ARCH_UNKNOWN, PL_HASKELL);
-  cj = new CompileJob();
-  cj->current_directory_ = base::FilePath(L"D:\\projects");
-  cj->source_files_.push_back(base::FilePath(L"D:\\projects\\test.hs"));
-  cj->output_file_ = base::FilePath(L"test.exe");
-  cj->language_ = PL_HASKELL;
-  //cj->cflags_ = L"/EHsc";
+  auto mc = base::zmq_message_center();
+  for (int i = 0; i < 3; ++i)
+  {
+    std::string address = base::AddressHelper::MakeZMQTCPAddress(
+        base::AddressHelper::GetProcessIP(),
+        base::AddressHelper::GetNextAvailablePort()
+      );
+
+    ipc_sub_handle_ = mc->RegisterChannel(base::CHANNEL_TYPE_SUB,
+      address, true);
+
+    if (ipc_sub_handle_ != base::INVALID_CHANNEL_ID)
+    {
+      ipc_sub_address_ = address;
+      break;
+    }
+  }
+  if (ipc_sub_handle_ == base::INVALID_CHANNEL_ID)
+  {
+    LOG(ERROR) << "Can not start IPC server";
+    WillStop();
+    return;
+  }
   
-  cl->StartCompile(cj);
+  mc->AddMessageHandler(this);
+  
+  ZServer* default_server = new ZServer(this);
+  default_server->Start(MAKE_IP(127, 0, 0, 1));
+  server_list_.push_back(default_server);
+  
+#if 1
+  ctrl = new DPEController(this);
+  ctrl->SetLanguage(PL_CPP);
+  ctrl->SetCompilerType(L"mingw");
+  ctrl->SetHomePath(base::FilePath(L"D:\\projects"));
+  ctrl->SetJobName(L"test_job");
+  ctrl->SetSource(base::FilePath(L"D:\\Projects\\case\\source.c"));
+  ctrl->SetWorker(base::FilePath(L"D:\\Projects\\case\\worker.c"));
+  ctrl->SetSink(base::FilePath(L"D:\\Projects\\case\\sink.c"));
+  ctrl->AddRemoteDPEService(true, default_server->GetServerAddress());
+  ctrl->Start();
 #endif
 }
 
@@ -65,63 +99,31 @@ void DPEService::StopImpl()
 
 int32_t DPEService::handle_message(int32_t handle, const std::string& data)
 {
-  return 0;
+  if (handle != ipc_sub_handle_) return 0;
+
+  base::DictionaryValue rep;
+  base::Value* v = base::JSONReader::Read(data.c_str(), base::JSON_ALLOW_TRAILING_COMMAS);
+  rep.SetString("type", "ipc");
+  rep.SetString("error_code", "-1");
+  
+  return 1;
 }
 
-scoped_refptr<CompilerResource> DPEService::CreateCompiler(
-    const NativeString& type, const NativeString& version, int32_t arch, 
-    int32_t language, const std::vector<base::FilePath>& source_file)
+void DPEService::LoadConfig()
 {
-  if (language == PL_UNKNOWN) language = DetectLanguage(source_file);
-  if (language == PL_UNKNOWN) return NULL;
+  home_dir_ = base::GetHomeDir().Append(L"dcfpe");
+  base::CreateDirectory(home_dir_);
 
-  if (base::StringEqualCaseInsensitive(type, L"mingw") ||
-      base::StringEqualCaseInsensitive(type, L"vc"))
   {
-    if (language != PL_C && language != PL_CPP) return NULL;
+    wchar_t lpszFolder[ MAX_PATH ] = { 0 };
+    ::SHGetSpecialFolderPath( NULL, lpszFolder, CSIDL_LOCAL_APPDATA, TRUE);
+    config_dir_ = base::FilePath(lpszFolder).DirName().Append(L"LocalLow\\dcfpe");
+    base::CreateDirectory(config_dir_);
   }
 
-  if (base::StringEqualCaseInsensitive(type, L"ghc"))
-  {
-    if (language != PL_HASKELL) return NULL;
-  }
-
-  if (base::StringEqualCaseInsensitive(type, L"python"))
-  {
-    if (language != PL_PYTHON) return NULL;
-  }
-
-  for (auto& it: compilers_)
-  {
-    if (base::StringEqualCaseInsensitive(it.type_, type))
-    {
-
-      if (arch != ARCH_UNKNOWN && arch != it.arch_) continue;
-
-      if (base::StringEqualCaseInsensitive(it.type_, L"mingw"))
-      {
-        return new MingwCompiler(it);
-      }
-      else if (base::StringEqualCaseInsensitive(it.type_, L"vc"))
-      {
-        return new VCCompiler(it);
-      }
-      else if (base::StringEqualCaseInsensitive(it.type_, L"ghc"))
-      {
-        return new GHCCompiler(it);
-      }
-      else if (base::StringEqualCaseInsensitive(it.type_, L"python"))
-      {
-        return new PythonCompiler(it);
-      }
-      else if (base::StringEqualCaseInsensitive(it.type_, L"pypy"))
-      {
-        return new PypyCompiler(it);
-      }
-    }
-  }
-
-  return NULL;
+  base::GetTempDir(&temp_dir_);
+  temp_dir_ = temp_dir_.Append(L"dcfpe");
+  base::CreateDirectory(temp_dir_);
 }
 
 static CompilerConfiguration::env_var_list_t
@@ -219,6 +221,107 @@ void DPEService::LoadCompilers(const base::FilePath& file)
       compilers_.push_back(config);
     }
   delete root;
+}
+
+std::wstring DPEService::GetDefaultCompilerType(int32_t language)
+{
+  // todo : get default compiler type from configuration 
+  if (language == PL_C || language == PL_CPP) return L"mingw";
+  if (language == PL_HASKELL) return L"ghc";
+  if (language == PL_PYTHON) return L"python";
+  return L"";
+}
+
+scoped_refptr<CompilerResource> DPEService::CreateCompiler(
+    std::wstring type, const std::wstring& version, int32_t arch, 
+    int32_t language, const std::vector<base::FilePath>& source_file)
+{
+  if (language == PL_UNKNOWN) language = DetectLanguage(source_file);
+  if (language == PL_UNKNOWN) return NULL;
+
+  if (type.empty())
+  {
+    type = GetDefaultCompilerType(language);
+  }
+  
+  if (base::StringEqualCaseInsensitive(type, L"mingw") ||
+      base::StringEqualCaseInsensitive(type, L"vc"))
+  {
+    if (language != PL_C && language != PL_CPP) return NULL;
+  }
+
+  if (base::StringEqualCaseInsensitive(type, L"ghc"))
+  {
+    if (language != PL_HASKELL) return NULL;
+  }
+
+  if (base::StringEqualCaseInsensitive(type, L"python"))
+  {
+    if (language != PL_PYTHON) return NULL;
+  }
+
+  for (auto& it: compilers_)
+  {
+    if (base::StringEqualCaseInsensitive(it.type_, type))
+    {
+
+      if (arch != ARCH_UNKNOWN && arch != it.arch_) continue;
+
+      if (base::StringEqualCaseInsensitive(it.type_, L"mingw"))
+      {
+        return new MingwCompiler(it);
+      }
+      else if (base::StringEqualCaseInsensitive(it.type_, L"vc"))
+      {
+        return new VCCompiler(it);
+      }
+      else if (base::StringEqualCaseInsensitive(it.type_, L"ghc"))
+      {
+        return new GHCCompiler(it);
+      }
+      else if (base::StringEqualCaseInsensitive(it.type_, L"python"))
+      {
+        return new PythonCompiler(it);
+      }
+      else if (base::StringEqualCaseInsensitive(it.type_, L"pypy"))
+      {
+        return new PypyCompiler(it);
+      }
+    }
+  }
+
+  return NULL;
+}
+
+void DPEService::RemoveDPEDevice(DPEDevice* device)
+{
+  for (auto iter = dpe_device_list_.begin();
+        iter != dpe_device_list_.end();)
+  {
+    if (*iter == device)
+    {
+      device->Release();
+      iter = dpe_device_list_.erase(iter);
+    }
+    else
+    {
+      ++iter;
+    }
+  }
+}
+
+scoped_refptr<DPEDevice> DPEService::CreateDPEDevice(
+  ZServer* zserver, base::DictionaryValue* request)
+{
+  scoped_refptr<DPEDevice> device = new DPEDeviceImpl(this);
+  if (!device->OpenDevice(zserver->ip_))
+  {
+    return NULL;
+  }
+  device->SetHomePath(base::FilePath(L"D:\\worker_home"));
+  device->AddRef();
+  dpe_device_list_.push_back(device);
+  return device;
 }
 
 }

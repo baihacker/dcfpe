@@ -127,7 +127,8 @@ bool ProcessContext::InitContext(ProcessOption& option)
     saAttr.bInheritHandle = TRUE; 
     saAttr.lpSecurityDescriptor = NULL; 
   
-    std_out_read_ = new base::PipeServer(base::PIPE_OPEN_MODE_INBOUND, base::PIPE_DATA_BYTE);
+    std_out_read_ = new base::PipeServer(
+      base::PIPE_OPEN_MODE_INBOUND, base::PIPE_DATA_BYTE, option.output_buffer_size_);
     std_out_write_ = std_out_read_->CreateClientAndConnect(true, true);
     
     DCHECK(std_out_read_);
@@ -148,7 +149,8 @@ bool ProcessContext::InitContext(ProcessOption& option)
     }
     else
     {
-      std_err_read_ = new base::PipeServer(base::PIPE_OPEN_MODE_INBOUND, base::PIPE_DATA_BYTE);
+      std_err_read_ = new base::PipeServer(
+          base::PIPE_OPEN_MODE_INBOUND, base::PIPE_DATA_BYTE, option.output_buffer_size_);
       std_err_write_ = std_err_read_->CreateClientAndConnect(true, true);
       
       DCHECK(std_err_read_);
@@ -372,7 +374,7 @@ unsigned __stdcall Process::ThreadMain(void * arg)
 
 static int64_t FileTimeToQuadWord(PFILETIME pft) 
 {
-	return (Int64ShllMod32(pft->dwHighDateTime, 32) | pft->dwLowDateTime);
+  return (Int64ShllMod32(pft->dwHighDateTime, 32) | pft->dwLowDateTime);
 }
 
 unsigned  Process::Run()
@@ -602,6 +604,7 @@ bool Process::Start()
                     &context_->si_,
                     &context_->process_info_) == 0)
   {
+    PLOG(ERROR) << "Can not create process";
     for (auto& it: clean_resource) it();
     return false;
   }
@@ -674,7 +677,7 @@ void   Process::OnThreadExitImpl()
   process_status_ = PROCESS_STATUS_STOPPED;
   
   // todo notify host
-  host_->OnStop(context_);
+  host_->OnStop(this, context_);
 }
 
 void Process::OnProcessOutput(base::WeakPtr<Process> p, bool is_std_out, const std::string& buffer)
@@ -687,7 +690,7 @@ void Process::OnProcessOutput(base::WeakPtr<Process> p, bool is_std_out, const s
 
 void Process::OnProcessOutputImpl(bool is_std_out, const std::string& buffer)
 {
-  host_->OnOutput(is_std_out, buffer);
+  host_->OnOutput(this, is_std_out, buffer);
 }
 
 void Process::OnProcessTimeOut(base::WeakPtr<Process> p)

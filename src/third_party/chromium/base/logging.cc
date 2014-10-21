@@ -104,11 +104,17 @@ PathString* log_file_name = NULL;
 FileHandle log_file = NULL;
 
 // what should be prepended to each message?
+#if 0
 bool log_process_id = false;
 bool log_thread_id = false;
 bool log_timestamp = true;
 bool log_tickcount = false;
-
+#else
+bool log_process_id = true;
+bool log_thread_id = true;
+bool log_timestamp = true;
+bool log_tickcount = true;
+#endif
 // Should we pop up fatal debug messages in a dialog?
 bool show_error_dialogs = false;
 

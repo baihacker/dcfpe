@@ -54,6 +54,13 @@
           'main\\compiler_resource.h',
           'main\\compiler_impl.h',
           'main\\compiler_impl.cc',
+          
+          'main\\dpe_device.h',
+          'main\\dpe_device_impl.h',
+          'main\\dpe_device_impl.cc',
+          
+          'main\\dpe_controller.h',
+          'main\\dpe_controller.cc',
         ],
       'dependencies':[
           '<(DEPTH)\\dpe_base\\dpe_base.gyp:dpe_base',

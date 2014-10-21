@@ -1,18 +1,20 @@
 #include "third_party/zmq/include/zmq.h"
 #include "third_party/zmq/include/zmq_utils.h"
-#include "dpe_base/chromium_base.h"
 int main()
 {
 	void* context = zmq_ctx_new();
-	void* sender = zmq_socket(context, ZMQ_PUB);
+	void* sender = zmq_socket(context, ZMQ_REQ);
 	int rc = zmq_connect(sender, "tcp://127.0.0.1:5678");
-	base::debug::Alias(NULL);
 	for (int msg = 1;;++msg)
 	{
-		char buff[64];
-		sprintf(buff, "message id = %d", msg);
+		char buff[4096] = R"({"type":"rsc","dest":"remote","src":"local","cookie":"demo_cookie","request":"CreateDPEDevice"})";
 		zmq_send(sender, buff, strlen(buff)+1, 0);
-		Sleep(2000);
+    int n = zmq_recv(sender, buff, 4096, 0);
+    buff[n] = 0;
+    puts(buff);
+		Sleep(10000);
 	}
+  zmq_close(sender);
+  zmq_ctx_term(context);
 	return 0;
 }

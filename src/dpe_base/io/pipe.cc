@@ -21,14 +21,27 @@ PipeServer::PipeServer(int32_t open_mode, int32_t pipe_mode, int32_t buffer_size
     buffer_size_ = kDefaultIOBufferSize;
   }
   {
-    wchar_t buff[128];
+    wchar_t buff[4096];
     swprintf(buff, L"PipeServer_%p_%p", ::GetCurrentProcessId(), this);
     pipe_name_ = std::wstring(kPipePrefix) + buff;
   }
+  std::wstring basic_pipe_name = pipe_name_;
   overlap_.hEvent = ::CreateEvent(NULL, TRUE, FALSE, NULL);
-  pipe_handle_ = ::CreateNamedPipeW(
-      pipe_name_.c_str(),
-      om, pm, 1, buffer_size_, buffer_size_, 5000, NULL);
+  for (int id = 0; id < 100; ++id)
+  {
+    pipe_handle_ = ::CreateNamedPipeW(
+        pipe_name_.c_str(),
+        om, pm, 1, buffer_size_, buffer_size_, 5000, NULL);
+    
+    if (pipe_handle_ != INVALID_HANDLE_VALUE) break;
+    
+    PLOG(ERROR) << "CreateNamedPipeW failed:\n" << base::SysWideToUTF8(pipe_name_);
+    
+    wchar_t buffer[4096];
+    swprintf(buffer, L"%s_%d", basic_pipe_name.c_str(), id);
+    pipe_name_ = buffer;
+    Sleep(100);
+  }
   state_ = PIPE_IDLE_STATE;
   
   if (open_mode_ != PIPE_OPEN_MODE_OUTBOUND)
@@ -76,7 +89,8 @@ bool PipeServer::ConnectToNewClient(HANDLE hPipe, LPOVERLAPPED lpo, BOOL& fPendi
 
   if (ConnectNamedPipe(hPipe, lpo) != 0)
   {
-      return false;
+    PLOG(ERROR) << "ConnectNamedPipe: can not connect named pipe:" << hPipe;
+    return false;
   }
   switch (GetLastError())
   {
@@ -89,7 +103,8 @@ bool PipeServer::ConnectToNewClient(HANDLE hPipe, LPOVERLAPPED lpo, BOOL& fPendi
             break;
     default:
     {
-        return false;
+      PLOG(ERROR) << "ConnectNamedPipe: can not connect named pipe:" << hPipe;
+      return false;
     }
   }
   return true;
@@ -99,6 +114,7 @@ bool PipeServer::Accept()
 {
   if (state_ != PIPE_IDLE_STATE)
   {
+    LOG(ERROR) << "Accept failed: invalid state";
     return false;
   }
   if (ConnectToNewClient(pipe_handle_, &overlap_, io_pending_))
@@ -120,6 +136,7 @@ bool PipeServer::Accept()
   }
   else
   {
+    LOG(ERROR) << "Accept failed: ConnectToNewClient failed";
     state_ = PIPE_ERROR_STATE;
     return false;
   }
@@ -262,7 +279,11 @@ bool PipeServer::Write(const char* buffer, int32_t size)
 
 scoped_refptr<IOHandler> PipeServer::CreateClientAndConnect(bool inherit, bool overlap)
 {
-  if (!Accept()) return NULL;
+  if (!Accept())
+  {
+    LOG(ERROR) << "Can not accept";
+    return NULL;
+  }
 
   int32_t io_flag = 0;
   
@@ -319,6 +340,7 @@ scoped_refptr<IOHandler> PipeServer::CreateClientAndConnect(bool inherit, bool o
       NULL);
     if (!fSuccess)
     {
+      PLOG(ERROR) << "Can not SetNamedPipeHandleState";
       ::CloseHandle(handle);
       return NULL;
     }
@@ -326,6 +348,7 @@ scoped_refptr<IOHandler> PipeServer::CreateClientAndConnect(bool inherit, bool o
   
   if (!WaitForPendingIO(3000))
   {
+    PLOG(ERROR) << "Can not WaitForPendingIO";
     ::CloseHandle(handle);
     return NULL;
   }

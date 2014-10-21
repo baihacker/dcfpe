@@ -10,8 +10,8 @@ class BasicCompiler : public CompilerResource, public process::ProcessHost
 public:
   BasicCompiler(const CompilerConfiguration& context);
   ~BasicCompiler();
-  void OnStop(process::ProcessContext* exit_code) override;
-  void OnOutput(bool is_std_out, const std::string& data) override;
+  void OnStop(process::Process* p, process::ProcessContext* exit_code) override;
+  void OnOutput(process::Process* p, bool is_std_out, const std::string& data) override;
   int32               GetArchitecture() const override{return context_.arch_;}
   
 protected:

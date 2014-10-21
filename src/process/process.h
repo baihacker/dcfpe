@@ -102,12 +102,13 @@ public:
   NativeString                          cmd_line_;
 };
 
+class Process;
 class ProcessHost
 {
 public:
   virtual ~ProcessHost(){};
-  virtual void OnStop(ProcessContext* exit_code) = 0;
-  virtual void OnOutput(bool is_std_out, const std::string& data) = 0;
+  virtual void OnStop(Process* p, ProcessContext* exit_code) = 0;
+  virtual void OnOutput(Process* p, bool is_std_out, const std::string& data) = 0;
 };
 
 class Process : public base::RefCounted<Process>

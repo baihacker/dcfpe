@@ -1,12 +1,13 @@
 #include "dpe_service/main/zserver.h"
 
-#include <iostream>
-using namespace std;
+#include "dpe_service/main/dpe_service.h"
 
 namespace ds
 {
-ZServer::ZServer() :
-  server_state_(ZSERVER_IDLE)
+ZServer::ZServer(DPEService* dpe) :
+  server_state_(ZSERVER_IDLE),
+  dpe_(dpe),
+  ip_(-1)
 {
 
 }
@@ -31,6 +32,7 @@ bool ZServer::Start(const std::string& address)
 
 bool ZServer::Start(int32_t ip)
 {
+  ip_ = ip;
   return Start(base::AddressHelper::MakeZMQTCPAddress(ip, kServerPort));
 }
 
@@ -44,20 +46,23 @@ bool ZServer::Stop()
 
   std::string().swap(server_address_);
   server_state_ = ZSERVER_IDLE;
-
+  ip_ = -1;
+  
   return true;
 }
 /*
 address: dpe:// physic address / instance address / network address
 msg protocol:
 {
-  "type" : "ipc", # other value: "rsr" remote service request (rpc, rmi)
-  "request" : "", # api name
+  "type" : "ipc", # other value: "rsc" remote service communicate (rpc, rmi)
+  "request" : "", # request, reply, message
   "src" : "",
   "dest" : "",
   "send_time" : "",
   "receive_time" : "",
-  "back_time" : "", 
+  "back_time" : "",
+  "session" : "",
+  "cookie" : "",
 }
 
 request = "CreateDPEDevice"
@@ -71,23 +76,68 @@ response =
 {
   "" : ""
 }
-
 */
 std::string ZServer::handle_request(base::ServerContext& context)
 {
-  const char* test_text = R"({"key":"value"})";
-  cerr << test_text << endl;
-  base::Value* v = base::JSONReader::Read(test_text);
-  if (!v) return "";
+  LOG(INFO) << "\nrequest:\n" << context.data_;
   
-  base::DictionaryValue* dv = NULL;
-  if (v->GetAsDictionary(&dv))
+  base::DictionaryValue rep;
+  base::Value* v = base::JSONReader::Read(context.data_.c_str(), base::JSON_ALLOW_TRAILING_COMMAS);
+  rep.SetString("type", "rsc");
+  rep.SetString("error_code", "-1");
+  
+  do
   {
-    std::string val;
-    if (dv->GetString("key", &val))
+    if (!v)
     {
-      cerr << val << endl;
+      LOG(ERROR) << "\nCan not parse request";
+      break;
     }
+    
+    base::DictionaryValue* dv = NULL;
+    if (!v->GetAsDictionary(&dv)) break;
+    {
+      std::string val;
+      
+      if (!dv->GetString("type", &val)) break;
+      if (val != "rsc") break;
+      
+      if (!dv->GetString("src", &val)) break;
+      rep.SetString("dest", val);
+      
+      if (!dv->GetString("dest", &val)) break;
+      rep.SetString("src", val);
+      
+      if (dv->GetString("cookie", &val))
+      {
+        rep.SetString("cookie", val);
+      }
+      
+      if (!dv->GetString("request", &val)) break;
+      
+      if (val != "CreateDPEDevice") break;
+      
+      auto s = dpe_->CreateDPEDevice(this, dv);
+      if (!s)
+      {
+        LOG(ERROR) << "can not create dpe device";
+        break;
+      }
+      rep.SetString("reply", "CreateDPEDeviceResponse");
+      rep.SetString("receive_address", s->GetReceiveAddress());
+      rep.SetString("send_address", s->GetSendAddress());
+      
+      rep.SetString("error_code", "0");
+    }
+  } while (false);
+  
+  delete v;
+  
+  std::string ret;
+  if (base::JSONWriter::Write(&rep, &ret))
+  {
+    LOG(INFO) << "\nreply:\n" << ret;
+    return ret;
   }
   return "";
 }

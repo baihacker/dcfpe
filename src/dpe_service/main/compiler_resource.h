@@ -38,7 +38,7 @@ public:
   ~CompileJob();
 
   int32_t                     language_;
-  std::string                 compiler_;
+  std::wstring                compiler_type_;
   
   base::FilePath              current_directory_;
   base::FilePath              output_directory_;
@@ -74,11 +74,11 @@ struct CompilerResource : public ResourceBase
 struct CompilerConfiguration
 {
   typedef std::vector<std::pair<NativeString, NativeString> > env_var_list_t;
-  NativeString      name_;
-  NativeString      type_;
+  std::wstring      name_;
+  std::wstring      type_;            // basic compile model: [language support, how to find the binary, how to construct command]
   base::FilePath    image_dir_;
   int32_t           arch_;
-  NativeString      version_;
+  std::wstring      version_;
   env_var_list_t    env_var_keep_;
   env_var_list_t    env_var_merge_;
   env_var_list_t    env_var_replace_;

@@ -48,7 +48,7 @@ void HelloFile()
 
 struct ProcessTest : public process::ProcessHost
 {
-  void OnStop(process::ProcessContext* context)
+  void OnStop(process::Process*, process::ProcessContext* context)
   {
     cerr << "process exit " << endl;
     cerr << "exit reason " << context->exit_reason_ <<endl;
@@ -59,7 +59,7 @@ struct ProcessTest : public process::ProcessHost
     p = NULL;
     delete this;
   }
-  void OnOutput(bool is_std_out, const std::string& data)
+  void OnOutput(process::Process*, bool is_std_out, const std::string& data)
   {
     cerr << "process output:" << endl;
     cerr << data << endl;

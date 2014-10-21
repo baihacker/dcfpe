@@ -25,9 +25,9 @@ int32_t dpe_base_main(void (*logic_main)())
     auto x = logging::LoggingSettings();
     x.logging_dest = logging::LOG_TO_SYSTEM_DEBUG_LOG;
     logging::BaseInitLoggingImpl(x);
-    PLOG(INFO) << "dpe base main running";
+    LOG(INFO) << "dpe base main running";
   }
-  PLOG(INFO) << "InitializeThreadPool";
+  LOG(INFO) << "InitializeThreadPool";
   base::ThreadPool::InitializeThreadPool();
   
   msg_center_impl = new MessageCenter();
@@ -42,7 +42,7 @@ int32_t dpe_base_main(void (*logic_main)())
   base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
         base::Bind(logic_main));
   
-  PLOG(INFO) << "RunMainLoop";
+  LOG(INFO) << "RunMainLoop";
   base::ThreadPool::RunMainLoop();
   
   delete zmq_client_impl;
@@ -54,7 +54,7 @@ int32_t dpe_base_main(void (*logic_main)())
   delete msg_center_impl;
   msg_center_impl = NULL;
   
-  PLOG(INFO) << "DeinitializeThreadPool";
+  LOG(INFO) << "DeinitializeThreadPool";
   base::ThreadPool::DeinitializeThreadPool();
   
   return 0;
