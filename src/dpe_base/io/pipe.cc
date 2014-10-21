@@ -31,16 +31,15 @@ PipeServer::PipeServer(int32_t open_mode, int32_t pipe_mode, int32_t buffer_size
   {
     pipe_handle_ = ::CreateNamedPipeW(
         pipe_name_.c_str(),
-        om, pm, 1, buffer_size_, buffer_size_, 5000, NULL);
+        om, pm, 1, buffer_size_, buffer_size_, 0, NULL);
     
     if (pipe_handle_ != INVALID_HANDLE_VALUE) break;
     
     PLOG(ERROR) << "CreateNamedPipeW failed:\n" << base::SysWideToUTF8(pipe_name_);
     
     wchar_t buffer[4096];
-    swprintf(buffer, L"%s_%d", basic_pipe_name.c_str(), id);
+    swprintf(buffer, L"%s_%d_%d", basic_pipe_name.c_str(), id, rand());
     pipe_name_ = buffer;
-    Sleep(100);
   }
   state_ = PIPE_IDLE_STATE;
   
@@ -73,7 +72,8 @@ bool PipeServer::Close()
 {
   if (pipe_handle_)
   {
-    DisconnectNamedPipe(pipe_handle_);
+    ::DisconnectNamedPipe(pipe_handle_);
+    ::CloseHandle(pipe_handle_);
   }
   if (overlap_.hEvent)
   {
