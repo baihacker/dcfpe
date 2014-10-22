@@ -28,6 +28,7 @@
 #include "third_party/chromium/base/strings/utf_string_conversions.h"
 #include "third_party/chromium/base/strings/string_number_conversions.h"
 #include "third_party/chromium/base/strings/utf_offset_string_conversions.h"
+#include "third_party/chromium/base/strings/stringprintf.h"
 #include "third_party/chromium/base/json/json_string_value_serializer.h"
 #include "third_party/chromium/base/json/json_parser.h"
 #include "third_party/chromium/base/json/json_reader.h"

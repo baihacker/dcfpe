@@ -3,8 +3,8 @@
 
 #include <string>
 
-#include "dpe_base/chromium_base.h"
 #include "dpe_base/dpe_base_export.h"
+#include "dpe_base/chromium_base.h"
 #include "dpe_base/io_handler.h"
 
 namespace base
@@ -43,40 +43,43 @@ public:
 
   bool          Close();
   bool          Accept();
-  bool          IsConnected() const;
-  bool          WaitForPendingIO(int32_t time_out);
-  bool          HasPendingIO() const;
+  bool          IsConnected() const
+  {return state_ == PIPE_WRITING_STATE || state_ == PIPE_READING_STATE;}
+
   HANDLE        Handle() const {return pipe_handle_;}
-  
+  std::wstring  PipeName() const {return pipe_name_;}
+
   bool          Read();
   bool          Write(const char* buffer, int32_t size);
   
-  std::string&  ReadBuffer(){return read_buffer_;}
-  int32_t       ReadSize() const{return read_;}
-
-  std::wstring  PipeName() const {return pipe_name_;}
+  bool          HasPendingIO() const {return io_pending_ ? true : false;}
+  bool          WaitForPendingIO(int32_t time_out);
   
+  std::string&  ReadBuffer(){return read_buffer_;}
+  int32_t       ReadSize() const{return read_size_;}
+
   scoped_refptr<IOHandler> CreateClientAndConnect(bool inherit = true, bool overlap = true);
   
 private:
-  bool          ConnectToNewClient(HANDLE hPipe, LPOVERLAPPED lpo, BOOL& fPendingIO);
+  bool          ConnectToNewClient(HANDLE hPipe, LPOVERLAPPED lpo, bool& fPendingIO);
   void          ResetState();
   
 private:
   std::wstring  pipe_name_;
+  DWORD         state_;
   
   int32_t       open_mode_;
   int32_t       pipe_mode_;
   int32_t       buffer_size_;
   
-  OVERLAPPED    overlap_;
   HANDLE        pipe_handle_;
+  OVERLAPPED    overlap_;
+  bool          io_pending_;
+  
   std::string   write_buffer_;
-  DWORD         read_;
+  int32_t       write_size_;
   std::string   read_buffer_;
-  DWORD         write_;
-  DWORD         state_;
-  BOOL          io_pending_;
+  int32_t       read_size_;
 };
 
 }

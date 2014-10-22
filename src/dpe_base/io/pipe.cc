@@ -20,38 +20,36 @@ PipeServer::PipeServer(int32_t open_mode, int32_t pipe_mode, int32_t buffer_size
   {
     buffer_size_ = kDefaultIOBufferSize;
   }
-  {
-    wchar_t buff[4096];
-    swprintf(buff, L"PipeServer_%p_%p", ::GetCurrentProcessId(), this);
-    pipe_name_ = std::wstring(kPipePrefix) + buff;
-  }
-  std::wstring basic_pipe_name = pipe_name_;
+
+  pipe_name_ = base::StringPrintf(L"%lsPipeServer_%p_%p",
+      kPipePrefix, ::GetCurrentProcessId(), this);
+  
   overlap_.hEvent = ::CreateEvent(NULL, TRUE, FALSE, NULL);
   for (int id = 0; id < 100; ++id)
   {
     pipe_handle_ = ::CreateNamedPipeW(
         pipe_name_.c_str(),
-        om, pm, 1, buffer_size_, buffer_size_, 0, NULL);
+        om, pm, 1, buffer_size_, buffer_size_, PIPE_TIMEOUT, NULL);
     
     if (pipe_handle_ != INVALID_HANDLE_VALUE) break;
     
-    PLOG(ERROR) << "CreateNamedPipeW failed:\n" << base::SysWideToUTF8(pipe_name_);
-    
-    wchar_t buffer[4096];
-    swprintf(buffer, L"%s_%d_%d", basic_pipe_name.c_str(), id, rand());
-    pipe_name_ = buffer;
+    PLOG(ERROR) << "CreateNamedPipeW failed:\n"
+                << base::SysWideToUTF8(pipe_name_);
+  
+    pipe_name_ = base::StringPrintf(L"%lsPipeServer_%p_%p_%d_%d",
+                  kPipePrefix, ::GetCurrentProcessId(), this, id, rand());
   }
   state_ = PIPE_IDLE_STATE;
   
   if (open_mode_ != PIPE_OPEN_MODE_OUTBOUND)
   {
     read_buffer_.resize(buffer_size_+64);
-    read_ = 0;
+    read_size_ = 0;
   }
   if (open_mode_ != PIPE_OPEN_MODE_INBOUND)
   {
     //write_buffer_.resize(buffer_size_+64);
-    write_ = 0;
+    write_size_ = 0;
   }
 }
 
@@ -64,10 +62,10 @@ void PipeServer::ResetState()
 {
   memset(&overlap_, 0, sizeof (overlap_));
   pipe_handle_ = NULL;
-  read_ = 0;
-  write_ = 0;
+  read_size_ = 0;
+  write_size_ = 0;
   state_ = PIPE_UNKNOWN_STATE;
-  io_pending_ = FALSE;
+  io_pending_ = false;
 }
 
 bool PipeServer::Close()
@@ -85,9 +83,9 @@ bool PipeServer::Close()
   return true;
 }
 
-bool PipeServer::ConnectToNewClient(HANDLE hPipe, LPOVERLAPPED lpo, BOOL& fPendingIO)
+bool PipeServer::ConnectToNewClient(HANDLE hPipe, LPOVERLAPPED lpo, bool& fPendingIO)
 {
-  fPendingIO = FALSE;
+  fPendingIO = false;
 
   if (ConnectNamedPipe(hPipe, lpo) != 0)
   {
@@ -133,7 +131,7 @@ bool PipeServer::Accept()
     {
       state_ = PIPE_READING_STATE;
     }
-    write_ = read_ = 0;
+    write_size_ = read_size_ = 0;
     return true;
   }
   else
@@ -144,14 +142,81 @@ bool PipeServer::Accept()
   }
 }
 
-bool PipeServer::IsConnected() const
+bool PipeServer::Read()
 {
-  return state_ == PIPE_WRITING_STATE || state_ == PIPE_READING_STATE;
+  if (state_ == PIPE_CONNECTING_STATE) return false;
+  
+  if (io_pending_) return false;
+  
+  if (open_mode_ == PIPE_OPEN_MODE_OUTBOUND) return false;
+  
+  overlap_.Offset = overlap_.OffsetHigh = 0;
+  
+  BOOL fSuccess = ReadFile(
+               pipe_handle_,
+               (char*)read_buffer_.c_str(),
+               read_buffer_.size(),
+               (DWORD*)&read_size_,
+               &overlap_);
+
+  state_ = PIPE_READING_STATE;
+
+  if (fSuccess && read_size_ != 0)
+  {
+    io_pending_ = false;
+    return true;
+  }
+  
+  DWORD dwErr = GetLastError();
+  if (!fSuccess && dwErr == ERROR_IO_PENDING)
+  {
+    io_pending_ = true;
+    return true;
+  }
+
+  Close();
+
+  return false;
 }
 
-bool PipeServer::HasPendingIO() const
+bool PipeServer::Write(const char* buffer, int32_t size)
 {
-  return io_pending_ ? true : false;
+  if (state_ == PIPE_CONNECTING_STATE) return false;
+  
+  if (io_pending_) return false;
+  
+  if (open_mode_ == PIPE_OPEN_MODE_INBOUND) return false;
+  
+  if (!buffer || size <= 0) return false;
+
+  std::string(buffer, buffer+size).swap(write_buffer_);
+  
+  overlap_.Offset = overlap_.OffsetHigh = 0;
+  
+  BOOL fSuccess = WriteFile(
+               pipe_handle_,
+               (char*)write_buffer_.c_str(),
+               size,
+               (DWORD*)&write_size_,
+               &overlap_);
+
+  state_ = PIPE_WRITING_STATE;
+
+  if (fSuccess && write_size_ != 0)
+  {
+    io_pending_ = false;
+    return true;
+  }
+  
+  DWORD dwErr = GetLastError();
+  if (!fSuccess && dwErr == ERROR_IO_PENDING)
+  {
+    io_pending_ = true;
+    return true;
+  }
+  
+  Close();
+  return false;
 }
 
 bool PipeServer::WaitForPendingIO(int32_t time_out)
@@ -185,17 +250,17 @@ bool PipeServer::WaitForPendingIO(int32_t time_out)
         io_pending_ = false;
         if (state_ == PIPE_READING_STATE)
         {
-          read_ = cbRet;
+          read_size_ = cbRet;
         }
         else if (state_ == PIPE_WRITING_STATE)
         {
-          write_ = cbRet;
+          write_size_ = cbRet;
         }
         else
         {
           state_ = open_mode_ == PIPE_OPEN_MODE_OUTBOUND ?
                 PIPE_WRITING_STATE : PIPE_READING_STATE;
-          write_ = read_ = 0;
+          write_size_ = read_size_ = 0;
         }
         return true;
       }
@@ -205,79 +270,6 @@ bool PipeServer::WaitForPendingIO(int32_t time_out)
     default:
       return false;
   }
-}
-
-bool PipeServer::Read()
-{
-  if (state_ == PIPE_CONNECTING_STATE) return false;
-  if (io_pending_) return false;
-  if (open_mode_ == PIPE_OPEN_MODE_OUTBOUND) return false;
-  
-  overlap_.Offset = overlap_.OffsetHigh = 0;
-  
-  BOOL fSuccess = ReadFile(
-               pipe_handle_,
-               (char*)read_buffer_.c_str(),
-               read_buffer_.size(),
-               &read_,
-               &overlap_);
-  state_ = PIPE_READING_STATE;
-  if (fSuccess && read_ != 0)
-  {
-    io_pending_ = false;
-    return true;
-  }
-  
-  DWORD dwErr = GetLastError();
-  if (!fSuccess && dwErr == ERROR_IO_PENDING)
-  {
-    io_pending_ = true;
-    return true;
-  }
-
-  Close();
-
-  return false;
-}
-
-bool PipeServer::Write(const char* buffer, int32_t size)
-{
-  if (state_ == PIPE_CONNECTING_STATE) return false;
-  
-  if (io_pending_) return false;
-  
-  if (open_mode_ == PIPE_OPEN_MODE_INBOUND) return false;
-  
-  if (!buffer || size <= 0) return false;
-  //if (size > static_cast<int32_t>(write_buffer_.size())) return false;
-  //memcpy((char*)write_buffer_.c_str(), buffer, size);
-  std::string(buffer, buffer+size).swap(write_buffer_);
-  
-  overlap_.Offset = overlap_.OffsetHigh = 0;
-  
-  BOOL fSuccess = WriteFile(
-               pipe_handle_,
-               (char*)write_buffer_.c_str(),
-               size,
-               &write_,
-               &overlap_);
-
-  state_ = PIPE_WRITING_STATE;
-  if (fSuccess && write_ != 0)
-  {
-    io_pending_ = false;
-    return true;
-  }
-  
-  DWORD dwErr = GetLastError();
-  if (!fSuccess && dwErr == ERROR_IO_PENDING)
-  {
-    io_pending_ = true;
-    return true;
-  }
-  
-  Close();
-  return false;
 }
 
 scoped_refptr<IOHandler> PipeServer::CreateClientAndConnect(bool inherit, bool overlap)

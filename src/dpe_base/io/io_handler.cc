@@ -2,10 +2,11 @@
 
 namespace base
 {
+
 IOHandler::IOHandler(HANDLE io_handle, int32_t io_flag, int32_t buffer_size) :
   io_handle_(io_handle),
   io_flag_(io_flag),
-  io_pending_(0),
+  io_pending_(false),
   buffer_size_(buffer_size),
   io_operation_(IO_OPERATION_READ)
 {
@@ -29,12 +30,15 @@ IOHandler::IOHandler(HANDLE io_handle, int32_t io_flag, int32_t buffer_size) :
     write_size_ = 0;
   }
   
-  io_pending_ = 0;
+  io_pending_ = false;
 }
 
 IOHandler::~IOHandler()
 {
-  if (overlap_.hEvent) ::CloseHandle(overlap_.hEvent);
+  if (overlap_.hEvent)
+  {
+    ::CloseHandle(overlap_.hEvent);
+  }
   ::CloseHandle(io_handle_);
 }
 
@@ -54,7 +58,9 @@ bool IOHandler::Read()
                read_buffer_.size(),
                (DWORD*)&read_size_,
                ol);
+
   io_operation_ = IO_OPERATION_READ;
+
   if (fSuccess && read_size_ != 0)
   {
     io_pending_ = false;
@@ -75,10 +81,10 @@ bool IOHandler::Write(const char* buffer, int32_t size)
 {
   if (io_pending_) return false;
   
-  if (!(io_flag_ & IO_FLAG_READ)) return false;
+  if (!(io_flag_ & IO_FLAG_WRITE)) return false;
+  
   if (!buffer || size <= 0) return false;
-  //if (size > static_cast<int32_t>(write_buffer_.size())) return false;
-  //memcpy((char*)write_buffer_.c_str(), buffer, size);
+
   std::string(buffer, buffer+size).swap(write_buffer_);
   
   overlap_.Offset = overlap_.OffsetHigh = 0;
@@ -91,7 +97,9 @@ bool IOHandler::Write(const char* buffer, int32_t size)
                size,
                (DWORD*)&write_size_,
                ol);
+
   io_operation_ = IO_OPERATION_WRITE;
+
   if (fSuccess && write_size_ != 0)
   {
     io_pending_ = false;
@@ -146,4 +154,5 @@ bool IOHandler::WaitForPendingIO(int32_t time_out)
   }
   return false;
 }
+
 }
