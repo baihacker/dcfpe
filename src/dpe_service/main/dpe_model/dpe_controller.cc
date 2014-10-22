@@ -187,6 +187,12 @@ bool RemoteDPEDevice::InitJob(const base::FilePath& source,
     req.SetString("worker_name", base::SysWideToUTF8(source.BaseName().value()));
     req.SetString("job_name", "test_job");
     req.SetString("data", data);
+    
+    req.SetString("dest", send_address_);
+    req.SetString("session", session_);
+    req.SetString("send_time",
+        base::StringPrintf("%lld", base::Time::Now().ToInternalValue())
+      );
     if (!base::JSONWriter::Write(&req, &msg))
     {
       LOG(ERROR) << "can not write InitJob message";
@@ -214,6 +220,12 @@ bool RemoteDPEDevice::DoTask(const std::string& task_id, const std::string& data
     req.SetString("message", "DoTask");
     req.SetString("task_id", task_id);
     req.SetString("data", data);
+    
+    req.SetString("dest", send_address_);
+    req.SetString("session", session_);
+    req.SetString("send_time",
+        base::StringPrintf("%lld", base::Time::Now().ToInternalValue())
+      );
     if (!base::JSONWriter::Write(&req, &msg))
     {
       LOG(ERROR) << "can not write DoTask message";

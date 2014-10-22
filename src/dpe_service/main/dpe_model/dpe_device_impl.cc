@@ -163,8 +163,8 @@ int32_t DPEDeviceImpl::handle_message(int32_t handle, const std::string& data)
       
       //if (!dv->GetString("dest", &val)) break;
       
-      //if (!dv->GetString("session", &val)) break;
-      //if (val != session_) break;
+      if (!dv->GetString("session", &val)) break;
+      if (val != session_) break;
 
       //if (dv->GetString("cookie", &val)) break;
       
