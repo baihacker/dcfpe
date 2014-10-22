@@ -6,8 +6,7 @@ namespace ds
 {
 RemoteDPEService::RemoteDPEService(DPEController* ctrl) :
   ctrl_(ctrl),
-  creating_(false),
-  weakptr_factory_(this)
+  creating_(false)
 {
 
 }
@@ -21,46 +20,20 @@ bool RemoteDPEService::RequestNewDevice()
 {
   if (creating_) return false;
 
-  auto zc = base::zmq_client();
-  std::string request;
+  if (!zclient_) zclient_ = new ZServerClient(this, server_address_);
+  if (zclient_->CreateDPEDevice())
   {
-    base::DictionaryValue req;
-    req.SetString("type", "rsc");
-    req.SetString("request", "CreateDPEDevice");
-    req.SetString("src", "src");
-    req.SetString("dest", "dest");
-    req.SetString("cookie", "cookie");
-    if (!base::JSONWriter::Write(&req, &request))
-    {
-      LOG(ERROR) << "can not write request json";
-      return false;
-    }
+    creating_ = true;
+    return true;
   }
   
-  zc->SendRequest(
-      server_address_,
-      request.c_str(), request.size(),
-      base::Bind(&RemoteDPEService::HandleResponse, weakptr_factory_.GetWeakPtr()),
-      60*1000
-    );
-
-  creating_ = true;
-  return true;
+  return false;
 }
 
-void RemoteDPEService::HandleResponse(base::WeakPtr<RemoteDPEService> rs, scoped_refptr<base::ZMQResponse> rep)
-{
-  if (RemoteDPEService* pThis = rs.get())
-  {
-    pThis->HandleResponseImpl(rep);
-  }
-}
 
-void RemoteDPEService::HandleResponseImpl(scoped_refptr<base::ZMQResponse> rep)
+void RemoteDPEService::HandleResponse(base::ZMQResponse* rep, const std::string& data)
 {
-  LOG(INFO) << "\nresponse:\n" << rep->data_;
-
-  base::Value* v = base::JSONReader::Read(rep->data_.c_str(), base::JSON_ALLOW_TRAILING_COMMAS);
+  base::Value* v = base::JSONReader::Read(data, base::JSON_ALLOW_TRAILING_COMMAS);
 
   do
   {

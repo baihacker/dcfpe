@@ -4,14 +4,16 @@
 #include "dpe_base/dpe_base.h"
 #include "dpe_service/main/compiler/compiler.h"
 #include "dpe_service/main/dpe_model/dpe_device.h"
+#include "dpe_service/main/zserver_client.h"
 
 namespace ds
 {
 
 class DPEController;
 class DPEService;
+class RemoteDPEDevice;
 
-struct RemoteDPEService : public base::RefCounted<RemoteDPEService>
+struct RemoteDPEService : public base::RefCounted<RemoteDPEService>, public ZServerClientHost
 {
   friend class DPEController;
 
@@ -20,21 +22,19 @@ public:
   ~RemoteDPEService();
   
   bool  RequestNewDevice();
-  
-private:
-  static void HandleResponse(base::WeakPtr<RemoteDPEService> rs, scoped_refptr<base::ZMQResponse> rep);
-  void  HandleResponseImpl(scoped_refptr<base::ZMQResponse> rep);
+  void  HandleResponse(base::ZMQResponse* rep, const std::string& data);
   
 private:
   DPEController*  ctrl_;
   bool            is_local_;
   std::string     server_address_;
   bool            creating_;
-  std::vector<scoped_refptr<RemoteDPEService> > device_list_;
-  base::WeakPtrFactory<RemoteDPEService>         weakptr_factory_;
+  
+  scoped_refptr<ZServerClient>                  zclient_;
+  std::vector<scoped_refptr<RemoteDPEDevice> >  device_list_;
 };
 
-class RemoteDPEDevice : public base::RefCounted<RemoteDPEDevice>, base::MessageHandler
+class RemoteDPEDevice : public base::RefCounted<RemoteDPEDevice>, public base::MessageHandler
 {
   friend class DPEController;
 public:

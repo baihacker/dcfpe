@@ -50,6 +50,9 @@
           'main\\zserver.h',
           'main\\zserver.cc',
           
+          'main\\zserver_client.h',
+          'main\\zserver_client.cc',
+          
           'main\\resource.h',
           
           'main\\compiler\\compiler.h',
