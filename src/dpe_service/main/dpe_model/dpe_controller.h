@@ -45,7 +45,6 @@ public:
     STATE_INITIALIZING,
     STATE_RUNNING_IDLE,
     STATE_RUNNING,
-    STATE_CONNECT_TIME_OUT,
     STATE_FAILED,
   };
   
@@ -60,6 +59,10 @@ public:
   bool        DoTask(const std::string& task_id, const std::string& data);
   
 private:
+  void        ScheduleCheckHeartBeat(int32_t delay = 0);
+  static void CheckHeartBeat(base::WeakPtr<RemoteDPEDevice> dev);
+  void        CheckHeartBeatImpl();
+  
   int32_t     handle_message(int32_t handle, const std::string& data) override;
   
 private:
@@ -77,6 +80,12 @@ private:
   std::string curr_task_input_;
   std::string curr_task_output_;
   int32_t     tries_;
+  
+  int32_t     heart_beat_id_;
+  bool        has_reply_;
+  base::Time  send_time_;
+
+  base::WeakPtrFactory<RemoteDPEDevice>         weakptr_factory_;
 };
 
 enum
@@ -117,6 +126,7 @@ public:
   void  OnTaskSucceed(RemoteDPEDevice* device);
   void  OnTaskFailed(RemoteDPEDevice* device);
   void  OnDeviceRunningIdle(RemoteDPEDevice* device);
+  void  OnDeviceLose(RemoteDPEDevice* device);
   
 private:
   scoped_refptr<Compiler> MakeNewCompiler(CompileJob* job);

@@ -92,10 +92,10 @@ bool DPEDeviceImpl::OpenDevice(int32_t ip)
   }
 
   device_state_ = DPE_DEVICE_WAITING;
-  base::ThreadPool::PostDelayedTask(base::ThreadPool::UI, FROM_HERE,
-      base::Bind(&DPEDeviceImpl::CheckTimeOut, weakptr_factory_.GetWeakPtr()),
-      base::TimeDelta::FromMilliseconds(60*1000));
-
+  
+  last_heart_beat_time_ = base::Time::Now();
+  ScheduleCheckHeartBeat();
+  
   mc->AddMessageHandler((base::MessageHandler*)this);
 
   return true;
@@ -113,27 +113,54 @@ bool DPEDeviceImpl::CloseDevice()
   mc->RemoveChannel(send_channel_);
   send_channel_ = base::INVALID_CHANNEL_ID;
 
+  mc->RemoveMessageHandler((base::MessageHandler*)this);
+  
   device_state_ = DPE_DEVICE_CLOSED;
+  
   return false;
 }
 
-void DPEDeviceImpl::CheckTimeOut(base::WeakPtr<DPEDeviceImpl> device)
+void DPEDeviceImpl::ScheduleCheckHeartBeat(int32_t delay)
 {
-  if (DPEDeviceImpl* pThis = device.get())
+  if (delay < 0) delay = 0;
+
+  if (delay == 0)
   {
-    pThis->CheckTimeOutImpl();
+    base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
+      base::Bind(&DPEDeviceImpl::CheckHeartBeat, weakptr_factory_.GetWeakPtr())
+      );
+  }
+  else
+  {
+    base::ThreadPool::PostDelayedTask(base::ThreadPool::UI, FROM_HERE,
+      base::Bind(&DPEDeviceImpl::CheckHeartBeat, weakptr_factory_.GetWeakPtr()),
+      base::TimeDelta::FromMilliseconds(delay));
   }
 }
 
-void DPEDeviceImpl::CheckTimeOutImpl()
+void DPEDeviceImpl::CheckHeartBeat(base::WeakPtr<DPEDeviceImpl> device)
 {
-  if (device_state_ == DPE_DEVICE_WAITING)
+  if (DPEDeviceImpl* pThis = device.get())
   {
-    LOG(ERROR) << "DPEDeviceImpl::CheckTimeOutImpl time out";
+    pThis->CheckHeartBeatImpl();
+  }
+}
+
+void DPEDeviceImpl::CheckHeartBeatImpl()
+{
+  auto curr = base::Time::Now();
+  
+  if ((curr-last_heart_beat_time_).InSeconds() > 120)
+  {
+    LOG(ERROR) << "DPEDeviceImpl : heart beat failed";
     CloseDevice();
     base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
       base::Bind(&DPEService::RemoveDPEDevice, base::Unretained(dpe_), static_cast<DPEDevice*>(this))
       );
+  }
+  else
+  {
+    ScheduleCheckHeartBeat(10*1000);
   }
 }
 
@@ -192,7 +219,23 @@ int32_t DPEDeviceImpl::handle_message(int32_t handle, const std::string& data)
 
 void DPEDeviceImpl::HandleHeartBeatMessage(base::DictionaryValue* message)
 {
+  std::string cookie;
+  if (!message->GetString("cookie", &cookie)) return;
+  last_heart_beat_time_ = base::Time::Now();
 
+  {
+    std::string val;
+    std::string msg;
+    base::DictionaryValue req;
+    req.SetString("type", "rsc");
+    req.SetString("message", "HeartBeat");
+    req.SetString("cookie", cookie);
+    req.SetString("session", session_);
+    req.SetString("error_code", "0");
+    base::JSONWriter::Write(&req, &msg);
+    auto mc = base::zmq_message_center();
+    mc->SendMessage(send_channel_, msg.c_str(), msg.size());
+  }
 }
 
 void DPEDeviceImpl::HandleInitJobMessage(base::DictionaryValue* message)
@@ -269,7 +312,7 @@ void DPEDeviceImpl::HandleDoTaskMessage(base::DictionaryValue* message)
   std::string data;
 
   message->GetString("task_id", &task_id);
-  message->GetString("data", &data);
+  message->GetString("task_input", &data);
 
   worker_process_ = new process::Process(this);
   std::string().swap(task_output_data_);

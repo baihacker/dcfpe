@@ -95,14 +95,17 @@ RemoteDPEDevice::RemoteDPEDevice(DPEController* ctrl) :
   ctrl_(ctrl),
   device_state_(STATE_IDLE),
   send_channel_(base::INVALID_CHANNEL_ID),
-  receive_channel_(base::INVALID_CHANNEL_ID)
+  receive_channel_(base::INVALID_CHANNEL_ID),
+  heart_beat_id_(0),
+  has_reply_(true),
+  weakptr_factory_(this)
 {
 
 }
 
 RemoteDPEDevice::~RemoteDPEDevice()
 {
-
+  Stop();
 }
 
 bool  RemoteDPEDevice::Start(const std::string& receive_address,
@@ -151,12 +154,28 @@ bool  RemoteDPEDevice::Start(const std::string& receive_address,
   }
   device_state_ = STATE_READY;
   session_ = session;
+
+  mc->AddMessageHandler((base::MessageHandler*)this);
+  ScheduleCheckHeartBeat();
+  
   return true;
 }
 
 bool  RemoteDPEDevice::Stop()
 {
-  return false;
+  auto mc = base::zmq_message_center();
+
+  mc->RemoveChannel(receive_channel_);
+  receive_channel_ = base::INVALID_CHANNEL_ID;
+
+  mc->RemoveChannel(send_channel_);
+  send_channel_ = base::INVALID_CHANNEL_ID;
+  
+  mc->RemoveMessageHandler((base::MessageHandler*)this);
+  
+  device_state_ = STATE_IDLE;
+  
+  return true;
 }
 
 bool RemoteDPEDevice::InitJob(const base::FilePath& source,
@@ -183,7 +202,6 @@ bool RemoteDPEDevice::InitJob(const base::FilePath& source,
     req.SetString("message", "InitJob");
     req.SetInteger("language", language);
     req.SetString("compiler_type", base::SysWideToUTF8(compiler_type));
-    req.SetString("cookie", "cookie");
     req.SetString("worker_name", base::SysWideToUTF8(source.BaseName().value()));
     req.SetString("job_name", "test_job");
     req.SetString("data", data);
@@ -203,7 +221,6 @@ bool RemoteDPEDevice::InitJob(const base::FilePath& source,
   auto mc = base::zmq_message_center();
   LOG(INFO) << mc->SendMessage(send_channel_, msg.c_str(), msg.size());
 
-  mc->AddMessageHandler((base::MessageHandler*)this);
   device_state_ = STATE_INITIALIZING;
 
   return true;
@@ -219,7 +236,7 @@ bool RemoteDPEDevice::DoTask(const std::string& task_id, const std::string& data
     req.SetString("type", "rsc");
     req.SetString("message", "DoTask");
     req.SetString("task_id", task_id);
-    req.SetString("data", data);
+    req.SetString("task_input", data);
     
     req.SetString("dest", send_address_);
     req.SetString("session", session_);
@@ -244,9 +261,85 @@ bool RemoteDPEDevice::DoTask(const std::string& task_id, const std::string& data
   return true;
 }
 
+void RemoteDPEDevice::ScheduleCheckHeartBeat(int32_t delay)
+{
+  if (delay < 0) delay = 0;
+
+  if (delay == 0)
+  {
+    base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
+      base::Bind(&RemoteDPEDevice::CheckHeartBeat, weakptr_factory_.GetWeakPtr())
+      );
+  }
+  else
+  {
+    base::ThreadPool::PostDelayedTask(base::ThreadPool::UI, FROM_HERE,
+      base::Bind(&RemoteDPEDevice::CheckHeartBeat, weakptr_factory_.GetWeakPtr()),
+      base::TimeDelta::FromMilliseconds(delay));
+  }
+}
+
+void RemoteDPEDevice::CheckHeartBeat(base::WeakPtr<RemoteDPEDevice> dev)
+{
+  if (RemoteDPEDevice* pThis = dev.get())
+  {
+    dev->CheckHeartBeatImpl();
+  }
+}
+
+void RemoteDPEDevice::CheckHeartBeatImpl()
+{
+  if (has_reply_)
+  {
+    ++heart_beat_id_;
+    
+    std::string msg;
+    base::DictionaryValue req;
+    req.SetString("type", "rsc");
+    req.SetString("message", "HeartBeat");
+
+    req.SetString("cookie", base::StringPrintf("%d", heart_beat_id_));
+    req.SetString("dest", send_address_);
+    req.SetString("session", session_);
+    req.SetString("send_time",
+        base::StringPrintf("%lld", base::Time::Now().ToInternalValue())
+      );
+    if (!base::JSONWriter::Write(&req, &msg))
+    {
+      LOG(ERROR) << "can not write Heart Beat message";
+      return;
+    }
+    
+    send_time_ = base::Time::Now();
+    has_reply_ = false;
+
+    auto mc = base::zmq_message_center();
+    mc->SendMessage(send_channel_, msg.c_str(), msg.size());
+ 
+    ScheduleCheckHeartBeat(10*1000);
+  }
+  else
+  {
+    auto curr = base::Time::Now();
+    if ((curr - send_time_).InSeconds() > 60)
+    {
+      LOG(ERROR) << "RemoteDPEDevice : heart beat failed";
+      device_state_ = STATE_FAILED;
+      ctrl_->OnDeviceLose(this);
+    }
+    else
+    {
+      ScheduleCheckHeartBeat(10*1000);
+    }
+  }
+}
+
 int32_t RemoteDPEDevice::handle_message(int32_t handle, const std::string& data)
 {
   if (handle != receive_channel_) return 0;
+  
+  if (device_state_ == STATE_FAILED || device_state_ == STATE_IDLE) return 1;
+  
   LOG(INFO) << "RemoteDPEDevice::handle_message:\n" << data;
   base::Value* v = base::JSONReader::Read(data.c_str(), base::JSON_ALLOW_TRAILING_COMMAS);
 
@@ -305,7 +398,14 @@ int32_t RemoteDPEDevice::handle_message(int32_t handle, const std::string& data)
         }
         ctrl_->OnTaskSucceed(this);
       }
-      
+      else if (val == "HeartBeat")
+      {
+        if (!dv->GetString("cookie", &val)) break;
+        if (atoi(val.c_str()) == heart_beat_id_)
+        {
+          has_reply_ = true;
+        }
+      }
     }
   } while (false);
   
@@ -487,6 +587,10 @@ void  DPEController::OnDeviceRunningIdle(RemoteDPEDevice* device)
       context->std_in_write_->WaitForPendingIO(-1);
     }
   }
+}
+
+void  DPEController::OnDeviceLose(RemoteDPEDevice* device)
+{
 }
 
 scoped_refptr<Compiler> DPEController::MakeNewCompiler(CompileJob* job)

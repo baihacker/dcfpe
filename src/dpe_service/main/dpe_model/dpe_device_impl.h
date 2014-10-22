@@ -32,12 +32,14 @@ public:
   bool          OpenDevice(int32_t ip) override;
   bool          CloseDevice() override;
   void          SetHomePath(const base::FilePath& path) override{home_path_ = path;}
-  int32_t       handle_message(int32_t handle, const std::string& data) override;
 
 private:
-  static void   CheckTimeOut(base::WeakPtr<DPEDeviceImpl> device);
-  void          CheckTimeOutImpl();
-
+  void          ScheduleCheckHeartBeat(int32_t delay = 0);
+  static void   CheckHeartBeat(base::WeakPtr<DPEDeviceImpl> device);
+  void          CheckHeartBeatImpl();
+  
+  int32_t       handle_message(int32_t handle, const std::string& data) override;
+  
   void          HandleHeartBeatMessage(base::DictionaryValue* message);
   void          HandleInitJobMessage(base::DictionaryValue* message);
   void          HandleDoTaskMessage(base::DictionaryValue* message);
@@ -71,6 +73,8 @@ private:
 
   base::FilePath                  image_path_;
   std::vector<NativeString>       argument_list_;
+  
+  base::Time                      last_heart_beat_time_;
 
   base::WeakPtrFactory<DPEDeviceImpl> weakptr_factory_;
 };
