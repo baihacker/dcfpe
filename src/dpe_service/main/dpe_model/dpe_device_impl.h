@@ -65,7 +65,7 @@ private:
   scoped_refptr<Compiler>         compiler_;
 
   scoped_refptr<process::Process> worker_process_;
-  int32_t                         task_id_;
+  std::string                     task_id_;
   std::string                     task_output_data_;
 
   base::FilePath                  image_path_;

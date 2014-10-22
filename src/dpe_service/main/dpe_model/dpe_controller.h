@@ -56,7 +56,7 @@ public:
   bool        Stop();
   bool        InitJob(const base::FilePath& source,
                 int32_t language, const std::wstring& compiler_type);
-  bool        DoTask(int32_t task_id, const std::string& data);
+  bool        DoTask(const std::string& task_id, const std::string& data);
   
 private:
   int32_t     handle_message(int32_t handle, const std::string& data) override;
@@ -71,7 +71,7 @@ private:
   int32_t     send_channel_;
   int32_t     receive_channel_;
   
-  int32_t     curr_task_id_;
+  std::string curr_task_id_;
   std::string curr_task_input_;
   std::string curr_task_output_;
   int32_t     tries_;
@@ -133,7 +133,7 @@ private:
   DPEService*                     dpe_;
   
   std::vector<scoped_refptr<RemoteDPEDevice> >   device_list_;
-  std::vector<RemoteDPEService*>  dpe_list_;
+  std::vector<scoped_refptr<RemoteDPEService> >  dpe_list_;
 
   std::wstring                    job_name_;
   base::FilePath                  home_path_;

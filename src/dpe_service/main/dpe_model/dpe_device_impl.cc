@@ -274,10 +274,10 @@ send_failed_message:
 
 void DPEDeviceImpl::HandleDoTaskMessage(base::DictionaryValue* message)
 {
-  int32_t task_id;
+  std::string task_id;
   std::string data;
 
-  message->GetInteger("task_id", &task_id);
+  message->GetString("task_id", &task_id);
   message->GetString("data", &data);
 
   worker_process_ = new process::Process(this);
@@ -375,6 +375,7 @@ void DPEDeviceImpl::OnStop(process::Process* p, process::ProcessContext* context
     req.SetString("type", "rsc");
     req.SetString("message", "DoTask");
     req.SetString("error_code", "-1");
+    req.SetString("task_id", task_id_);
     base::JSONWriter::Write(&req, &msg);
     auto mc = base::zmq_message_center();
     mc->SendMessage(send_channel_, msg.c_str(), msg.size());
@@ -387,7 +388,7 @@ void DPEDeviceImpl::OnStop(process::Process* p, process::ProcessContext* context
     req.SetString("type", "rsc");
     req.SetString("message", "DoTask");
     req.SetString("error_code", "0");
-    req.SetInteger("task_id", task_id_);
+    req.SetString("task_id", task_id_);
     req.SetString("task_output", task_output_data_);
     base::JSONWriter::Write(&req, &msg);
     auto mc = base::zmq_message_center();

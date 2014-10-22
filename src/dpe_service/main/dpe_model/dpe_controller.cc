@@ -30,7 +30,6 @@ bool RemoteDPEService::RequestNewDevice()
   return false;
 }
 
-
 void RemoteDPEService::HandleResponse(base::ZMQResponse* rep, const std::string& data)
 {
   base::Value* v = base::JSONReader::Read(data, base::JSON_ALLOW_TRAILING_COMMAS);
@@ -81,10 +80,12 @@ void RemoteDPEService::HandleResponse(base::ZMQResponse* rep, const std::string&
       }
       LOG(INFO) << "Create RemoteDPEDevice success";
       ctrl_->AddRemoteDPEDevice(d);
+      device_list_.push_back(d);
     }
   } while (false);
   
   delete v;
+  
   creating_ = false;
 }
 
@@ -198,7 +199,7 @@ bool RemoteDPEDevice::InitJob(const base::FilePath& source,
   return true;
 }
 
-bool RemoteDPEDevice::DoTask(int32_t task_id, const std::string& data)
+bool RemoteDPEDevice::DoTask(const std::string& task_id, const std::string& data)
 {
   if (device_state_ != STATE_RUNNING_IDLE) return false;
 
@@ -207,7 +208,7 @@ bool RemoteDPEDevice::DoTask(int32_t task_id, const std::string& data)
     base::DictionaryValue req;
     req.SetString("type", "rsc");
     req.SetString("message", "DoTask");
-    req.SetInteger("task_id", task_id);
+    req.SetString("task_id", task_id);
     req.SetString("data", data);
     if (!base::JSONWriter::Write(&req, &msg))
     {
@@ -275,8 +276,8 @@ int32_t RemoteDPEDevice::handle_message(int32_t handle, const std::string& data)
           ctrl_->OnTaskFailed(this);
           break;
         }
-        int32_t task_id;
-        if (!dv->GetInteger("task_id", &task_id) || task_id != curr_task_id_)
+        std::string task_id;
+        if (!dv->GetString("task_id", &task_id) || task_id != curr_task_id_)
         {
           ctrl_->OnTaskFailed(this);
           break;
@@ -330,7 +331,6 @@ bool  DPEController::AddRemoteDPEService(bool is_local, const std::string& serve
   auto s = new RemoteDPEService(this);
   s->is_local_ = is_local;
   s->server_address_ = server_address;
-  s->AddRef();
 
   dpe_list_.push_back(s);
 
@@ -397,12 +397,19 @@ bool DPEController::Start()
 
 void  DPEController::OnTaskSucceed(RemoteDPEDevice* device)
 {
-  output_lines_[device->curr_task_id_] = std::move(device->curr_task_output_);
+  int32_t id = atoi(device->curr_task_id_.c_str());
+  
+  if (id >= 0 && id < static_cast<int32_t>(output_lines_.size()))
+  {
+    output_lines_[id] = std::move(device->curr_task_output_);
+  }
 }
 
 void  DPEController::OnTaskFailed(RemoteDPEDevice* device)
 {
-  task_queue_.push(device->curr_task_id_);
+  int32_t id = atoi(device->curr_task_id_.c_str());
+  
+  task_queue_.push(id);
 }
 
 void  DPEController::OnDeviceRunningIdle(RemoteDPEDevice* device)
@@ -413,7 +420,7 @@ void  DPEController::OnDeviceRunningIdle(RemoteDPEDevice* device)
     task_queue_.pop();
     std::string orz = input_lines_[curr];
     orz.append(1, '\n');
-    device->DoTask(curr, orz);
+    device->DoTask(base::StringPrintf("%d", curr), orz);
   }
   else
   {
