@@ -1,4 +1,4 @@
-#include "dpe_service/main/dpe_device_impl.h"
+#include "dpe_service/main/dpe_model/dpe_device_impl.h"
 
 #include "dpe_service/main/dpe_service.h"
 
@@ -320,9 +320,9 @@ send_failed_message:
   }
 }
 
-scoped_refptr<CompilerResource> DPEDeviceImpl::MakeNewCompiler(CompileJob* job)
+scoped_refptr<Compiler> DPEDeviceImpl::MakeNewCompiler(CompileJob* job)
 {
-  scoped_refptr<CompilerResource> cr =
+  scoped_refptr<Compiler> cr =
     dpe_->CreateCompiler(compiler_type_, L"", ARCH_UNKNOWN, language_, job->source_files_);
   return cr;
 }

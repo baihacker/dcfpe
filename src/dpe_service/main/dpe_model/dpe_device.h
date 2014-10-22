@@ -1,5 +1,5 @@
-#ifndef DPE_SERVICE_MAIN_DPE_DEVICE_H_
-#define DPE_SERVICE_MAIN_DPE_DEVICE_H_
+#ifndef DPE_SERVICE_MAIN_DPE_MODEL_DPE_DEVICE_H_
+#define DPE_SERVICE_MAIN_DPE_MODEL_DPE_DEVICE_H_
 
 #include "dpe_service/main/resource.h"
 

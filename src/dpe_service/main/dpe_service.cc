@@ -1,8 +1,8 @@
 #include "dpe_service/main/dpe_service.h"
 
-#include "dpe_service/main/compiler_impl.h"
-#include "dpe_service/main/dpe_device_impl.h"
-#include "dpe_service/main/dpe_controller.h"
+#include "dpe_service/main/compiler/compiler_impl.h"
+#include "dpe_service/main/dpe_model/dpe_device_impl.h"
+#include "dpe_service/main/dpe_model/dpe_controller.h"
 
 #include <Shlobj.h>
 
@@ -232,7 +232,7 @@ std::wstring DPEService::GetDefaultCompilerType(int32_t language)
   return L"";
 }
 
-scoped_refptr<CompilerResource> DPEService::CreateCompiler(
+scoped_refptr<Compiler> DPEService::CreateCompiler(
     std::wstring type, const std::wstring& version, int32_t arch, 
     int32_t language, const std::vector<base::FilePath>& source_file)
 {

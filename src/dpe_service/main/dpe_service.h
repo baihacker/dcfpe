@@ -4,9 +4,9 @@
 #include "dpe_base/dpe_base.h"
 #include "dpe_service/main/zserver.h"
 #include "dpe_service/main/resource.h"
-#include "dpe_service/main/compiler_resource.h"
-#include "dpe_service/main/dpe_device.h"
-#include "dpe_service/main/dpe_controller.h"
+#include "dpe_service/main/compiler/compiler.h"
+#include "dpe_service/main/dpe_model/dpe_device.h"
+#include "dpe_service/main/dpe_model/dpe_controller.h"
 
 namespace ds
 {
@@ -23,7 +23,7 @@ public:
 
   std::wstring  GetDefaultCompilerType(int32_t language);
   
-  scoped_refptr<CompilerResource> CreateCompiler(
+  scoped_refptr<Compiler> CreateCompiler(
     std::wstring type, const std::wstring& version, int32_t arch,
     int32_t language, const std::vector<base::FilePath>& source_file = std::vector<base::FilePath>());
 

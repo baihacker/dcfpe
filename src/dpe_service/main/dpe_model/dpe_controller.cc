@@ -1,4 +1,4 @@
-#include "dpe_service/main/dpe_controller.h"
+#include "dpe_service/main/dpe_model/dpe_controller.h"
 
 #include "dpe_service/main/dpe_service.h"
 
@@ -453,9 +453,9 @@ void  DPEController::OnDeviceRunningIdle(RemoteDPEDevice* device)
   }
 }
 
-scoped_refptr<CompilerResource> DPEController::MakeNewCompiler(CompileJob* job)
+scoped_refptr<Compiler> DPEController::MakeNewCompiler(CompileJob* job)
 {
-  scoped_refptr<CompilerResource> cr =
+  scoped_refptr<Compiler> cr =
     dpe_->CreateCompiler(compiler_type_, L"", ARCH_UNKNOWN, language_, job->source_files_);
   return cr;
 }

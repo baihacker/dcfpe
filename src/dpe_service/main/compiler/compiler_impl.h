@@ -1,11 +1,11 @@
-#ifndef DPE_SERVICE_MAIN_COMPILER_IMPL_H_
-#define DPE_SERVICE_MAIN_COMPILER_IMPL_H_
+#ifndef DPE_SERVICE_MAIN_COMPILER_COMPILER_IMPL_H_
+#define DPE_SERVICE_MAIN_COMPILER_COMPILER_IMPL_H_
 
-#include "dpe_service/main/compiler_resource.h"
+#include "dpe_service/main/compiler/compiler.h"
 
 namespace ds
 {
-class BasicCompiler : public CompilerResource, public process::ProcessHost
+class BasicCompiler : public Compiler, public process::ProcessHost
 {
 public:
   BasicCompiler(const CompilerConfiguration& context);

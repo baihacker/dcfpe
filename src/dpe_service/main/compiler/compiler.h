@@ -1,5 +1,5 @@
-#ifndef DPE_SERVICE_MAIN_COMPILER_RESOURCE_H_
-#define DPE_SERVICE_MAIN_COMPILER_RESOURCE_H_
+#ifndef DPE_SERVICE_MAIN_COMPILER_COMPILER_H_
+#define DPE_SERVICE_MAIN_COMPILER_COMPILER_H_
 
 #include "dpe_service/main/resource.h"
 
@@ -60,7 +60,7 @@ public:
   std::vector<NativeString>   arguments_;
 };
 
-struct CompilerResource : public ResourceBase
+struct Compiler : public ResourceBase
 {
   // hold a weak reference to a compile job after start
   virtual bool                StartCompile(CompileJob* job) = 0;

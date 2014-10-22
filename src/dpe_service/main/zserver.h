@@ -32,6 +32,9 @@ private:
   bool Start(const std::string& address);
   std::string handle_request(base::ServerContext& context) override;
 
+  void HandleCreateDPEDeviceRequest(
+        base::DictionaryValue* req, base::DictionaryValue* reply);
+
 public:
   // remote message handling: bind and receive and send
   int32_t     server_state_;

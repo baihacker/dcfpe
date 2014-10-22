@@ -51,16 +51,17 @@
           'main\\zserver.cc',
           
           'main\\resource.h',
-          'main\\compiler_resource.h',
-          'main\\compiler_impl.h',
-          'main\\compiler_impl.cc',
           
-          'main\\dpe_device.h',
-          'main\\dpe_device_impl.h',
-          'main\\dpe_device_impl.cc',
+          'main\\compiler\\compiler.h',
+          'main\\compiler\\compiler_impl.h',
+          'main\\compiler\\compiler_impl.cc',
           
-          'main\\dpe_controller.h',
-          'main\\dpe_controller.cc',
+          'main\\dpe_model\\dpe_device.h',
+          'main\\dpe_model\\dpe_device_impl.h',
+          'main\\dpe_model\\dpe_device_impl.cc',
+          
+          'main\\dpe_model\\dpe_controller.h',
+          'main\\dpe_model\\dpe_controller.cc',
         ],
       'dependencies':[
           '<(DEPTH)\\dpe_base\\dpe_base.gyp:dpe_base',

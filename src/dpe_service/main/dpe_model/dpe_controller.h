@@ -1,28 +1,13 @@
-#ifndef DPE_SERVICE_MAIN_DPE_CONTROLLER_H_
-#define DPE_SERVICE_MAIN_DPE_CONTROLLER_H_
+#ifndef DPE_SERVICE_MAIN_DPE_MODEL_DPE_CONTROLLER_H_
+#define DPE_SERVICE_MAIN_DPE_MODEL_DPE_CONTROLLER_H_
 
 #include "dpe_base/dpe_base.h"
-#include "dpe_service/main/dpe_device.h"
-#include "dpe_service/main/compiler_resource.h"
+#include "dpe_service/main/compiler/compiler.h"
+#include "dpe_service/main/dpe_model/dpe_device.h"
 
 namespace ds
 {
 
-#if 0
-struct JobData
-{
-  JobData(){}
-  JobData(const JobData& other) : data_(other.data_){}
-  JobData(JobData&& other) : data_(std::move(other.data_)){}
-  JobData& operator = (const JobData& other)
-  {if (&other != this) {id_=other.id_; data_=other.data_;} return *this;}
-  JobData& operator = (JobData&& other)
-  {if (&other != this) {id_=other.id_; data_=std::move(other.data_);} return *this;}
-
-  int32_t       id_;
-  std::string   data_;
-};
-#endif
 class DPEController;
 class DPEService;
 
@@ -132,7 +117,7 @@ public:
   void  OnDeviceRunningIdle(RemoteDPEDevice* device);
   
 private:
-  scoped_refptr<CompilerResource> MakeNewCompiler(CompileJob* job);
+  scoped_refptr<Compiler> MakeNewCompiler(CompileJob* job);
   void  OnCompileFinished(CompileJob* job) override;
   static void  ScheduleNextStep(base::WeakPtr<DPEController> ctrl);
   void  ScheduleNextStepImpl();
@@ -169,7 +154,7 @@ private:
   std::vector<std::string>        output_lines_;
 
   scoped_refptr<CompileJob>       cj_;
-  scoped_refptr<CompilerResource> compiler_;
+  scoped_refptr<Compiler>         compiler_;
   
   scoped_refptr<process::Process> source_process_;
   std::string                     input_data_;

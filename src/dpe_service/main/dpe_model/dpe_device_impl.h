@@ -1,9 +1,9 @@
-#ifndef DPE_SERVICE_MAIN_DPE_DEVICE_IMPL_H_
-#define DPE_SERVICE_MAIN_DPE_DEVICE_IMPL_H_
+#ifndef DPE_SERVICE_MAIN_DPE_MODEL_DPE_DEVICE_IMPL_H_
+#define DPE_SERVICE_MAIN_DPE_MODEL_DPE_DEVICE_IMPL_H_
 
 #include "dpe_base/dpe_base.h"
-#include "dpe_service/main/dpe_device.h"
-#include "dpe_service/main/compiler_resource.h"
+#include "dpe_service/main/compiler/compiler.h"
+#include "dpe_service/main/dpe_model/dpe_device.h"
 
 namespace ds
 {
@@ -41,7 +41,7 @@ private:
   void          HandleInitJobMessage(base::DictionaryValue* message);
   void          HandleDoTaskMessage(base::DictionaryValue* message);
 
-  scoped_refptr<CompilerResource> MakeNewCompiler(CompileJob* job);
+  scoped_refptr<Compiler> MakeNewCompiler(CompileJob* job);
   void          OnCompileFinished(CompileJob* job) override;
 
   void          OnStop(process::Process* p, process::ProcessContext* context) override;
@@ -62,7 +62,7 @@ private:
   std::wstring   compiler_type_;
 
   scoped_refptr<CompileJob>       cj_;
-  scoped_refptr<CompilerResource> compiler_;
+  scoped_refptr<Compiler>         compiler_;
 
   scoped_refptr<process::Process> worker_process_;
   int32_t                         task_id_;
