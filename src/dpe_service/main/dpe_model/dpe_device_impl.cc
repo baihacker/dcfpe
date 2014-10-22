@@ -10,24 +10,15 @@ DPEDeviceImpl::DPEDeviceImpl(DPEService* dpe) :
   device_state_(DPE_DEVICE_IDLE),
   receive_channel_(base::INVALID_CHANNEL_ID),
   send_channel_(base::INVALID_CHANNEL_ID),
+  session_(base::StringPrintf("%p", this)),
   weakptr_factory_(this)
 {
-
+  
 }
 
 DPEDeviceImpl::~DPEDeviceImpl()
 {
-LOG(INFO) << "DPEDeviceImpl::~DPEDeviceImpl";
-}
-
-std::string DPEDeviceImpl::GetReceiveAddress()
-{
-  return receive_address_;
-}
-
-std::string DPEDeviceImpl::GetSendAddress()
-{
-  return send_address_;
+  LOG(INFO) << "DPEDeviceImpl::~DPEDeviceImpl";
 }
 
 bool DPEDeviceImpl::OpenDevice(int32_t ip)
@@ -255,7 +246,7 @@ void DPEDeviceImpl::HandleInitJobMessage(base::DictionaryValue* message)
     goto send_failed_message;
   }
 
-  device_state_ = DPE_DEVICE_COMPILING;
+  device_state_ = DPE_DEVICE_INITIALIZING;
   return;
 send_failed_message:
   {

@@ -70,7 +70,7 @@ void DPEService::Start()
   ctrl->SetWorker(base::FilePath(L"D:\\Projects\\case\\worker.c"));
   ctrl->SetSink(base::FilePath(L"D:\\Projects\\case\\sink.c"));
   ctrl->AddRemoteDPEService(true, default_server->GetServerAddress());
-  ctrl->Start();
+  LOG(INFO) << ctrl->Start();
 #endif
 }
 

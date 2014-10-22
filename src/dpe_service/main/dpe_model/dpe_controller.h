@@ -42,7 +42,7 @@ public:
   {
     STATE_IDLE,
     STATE_READY,
-    STATE_PREPARING,
+    STATE_INITIALIZING,
     STATE_RUNNING_IDLE,
     STATE_RUNNING,
     STATE_CONNECT_TIME_OUT,
@@ -52,7 +52,8 @@ public:
   RemoteDPEDevice(DPEController* ctrl);
   ~RemoteDPEDevice();
 
-  bool        Start(const std::string& receive_address, const std::string& send_address);
+  bool        Start(const std::string& receive_address,
+                    const std::string& send_address, const std::string& session);
   bool        Stop();
   bool        InitJob(const base::FilePath& source,
                 int32_t language, const std::wstring& compiler_type);
@@ -65,6 +66,7 @@ private:
   DPEController* ctrl_;
   int32_t     device_state_;
   
+  std::string session_;
   std::string send_address_;
   std::string receive_address_;
   
@@ -132,8 +134,8 @@ private:
 private:
   DPEService*                     dpe_;
   
-  std::vector<scoped_refptr<RemoteDPEDevice> >   device_list_;
   std::vector<scoped_refptr<RemoteDPEService> >  dpe_list_;
+  std::vector<scoped_refptr<RemoteDPEDevice> >   device_list_;
 
   std::wstring                    job_name_;
   base::FilePath                  home_path_;

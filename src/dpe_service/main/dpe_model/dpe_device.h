@@ -10,9 +10,12 @@ class DPEDevice : public ResourceBase
 public:
   virtual std::string GetReceiveAddress() = 0;
   virtual std::string GetSendAddress() = 0;
+  virtual std::string   GetSession() = 0;
+
   virtual bool        OpenDevice(int32_t ip) = 0;
   virtual bool        CloseDevice() = 0;
   virtual void        SetHomePath(const base::FilePath& path) = 0;
+
 };
 
 }

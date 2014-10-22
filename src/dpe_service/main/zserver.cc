@@ -157,7 +157,7 @@ void ZServer::HandleCreateDPEDeviceRequest(
   // the information of DPEDevice
   reply->SetString("receive_address", s->GetReceiveAddress());
   reply->SetString("send_address", s->GetSendAddress());
-  
+  reply->SetString("session", s->GetSession());
   reply->SetString("error_code", "0");
 }
 

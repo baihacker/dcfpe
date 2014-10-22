@@ -65,15 +65,17 @@ void RemoteDPEService::HandleResponse(base::ZMQResponse* rep, const std::string&
 
       std::string ra;
       std::string sa;
-
+      std::string session;
+      
       if (!dv->GetString("receive_address", &ra)) break;
       if (!dv->GetString("send_address", &sa)) break;
+      if (!dv->GetString("session", &session)) break;
 
       if (ra.empty()) break;
       if (sa.empty()) break;
 
       scoped_refptr<RemoteDPEDevice> d = new RemoteDPEDevice(ctrl_);
-      if (!d->Start(sa, ra))
+      if (!d->Start(sa, ra, session))
       {
         LOG(ERROR) << "can not start RemoteDPEDevice";
         break;
@@ -103,7 +105,8 @@ RemoteDPEDevice::~RemoteDPEDevice()
 
 }
 
-bool  RemoteDPEDevice::Start(const std::string& receive_address, const std::string& send_address)
+bool  RemoteDPEDevice::Start(const std::string& receive_address,
+            const std::string& send_address, const std::string& session)
 {
   if (device_state_ != STATE_IDLE) return false;
 
@@ -147,6 +150,7 @@ bool  RemoteDPEDevice::Start(const std::string& receive_address, const std::stri
         });
   }
   device_state_ = STATE_READY;
+  session_ = session;
   return true;
 }
 
@@ -194,7 +198,7 @@ bool RemoteDPEDevice::InitJob(const base::FilePath& source,
   LOG(INFO) << mc->SendMessage(send_channel_, msg.c_str(), msg.size());
 
   mc->AddMessageHandler((base::MessageHandler*)this);
-  device_state_ = STATE_PREPARING;
+  device_state_ = STATE_INITIALIZING;
 
   return true;
 }
@@ -304,6 +308,7 @@ int32_t RemoteDPEDevice::handle_message(int32_t handle, const std::string& data)
 
 DPEController::DPEController(DPEService* dpe) :
   dpe_(dpe),
+  job_state_(DPE_JOB_STATE_PREPARE),
   language_(PL_UNKNOWN),
   weakptr_factory_(this)
 {
@@ -312,7 +317,7 @@ DPEController::DPEController(DPEService* dpe) :
 
 DPEController::~DPEController()
 {
-
+  Stop();
 }
 
 bool DPEController::AddRemoteDPEService(bool is_local, int32_t ip, int32_t port)
@@ -346,7 +351,7 @@ void  DPEController::AddRemoteDPEDevice(scoped_refptr<RemoteDPEDevice> device)
 
 bool DPEController::Start()
 {
-  if (job_state_ == DPE_JOB_STATE_FAILED || DPE_JOB_STATE_FINISH)
+  if (job_state_ == DPE_JOB_STATE_FAILED || job_state_ == DPE_JOB_STATE_FINISH)
     job_state_ = DPE_JOB_STATE_PREPARE;
   if (job_state_ != DPE_JOB_STATE_PREPARE) return false;
 
@@ -354,7 +359,8 @@ bool DPEController::Start()
 
   if (!base::CreateDirectory(job_home_path_))
   {
-    LOG(ERROR) << "can not create job home path:" << base::NativeToUTF8(job_home_path_.value());
+    LOG(ERROR) << "DPEController : can not create job home path:"
+                << base::NativeToUTF8(job_home_path_.value());
     job_state_ = DPE_JOB_STATE_FAILED;
     return false;
   }
@@ -375,14 +381,14 @@ bool DPEController::Start()
 
   if (!compiler_)
   {
-    LOG(ERROR) << "can not create compiler:";
+    LOG(ERROR) << "DPEController : can not create compiler:";
     job_state_ = DPE_JOB_STATE_FAILED;
     return false;
   }
 
   if (!compiler_->StartCompile(cj_))
   {
-    LOG(ERROR) << "can not start compile source";
+    LOG(ERROR) << "DPEController : can not start compile source";
     job_state_ = DPE_JOB_STATE_FAILED;
     return false;
   }
@@ -395,8 +401,38 @@ bool DPEController::Start()
   return true;
 }
 
+bool  DPEController::Stop()
+{
+  job_state_ = DPE_JOB_STATE_PREPARE;
+
+  sink_process_ = NULL;
+  std::string().swap(output_data_);
+  
+  source_process_ = NULL;
+  std::string().swap(input_data_);
+  
+  compiler_ = NULL;
+  cj_ = NULL;
+  
+  std::vector<std::string>().swap(output_lines_);
+  std::queue<int32_t>().swap(task_queue_);
+  std::vector<std::string>().swap(input_lines_);
+  
+
+  std::vector<scoped_refptr<RemoteDPEDevice> >().
+    swap(device_list_);
+  for (auto& it: dpe_list_)
+  {
+    std::vector<scoped_refptr<RemoteDPEDevice> >().
+      swap(it->device_list_);
+  }
+  return true;
+}
+
 void  DPEController::OnTaskSucceed(RemoteDPEDevice* device)
 {
+  if (job_state_ != DPE_JOB_STATE_RUNNING) return;
+  
   int32_t id = atoi(device->curr_task_id_.c_str());
   
   if (id >= 0 && id < static_cast<int32_t>(output_lines_.size()))
@@ -407,16 +443,24 @@ void  DPEController::OnTaskSucceed(RemoteDPEDevice* device)
 
 void  DPEController::OnTaskFailed(RemoteDPEDevice* device)
 {
+  if (job_state_ != DPE_JOB_STATE_RUNNING) return;
+  
+  /*
   int32_t id = atoi(device->curr_task_id_.c_str());
   
   task_queue_.push(id);
+  */
+  Stop();
+  job_state_ = DPE_JOB_STATE_FAILED;
 }
 
 void  DPEController::OnDeviceRunningIdle(RemoteDPEDevice* device)
 {
+  if (job_state_ != DPE_JOB_STATE_RUNNING) return;
+  
   if (!task_queue_.empty())
   {
-    int curr = task_queue_.front();
+    int32_t curr = task_queue_.front();
     task_queue_.pop();
     std::string orz = input_lines_[curr];
     orz.append(1, '\n');
@@ -446,7 +490,7 @@ void DPEController::OnCompileFinished(CompileJob* job)
       cj_->compile_process_->GetProcessContext()->exit_reason_ != process::EXIT_REASON_EXIT)
   {
     job_state_ = DPE_JOB_STATE_FAILED;
-    LOG(ERROR) << "compile error:\n" << cj_->compiler_output_;
+    LOG(ERROR) << "DPEController : compile error:\n" << cj_->compiler_output_;
     return;
   }
 
@@ -488,7 +532,7 @@ void  DPEController::ScheduleNextStepImpl()
 
       if (!compiler_->StartCompile(cj_))
       {
-        LOG(ERROR) << "can not start compile worker";
+        LOG(ERROR) << "DPEController : can not start compile worker";
         job_state_ = DPE_JOB_STATE_FAILED;
         return;
       }
@@ -506,7 +550,7 @@ void  DPEController::ScheduleNextStepImpl()
 
       if (!compiler_->StartCompile(cj_))
       {
-        LOG(ERROR) << "can not start compile sink";
+        LOG(ERROR) << "DPEController : can not start compile sink";
         job_state_ = DPE_JOB_STATE_FAILED;
         return;
       }
@@ -529,7 +573,7 @@ void  DPEController::ScheduleNextStepImpl()
       std::string().swap(input_data_);
       if (!source_process_->Start())
       {
-        LOG(ERROR) << "can not start source process";
+        LOG(ERROR) << "DPEController : can not start source process";
         job_state_ = DPE_JOB_STATE_FAILED;
         break;
       }
@@ -553,7 +597,7 @@ void  DPEController::ScheduleNextStepImpl()
 
       if (!sink_process_->Start())
       {
-        LOG(ERROR) << "can not start sink process";
+        LOG(ERROR) << "DPEController : can not start sink process";
         job_state_ = DPE_JOB_STATE_FAILED;
         break;
       }
@@ -561,13 +605,13 @@ void  DPEController::ScheduleNextStepImpl()
       base::FilePath output = job_home_path_.Append(L"output_temp.txt");
       base::WriteFile(output, "", 0);
       std::string().swap(output_data_);
+
       {
-        char buff[64];
-        sprintf(buff, "%d\n", input_lines_.size());
+        std::string lines = base::StringPrintf("%d\n", input_lines_.size());
         auto po = sink_process_->GetProcessContext();
-        po->std_in_write_->Write(buff, strlen(buff));
+        po->std_in_write_->Write(lines.c_str(), lines.size());
         po->std_in_write_->WaitForPendingIO(-1);
-        LOG(INFO) << "sink process ready";
+        LOG(INFO) << "DPEController : sink process ready";
       }
       
       job_state_ = DPE_JOB_STATE_RUNNING;
@@ -579,7 +623,7 @@ void  DPEController::ScheduleNextStepImpl()
 void  DPEController::ScheduleRefreshRunningState(int32_t delay)
 {
   if (delay < 0) delay = 0;
-  LOG(INFO) << "ScheduleRefreshRunningState" << delay;
+
   if (delay == 0)
   {
     base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
@@ -596,7 +640,6 @@ void  DPEController::ScheduleRefreshRunningState(int32_t delay)
 
 void  DPEController::RefreshRunningState(base::WeakPtr<DPEController> ctrl)
 {
-  LOG(INFO) << "RefreshRunningState";
   if (DPEController* pThis = ctrl.get())
   {
     pThis->RefreshRunningStateImpl();
@@ -609,12 +652,13 @@ void  DPEController::RefreshRunningStateImpl()
 
   for (auto it : dpe_list_)
   {
-    if (!it->creating_)
+    if (!it->creating_ && it->device_list_.empty())
     {
-      LOG(INFO) << "request new device";
+      LOG(INFO) << "DPEController : request new device";
       it->RequestNewDevice();
     }
   }
+  ScheduleRefreshRunningState(1000);
 }
 
 void DPEController::OnStop(process::Process* p, process::ProcessContext* context)
@@ -632,7 +676,13 @@ void DPEController::OnStop(process::Process* p, process::ProcessContext* context
   }
   else if (p == sink_process_)
   {
+    if (context->exit_code_ != 0 || context->exit_reason_ != process::EXIT_REASON_EXIT)
+    {
+      job_state_ = DPE_JOB_STATE_FAILED;
+      return;
+    }
     base::WriteFile(output_file_path_, output_data_.c_str(), output_data_.size());
+    job_state_ = DPE_JOB_STATE_FINISH;
   }
 }
 

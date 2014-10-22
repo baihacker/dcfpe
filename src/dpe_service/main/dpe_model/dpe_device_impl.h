@@ -12,7 +12,7 @@ enum
 {
   DPE_DEVICE_IDLE,
   DPE_DEVICE_WAITING,
-  DPE_DEVICE_COMPILING,
+  DPE_DEVICE_INITIALIZING,
   DPE_DEVICE_RUNNING_IDLE,
   DPE_DEVICE_RUNNING,
   DPE_DEVICE_CLOSED,
@@ -26,8 +26,9 @@ public:
   DPEDeviceImpl(DPEService* dpe);
   ~DPEDeviceImpl();
 
-  std::string   GetReceiveAddress() override;
-  std::string   GetSendAddress() override;
+  std::string   GetReceiveAddress() override{return receive_address_;}
+  std::string   GetSendAddress() override{return send_address_;}
+  std::string   GetSession() override{return session_;}
   bool          OpenDevice(int32_t ip) override;
   bool          CloseDevice() override;
   void          SetHomePath(const base::FilePath& path) override{home_path_ = path;}
