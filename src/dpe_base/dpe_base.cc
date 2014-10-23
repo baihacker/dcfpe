@@ -1,5 +1,9 @@
 #include "dpe_base/dpe_base.h"
 
+#include <windows.h>
+#include <winioctl.h>
+
+
 namespace base
 {
 
@@ -113,4 +117,180 @@ bool StringEqualCaseInsensitive(const std::string& x, const std::string& y)
   NativeString WideToNative(const std::wstring& x) {return base::SysWideToUTF8(x);}
   NativeString UTF8ToNative(const std::string& x) {return x;}
 #endif
+
+static BOOL DoIdentify(HANDLE hPhysicalDriveIOCTL,
+                            PSENDCMDINPARAMS pSCIP,
+                            PSENDCMDOUTPARAMS pSCOP,
+                            BYTE btIDCmd,
+                            BYTE btDriveNum,
+                            PDWORD pdwBytesReturned)
+{
+    pSCIP->cBufferSize = IDENTIFY_BUFFER_SIZE;
+    pSCIP->irDriveRegs.bFeaturesReg = 0;
+    pSCIP->irDriveRegs.bSectorCountReg  = 1;
+    pSCIP->irDriveRegs.bSectorNumberReg = 1;
+    pSCIP->irDriveRegs.bCylLowReg  = 0;
+    pSCIP->irDriveRegs.bCylHighReg = 0;
+
+    pSCIP->irDriveRegs.bDriveHeadReg = (btDriveNum & 1) ? 0xB0 : 0xA0;
+    pSCIP->irDriveRegs.bCommandReg = btIDCmd;
+    pSCIP->bDriveNumber = btDriveNum;
+    pSCIP->cBufferSize = IDENTIFY_BUFFER_SIZE;
+
+    return DeviceIoControl(hPhysicalDriveIOCTL,
+                            SMART_RCV_DRIVE_DATA,
+                            (LPVOID)pSCIP,
+                            sizeof(SENDCMDINPARAMS) - 1,
+                            (LPVOID)pSCOP,
+                            sizeof(SENDCMDOUTPARAMS) + IDENTIFY_BUFFER_SIZE - 1,
+                            pdwBytesReturned, NULL);
+}
+
+static std::string ConvertToString(DWORD dwDiskData[256], int nFirstIndex, int nLastIndex)
+{
+  std::string result;
+
+  for(int32_t nIndex = nFirstIndex; nIndex <= nLastIndex; nIndex++)
+  {
+    char val = dwDiskData[nIndex] / 256;
+    if (val != 0 && val != 32) result.append(1, val);
+    
+    val = dwDiskData[nIndex] % 256;
+    if (val != 0 && val != 32) result.append(1, val);
+  }
+  return result;
+}
+
+static std::string HardDriverIDImpl(int32_t driver_id)
+{
+  std::wstring path = base::StringPrintf(L"\\\\.\\PHYSICALDRIVE%d", driver_id);
+
+  HANDLE hFile = ::CreateFileW(path.c_str(),
+                       GENERIC_READ | GENERIC_WRITE,
+                       FILE_SHARE_READ | FILE_SHARE_WRITE,
+                       NULL, OPEN_EXISTING,
+                       0, NULL);
+  if (hFile == INVALID_HANDLE_VALUE)
+  {
+    return "";
+  }
+  DWORD dwBytesReturned;
+  GETVERSIONINPARAMS gvopVersionParams={0};
+  DeviceIoControl(hFile,
+                  SMART_GET_VERSION,
+                  NULL,
+                  0,
+                  &gvopVersionParams,
+                  sizeof(gvopVersionParams),
+                   &dwBytesReturned, NULL);
+  if(gvopVersionParams.bIDEDeviceMap <= 0)
+  {
+    ::CloseHandle(hFile);
+    return ""; 
+  }
+
+  int btIDCmd = 0;
+  SENDCMDINPARAMS InParams = {0};
+
+  #define  IDE_ATAPI_IDENTIFY  0xA1  //  Returns ID sector for ATAPI.
+  #define  IDE_ATA_IDENTIFY    0xEC  //  Returns ID sector for ATA.
+
+  btIDCmd = (gvopVersionParams.bIDEDeviceMap >> driver_id & 0x10) ? IDE_ATAPI_IDENTIFY : IDE_ATA_IDENTIFY;
+
+  BYTE btIDOutCmd[sizeof(SENDCMDOUTPARAMS) + IDENTIFY_BUFFER_SIZE - 1] = {0};
+
+  if(DoIdentify(hFile,
+                  &InParams,
+                  (PSENDCMDOUTPARAMS)btIDOutCmd,
+                  (BYTE)btIDCmd,
+                  (BYTE)driver_id, &dwBytesReturned) == FALSE)
+  {
+    ::CloseHandle(hFile);
+    return "";
+  }
+  ::CloseHandle(hFile);
+
+  DWORD dwDiskData[256];
+  USHORT *pIDSector;
+
+  pIDSector = (USHORT*)((SENDCMDOUTPARAMS*)btIDOutCmd)->bBuffer;
+  for(int i=0; i < 256; i++) dwDiskData[i] = pIDSector[i];
+
+  return ConvertToString(dwDiskData, 10, 19);
+  // 10 19 序列号
+  // 27 46 模型号
+}
+
+static std::string GetCPUID()
+{
+  std::string CPUID;
+  unsigned long s1,s2;
+  unsigned char vendor_id[]="------------";
+  char sel;
+  sel='1';
+  std::string VernderID;
+  std::string CPUID1,CPUID2;
+  switch(sel)
+  {
+  case '1':
+      __asm{
+          xor eax,eax      //eax=0:取Vendor信息
+          cpuid    //取cpu id指令，可在Ring3级使用
+          mov dword ptr vendor_id,ebx
+          mov dword ptr vendor_id[+4],edx
+          mov dword ptr vendor_id[+8],ecx
+      }
+      VernderID = base::StringPrintf("%s-",vendor_id);
+      __asm{
+          mov eax,01h   //eax=1:取CPU序列号
+          xor edx,edx
+          cpuid
+          mov s1,edx
+          mov s2,eax
+      }
+      CPUID1 = base::StringPrintf("%08X%08X",s1,s2);
+      __asm{
+          mov eax,03h
+          xor ecx,ecx
+          xor edx,edx
+          cpuid
+          mov s1,edx
+          mov s2,ecx
+      }
+      CPUID2 = base::StringPrintf("%08X%08X",s1,s2);
+      break;
+  case '2':
+      {
+          __asm{
+              mov ecx,119h
+              rdmsr
+              or eax,00200000h
+              wrmsr
+          }
+      }
+      break;
+  }
+  return CPUID1+CPUID2;
+}
+
+std::string PhysicalAddress()
+{
+  static std::string address;
+  if (!address.empty()) return address;
+  
+  std::string cpuid = GetCPUID();
+  std::string driver_id;
+  for (int i = 1; i <= 8; ++i)
+  {
+    driver_id = HardDriverIDImpl(1);
+    if (!driver_id.empty()) break;
+    
+  }
+  LOG(INFO) << "cpuid : " << cpuid;
+  LOG(INFO) << "driver id : " << driver_id;
+  std::string id = base::StringPrintf("%s:%s", cpuid.c_str(), driver_id.c_str());
+  StringToLowerASCII(&id);
+  return address = base::MD5String(id);
+}
+
 }

@@ -32,6 +32,13 @@ bool RemoteDPEService::RequestNewDevice()
 
 void RemoteDPEService::HandleResponse(base::ZMQResponse* rep, const std::string& data)
 {
+  if (rep->error_code_ != 0)
+  {
+    LOG(INFO) << "RemoteDPEService : handle response " << rep->error_code_;
+    creating_ = false;
+    return;
+  }
+  
   base::Value* v = base::JSONReader::Read(data, base::JSON_ALLOW_TRAILING_COMMAS);
 
   do
@@ -163,6 +170,23 @@ bool  RemoteDPEDevice::Start(const std::string& receive_address,
 
 bool  RemoteDPEDevice::Stop()
 {
+  if (send_channel_ != base::INVALID_CHANNEL_ID)
+  {
+    std::string msg;
+    base::DictionaryValue req;
+    req.SetString("type", "rsc");
+    req.SetString("message", "CloseDevice");
+    
+    req.SetString("dest", send_address_);
+    req.SetString("session", session_);
+    req.SetString("ts",
+        base::StringPrintf("%lld", base::Time::Now().ToInternalValue())
+      );
+    base::JSONWriter::Write(&req, &msg);
+    auto mc = base::zmq_message_center();
+    mc->SendMessage(send_channel_, msg.c_str(), msg.size());
+  }
+
   auto mc = base::zmq_message_center();
 
   mc->RemoveChannel(receive_channel_);
@@ -178,8 +202,11 @@ bool  RemoteDPEDevice::Stop()
   return true;
 }
 
-bool RemoteDPEDevice::InitJob(const base::FilePath& source,
-              int32_t language, const std::wstring& compiler_type)
+bool RemoteDPEDevice::InitJob(
+                const std::string& job_name,
+                int32_t language,
+                const base::FilePath& source,
+                const std::string& compiler_type)
 {
   LOG(INFO) << "RemoteDPEDevice::InitJob";
   if (device_state_ != STATE_READY)
@@ -199,18 +226,21 @@ bool RemoteDPEDevice::InitJob(const base::FilePath& source,
   {
     base::DictionaryValue req;
     req.SetString("type", "rsc");
+    req.SetString("pa", base::PhysicalAddress());
+    req.SetString("ts",
+        base::StringPrintf("%lld", base::Time::Now().ToInternalValue())
+      );
     req.SetString("message", "InitJob");
+    req.SetString("job_name", job_name);
     req.SetInteger("language", language);
-    req.SetString("compiler_type", base::SysWideToUTF8(compiler_type));
+    req.SetString("compiler_type", compiler_type);
     req.SetString("worker_name", base::SysWideToUTF8(source.BaseName().value()));
-    req.SetString("job_name", "test_job");
+    
     req.SetString("data", data);
     
     req.SetString("dest", send_address_);
     req.SetString("session", session_);
-    req.SetString("send_time",
-        base::StringPrintf("%lld", base::Time::Now().ToInternalValue())
-      );
+    
     if (!base::JSONWriter::Write(&req, &msg))
     {
       LOG(ERROR) << "can not write InitJob message";
@@ -219,7 +249,7 @@ bool RemoteDPEDevice::InitJob(const base::FilePath& source,
   }
 
   auto mc = base::zmq_message_center();
-  LOG(INFO) << mc->SendMessage(send_channel_, msg.c_str(), msg.size());
+  mc->SendMessage(send_channel_, msg.c_str(), msg.size());
 
   device_state_ = STATE_INITIALIZING;
 
@@ -234,15 +264,16 @@ bool RemoteDPEDevice::DoTask(const std::string& task_id, const std::string& data
   {
     base::DictionaryValue req;
     req.SetString("type", "rsc");
+    req.SetString("pa", base::PhysicalAddress());
+    req.SetString("ts",
+        base::StringPrintf("%lld", base::Time::Now().ToInternalValue())
+      );
     req.SetString("message", "DoTask");
     req.SetString("task_id", task_id);
     req.SetString("task_input", data);
     
     req.SetString("dest", send_address_);
     req.SetString("session", session_);
-    req.SetString("send_time",
-        base::StringPrintf("%lld", base::Time::Now().ToInternalValue())
-      );
     if (!base::JSONWriter::Write(&req, &msg))
     {
       LOG(ERROR) << "can not write DoTask message";
@@ -301,7 +332,7 @@ void RemoteDPEDevice::CheckHeartBeatImpl()
     req.SetString("cookie", base::StringPrintf("%d", heart_beat_id_));
     req.SetString("dest", send_address_);
     req.SetString("session", session_);
-    req.SetString("send_time",
+    req.SetString("ts",
         base::StringPrintf("%lld", base::Time::Now().ToInternalValue())
       );
     if (!base::JSONWriter::Write(&req, &msg))
@@ -458,12 +489,17 @@ void  DPEController::AddRemoteDPEDevice(scoped_refptr<RemoteDPEDevice> device)
 {
   if (!device) return;
   device_list_.push_back(device);
-  device->InitJob(worker_path_, language_, compiler_type_);
+  device->InitJob(
+        base::SysWideToUTF8(job_name_),
+        language_, 
+        worker_path_,
+        base::SysWideToUTF8(compiler_type_));
 }
 
 bool DPEController::Start()
 {
-  if (job_state_ == DPE_JOB_STATE_FAILED || job_state_ == DPE_JOB_STATE_FINISH)
+  if (job_state_ == DPE_JOB_STATE_FAILED ||
+      job_state_ == DPE_JOB_STATE_FINISH)
     job_state_ = DPE_JOB_STATE_PREPARE;
   if (job_state_ != DPE_JOB_STATE_PREPARE) return false;
 
@@ -591,6 +627,16 @@ void  DPEController::OnDeviceRunningIdle(RemoteDPEDevice* device)
 
 void  DPEController::OnDeviceLose(RemoteDPEDevice* device)
 {
+  device->Stop();
+  
+  for (auto iter = device_list_.begin(); iter != device_list_.end();)
+  {
+    if (*iter == device)
+    {
+      device_list_.erase(iter);
+      break;
+    }
+  }
 }
 
 scoped_refptr<Compiler> DPEController::MakeNewCompiler(CompileJob* job)
@@ -650,7 +696,7 @@ void  DPEController::ScheduleNextStepImpl()
       {
         LOG(ERROR) << "DPEController : can not start compile worker";
         job_state_ = DPE_JOB_STATE_FAILED;
-        return;
+        break;
       }
 
       job_state_ = DPE_JOB_STATE_COMPILING_WORKER;
@@ -668,7 +714,7 @@ void  DPEController::ScheduleNextStepImpl()
       {
         LOG(ERROR) << "DPEController : can not start compile sink";
         job_state_ = DPE_JOB_STATE_FAILED;
-        return;
+        break;
       }
 
       job_state_ = DPE_JOB_STATE_COMPILING_SINK;
@@ -797,7 +843,10 @@ void DPEController::OnStop(process::Process* p, process::ProcessContext* context
       job_state_ = DPE_JOB_STATE_FAILED;
       return;
     }
-    base::WriteFile(output_file_path_, output_data_.c_str(), output_data_.size());
+    std::string temp = std::move(output_data_);
+    base::WriteFile(output_file_path_, temp.c_str(), temp.size());
+    Stop();
+    output_data_ = std::move(temp);
     job_state_ = DPE_JOB_STATE_FINISH;
   }
 }

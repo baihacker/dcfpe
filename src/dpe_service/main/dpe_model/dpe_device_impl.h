@@ -43,12 +43,14 @@ private:
   void          HandleHeartBeatMessage(base::DictionaryValue* message);
   void          HandleInitJobMessage(base::DictionaryValue* message);
   void          HandleDoTaskMessage(base::DictionaryValue* message);
+  void          HandleCloseDeviceMessage(base::DictionaryValue* message);
 
   scoped_refptr<Compiler> MakeNewCompiler(CompileJob* job);
   void          OnCompileFinished(CompileJob* job) override;
 
   void          OnStop(process::Process* p, process::ProcessContext* context) override;
   void          OnOutput(process::Process* p, bool is_std_out, const std::string& data) override;
+
 private:
   DPEService*   dpe_;
   int32_t       device_state_;

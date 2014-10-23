@@ -56,25 +56,14 @@ msg protocol:
 {
   "type" : "ipc", # other value: "rsc" remote service communicate (rpc, rmi)
   "request" : "", # request, reply, message
+  
+  "pa" : "",
   "src" : "",
   "dest" : "",
-  "send_time" : "",
-  "receive_time" : "",
-  "back_time" : "",
   "session" : "",
   "cookie" : "",
-}
-
-request = "CreateDPEDevice"
-arguments = 
-{
-  "":"",
-}
-
-reply = "CreateDPEDeviceResponse"
-response = 
-{
-  "" : ""
+  "ts" : "",
+  "ots" : "",
 }
 */
 std::string ZServer::handle_request(base::ServerContext& context)
@@ -84,7 +73,11 @@ std::string ZServer::handle_request(base::ServerContext& context)
   base::DictionaryValue rep;
   rep.SetString("type", "rsc");
   rep.SetString("error_code", "-1");
-  
+  rep.SetString("pa", base::PhysicalAddress());
+  rep.SetString("ts",
+        base::StringPrintf("%lld", base::Time::Now().ToInternalValue())
+      );
+
   base::Value* v = base::JSONReader::Read(
           context.data_.c_str(), base::JSON_ALLOW_TRAILING_COMMAS);
 
@@ -111,15 +104,17 @@ std::string ZServer::handle_request(base::ServerContext& context)
     if (!dv->GetString("dest", &val)) break;
     rep.SetString("src", val);
     
-    // we give cookie back
+    // send cookie back
     if (dv->GetString("cookie", &val))
     {
       rep.SetString("cookie", val);
     }
     
-    rep.SetString("receive_time",
-      base::StringPrintf("%lld", base::Time::Now().ToInternalValue())
-      );
+    // original time stamp
+    if (dv->GetString("ts", &val))
+    {
+      rep.SetString("ots", val);
+    }
 
     if (!dv->GetString("request", &val)) break;
 
@@ -144,6 +139,8 @@ std::string ZServer::handle_request(base::ServerContext& context)
 void ZServer::HandleCreateDPEDeviceRequest(
       base::DictionaryValue* req, base::DictionaryValue* reply)
 {
+  reply->SetString("reply", "CreateDPEDeviceResponse");
+  
   auto s = dpe_->CreateDPEDevice(this, req);
   if (!s)
   {
@@ -151,13 +148,12 @@ void ZServer::HandleCreateDPEDeviceRequest(
     reply->SetString("error_code", "-1");
     return;
   }
- 
-  reply->SetString("reply", "CreateDPEDeviceResponse");
-  
+
   // the information of DPEDevice
   reply->SetString("receive_address", s->GetReceiveAddress());
   reply->SetString("send_address", s->GetSendAddress());
   reply->SetString("session", s->GetSession());
+  
   reply->SetString("error_code", "0");
 }
 

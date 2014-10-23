@@ -54,8 +54,8 @@ public:
   bool        Start(const std::string& receive_address,
                     const std::string& send_address, const std::string& session);
   bool        Stop();
-  bool        InitJob(const base::FilePath& source,
-                int32_t language, const std::wstring& compiler_type);
+  bool        InitJob(const std::string& job_name, int32_t language,
+                const base::FilePath& source, const std::string& compiler_type);
   bool        DoTask(const std::string& task_id, const std::string& data);
   
 private:
@@ -96,7 +96,7 @@ enum
   DPE_JOB_STATE_COMPILING_SINK,
   DPE_JOB_STATE_GENERATING_INPUT,
   DPE_JOB_STATE_RUNNING,
-  DPE_JOB_STATE_FINISH,
+  DPE_JOB_STATE_FINISH,                 // The same as prepare, but we have output_data
   DPE_JOB_STATE_FAILED,
 };
 

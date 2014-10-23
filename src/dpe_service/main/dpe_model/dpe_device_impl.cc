@@ -18,7 +18,7 @@ DPEDeviceImpl::DPEDeviceImpl(DPEService* dpe) :
 
 DPEDeviceImpl::~DPEDeviceImpl()
 {
-  LOG(INFO) << "DPEDeviceImpl::~DPEDeviceImpl";
+  CloseDevice();
 }
 
 bool DPEDeviceImpl::OpenDevice(int32_t ip)
@@ -209,6 +209,10 @@ int32_t DPEDeviceImpl::handle_message(int32_t handle, const std::string& data)
       {
         HandleDoTaskMessage(dv);
       }
+      else if (val == "CloseDevice")
+      {
+        HandleCloseDeviceMessage(dv);
+      }
     }
   } while (false);
 
@@ -226,13 +230,15 @@ void DPEDeviceImpl::HandleHeartBeatMessage(base::DictionaryValue* message)
   {
     std::string val;
     std::string msg;
-    base::DictionaryValue req;
-    req.SetString("type", "rsc");
-    req.SetString("message", "HeartBeat");
-    req.SetString("cookie", cookie);
-    req.SetString("session", session_);
-    req.SetString("error_code", "0");
-    base::JSONWriter::Write(&req, &msg);
+    base::DictionaryValue rep;
+    rep.SetString("type", "rsc");
+    rep.SetString("pa", base::PhysicalAddress());
+    rep.SetString("ts", base::StringPrintf("%lld", base::Time::Now().ToInternalValue()));
+    rep.SetString("message", "HeartBeat");
+    rep.SetString("cookie", cookie);
+    rep.SetString("session", session_);
+    rep.SetString("error_code", "0");
+    base::JSONWriter::Write(&rep, &msg);
     auto mc = base::zmq_message_center();
     mc->SendMessage(send_channel_, msg.c_str(), msg.size());
   }
@@ -240,24 +246,51 @@ void DPEDeviceImpl::HandleHeartBeatMessage(base::DictionaryValue* message)
 
 void DPEDeviceImpl::HandleInitJobMessage(base::DictionaryValue* message)
 {
+  auto quit_with_state = [&](int32_t state) {
+    std::string msg;
+    base::DictionaryValue rep;
+    rep.SetString("type", "rsc");
+    rep.SetString("pa", base::PhysicalAddress());
+    rep.SetString("ts", base::StringPrintf("%lld", base::Time::Now().ToInternalValue()));
+    rep.SetString("message", "InitJob");
+    rep.SetString("error_code", "-1");
+    base::JSONWriter::Write(&rep, &msg);
+    auto mc = base::zmq_message_center();
+    mc->SendMessage(send_channel_, msg.c_str(), msg.size());
+    device_state_ = state;
+  };
+
+  if (device_state_ != DPE_DEVICE_WAITING)
+  {
+    quit_with_state(device_state_);
+    return;
+  }
+
   std::string val;
   int32_t language = PL_UNKNOWN;
   std::string compiler_type;
   std::string worker_name;
   std::string data;
   std::string job_name;
+  std::string job_id;
+  std::string rpa;
+
+  message->GetString("pa", &rpa);
+  message->GetString("job_name", &job_name);
+
   message->GetInteger("language", &language);
   message->GetString("compiler_type", &compiler_type);
   message->GetString("worker_name", &worker_name);
   message->GetString("data", &data);
-  message->GetString("job_name", &job_name);
+  
 
-  if (job_name.empty() || worker_name.empty() || data.empty())
+  if (rpa.empty() || job_name.empty() || worker_name.empty() || data.empty())
   {
-    goto send_failed_message;
+    quit_with_state(device_state_);
+    return;
   }
 
-  job_home_path_ = home_path_.Append(base::SysUTF8ToWide(job_name));
+  job_home_path_ = home_path_.Append(base::SysUTF8ToWide(job_name+"@"+rpa));
   worker_path_ = job_home_path_.Append(base::SysUTF8ToWide(worker_name));
 
   base::CreateDirectory(job_home_path_);
@@ -280,36 +313,69 @@ void DPEDeviceImpl::HandleInitJobMessage(base::DictionaryValue* message)
   if (!compiler_)
   {
     LOG(ERROR) << "can not create compiler:";
-    goto send_failed_message;
+    quit_with_state(device_state_);
+    return;
+  }
+
+  if (compiler_->GenerateCmdline(cj_))
+  {
+    image_path_ =  cj_->image_path_.IsAbsolute() ?
+                       cj_->image_path_ :
+                       cj_->current_directory_.Append(cj_->image_path_);
+    argument_list_ = cj_->arguments_;
+  }
+
+  // todo : make sure we need not compile
+  if (base::PathExists(image_path_))
+  {
+    std::string msg;
+    base::DictionaryValue rep;
+    rep.SetString("type", "rsc");
+    rep.SetString("message", "InitJob");
+    rep.SetString("pa", base::PhysicalAddress());
+    rep.SetString("ts", base::StringPrintf("%lld", base::Time::Now().ToInternalValue()));
+    rep.SetString("error_code", "0");
+    device_state_ = DPE_DEVICE_RUNNING_IDLE;
+    base::JSONWriter::Write(&rep, &msg);
+    auto mc = base::zmq_message_center();
+    mc->SendMessage(send_channel_, msg.c_str(), msg.size());
+    return;
   }
 
   if (!compiler_->StartCompile(cj_))
   {
     LOG(ERROR) << "can not start compile source";
-    goto send_failed_message;
+    quit_with_state(device_state_);
+    return;
   }
 
   device_state_ = DPE_DEVICE_INITIALIZING;
-  return;
-send_failed_message:
-  {
-    std::string msg;
-    base::DictionaryValue req;
-    req.SetString("type", "rsc");
-    req.SetString("message", "InitJob");
-    req.SetString("error_code", "-1");
-    base::JSONWriter::Write(&req, &msg);
-    auto mc = base::zmq_message_center();
-    mc->SendMessage(send_channel_, msg.c_str(), msg.size());
-    device_state_ = DPE_DEVICE_FAILED;
-    return;
-  }
 }
 
 void DPEDeviceImpl::HandleDoTaskMessage(base::DictionaryValue* message)
 {
+  auto quit_with_state = [&](int32_t state) {
+    std::string msg;
+    base::DictionaryValue rep;
+    rep.SetString("type", "rsc");
+    rep.SetString("pa", base::PhysicalAddress());
+    rep.SetString("ts", base::StringPrintf("%lld", base::Time::Now().ToInternalValue()));
+    rep.SetString("message", "DoTask");
+    rep.SetString("error_code", "-1");
+    base::JSONWriter::Write(&rep, &msg);
+    auto mc = base::zmq_message_center();
+    mc->SendMessage(send_channel_, msg.c_str(), msg.size());
+    device_state_ = state;
+  };
+
   std::string task_id;
   std::string data;
+
+  if (device_state_ != DPE_DEVICE_RUNNING_IDLE)
+  {
+    quit_with_state(device_state_);
+    return;
+  }
 
   message->GetString("task_id", &task_id);
   message->GetString("task_input", &data);
@@ -327,31 +393,24 @@ void DPEDeviceImpl::HandleDoTaskMessage(base::DictionaryValue* message)
   if (!worker_process_->Start())
   {
     LOG(ERROR) << "can not start worker process";
-    goto send_failed_message;
+    quit_with_state(device_state_);
+    return;
   }
 
   auto context = worker_process_->GetProcessContext();
-  //context->std_in_write_->Write("1\n", 2);
-  //context->std_in_write_->WaitForPendingIO(-1);
 
   context->std_in_write_->Write(data.c_str(), data.size());
 
   task_id_ = task_id;
   device_state_ = DPE_DEVICE_RUNNING;
-  return;
-send_failed_message:
-  {
-    std::string msg;
-    base::DictionaryValue req;
-    req.SetString("type", "rsc");
-    req.SetString("message", "InitJob");
-    req.SetString("error_code", "-1");
-    base::JSONWriter::Write(&req, &msg);
-    auto mc = base::zmq_message_center();
-    mc->SendMessage(send_channel_, msg.c_str(), msg.size());
-    device_state_ = DPE_DEVICE_FAILED;
-    return;
-  }
+}
+
+void DPEDeviceImpl::HandleCloseDeviceMessage(base::DictionaryValue* message)
+{
+  CloseDevice();
+  base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
+    base::Bind(&DPEService::RemoveDPEDevice, base::Unretained(dpe_), static_cast<DPEDevice*>(this))
+    );
 }
 
 scoped_refptr<Compiler> DPEDeviceImpl::MakeNewCompiler(CompileJob* job)
@@ -363,73 +422,63 @@ scoped_refptr<Compiler> DPEDeviceImpl::MakeNewCompiler(CompileJob* job)
 
 void  DPEDeviceImpl::OnCompileFinished(CompileJob* job)
 {
+  std::string msg;
+  base::DictionaryValue rep;
+  rep.SetString("type", "rsc");
+  rep.SetString("message", "InitJob");
+  rep.SetString("pa", base::PhysicalAddress());
+  rep.SetString("ts", base::StringPrintf("%lld", base::Time::Now().ToInternalValue()));
+  rep.SetString("error_code", "-1");
+
   if (cj_->compile_process_->GetProcessContext()->exit_code_ != 0 ||
       cj_->compile_process_->GetProcessContext()->exit_reason_ != process::EXIT_REASON_EXIT)
   {
-    device_state_ = DPE_DEVICE_FAILED;
     LOG(ERROR) << "compile error:\n" << cj_->compiler_output_;
-    std::string msg;
-    base::DictionaryValue req;
-    req.SetString("type", "rsc");
-    req.SetString("message", "InitJob");
-    req.SetString("error_code", "-1");
-    base::JSONWriter::Write(&req, &msg);
-    auto mc = base::zmq_message_center();
-    mc->SendMessage(send_channel_, msg.c_str(), msg.size());
-    return;
+    rep.SetString("error_code", "-1");
+    device_state_ = DPE_DEVICE_FAILED;
   }
-
-  image_path_ =  job->image_path_.IsAbsolute() ?
+  else
+  {
+    image_path_ =  job->image_path_.IsAbsolute() ?
                        job->image_path_ :
                        job->current_directory_.Append(cj_->image_path_);
-  argument_list_ = job->arguments_;
-
-  {
-    std::string msg;
-    base::DictionaryValue req;
-    req.SetString("type", "rsc");
-    req.SetString("message", "InitJob");
-    req.SetString("error_code", "0");
-    base::JSONWriter::Write(&req, &msg);
-    auto mc = base::zmq_message_center();
-    mc->SendMessage(send_channel_, msg.c_str(), msg.size());
+    argument_list_ = job->arguments_;
+    rep.SetString("error_code", "0");
     device_state_ = DPE_DEVICE_RUNNING_IDLE;
   }
+
+  base::JSONWriter::Write(&rep, &msg);
+  auto mc = base::zmq_message_center();
+  mc->SendMessage(send_channel_, msg.c_str(), msg.size());
 }
 
 void DPEDeviceImpl::OnStop(process::Process* p, process::ProcessContext* context)
 {
+  std::string msg;
+  base::DictionaryValue rep;
+  rep.SetString("type", "rsc");
+  rep.SetString("pa", base::PhysicalAddress());
+  rep.SetString("ts", base::StringPrintf("%lld", base::Time::Now().ToInternalValue()));
+  rep.SetString("message", "DoTask");
+  rep.SetString("task_id", task_id_);
+  rep.SetString("error_code", "-1");
+
   if (p->GetProcessContext()->exit_code_ != 0 ||
       p->GetProcessContext()->exit_reason_ != process::EXIT_REASON_EXIT)
   {
-    device_state_ = DPE_DEVICE_RUNNING_IDLE;
     LOG(ERROR) << "compile error:\n" << cj_->compiler_output_;
-    std::string msg;
-    base::DictionaryValue req;
-    req.SetString("type", "rsc");
-    req.SetString("message", "DoTask");
-    req.SetString("error_code", "-1");
-    req.SetString("task_id", task_id_);
-    base::JSONWriter::Write(&req, &msg);
-    auto mc = base::zmq_message_center();
-    mc->SendMessage(send_channel_, msg.c_str(), msg.size());
-    return;
+    device_state_ = DPE_DEVICE_RUNNING_IDLE;
+  }
+  else
+  {
+    rep.SetString("error_code", "0");
+    rep.SetString("task_output", task_output_data_);
+    device_state_ = DPE_DEVICE_RUNNING_IDLE;
   }
 
-  {
-    std::string msg;
-    base::DictionaryValue req;
-    req.SetString("type", "rsc");
-    req.SetString("message", "DoTask");
-    req.SetString("error_code", "0");
-    req.SetString("task_id", task_id_);
-    req.SetString("task_output", task_output_data_);
-    base::JSONWriter::Write(&req, &msg);
-    auto mc = base::zmq_message_center();
-    mc->SendMessage(send_channel_, msg.c_str(), msg.size());
-    device_state_ = DPE_DEVICE_RUNNING_IDLE;
-    return;
-  }
+  base::JSONWriter::Write(&rep, &msg);
+  auto mc = base::zmq_message_center();
+  mc->SendMessage(send_channel_, msg.c_str(), msg.size());
 }
 
 void DPEDeviceImpl::OnOutput(process::Process* p, bool is_std_out, const std::string& data)

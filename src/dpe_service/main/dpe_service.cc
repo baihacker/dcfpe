@@ -29,7 +29,7 @@ void DPEService::Start()
 {
   LoadConfig();
   LoadCompilers(base::FilePath(L"D:\\compilers.json"));
-
+  LOG(INFO) << base::PhysicalAddress();
   auto mc = base::zmq_message_center();
   for (int i = 0; i < 3; ++i)
   {

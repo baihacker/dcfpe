@@ -366,6 +366,7 @@ void ZMQClient::ProcessEvent(const std::vector<void*>& signal_sockets)
         zmq_close(iter->zmq_socket_);
 
         scoped_refptr<ZMQResponse> rep = new ZMQResponse();
+        rep->error_code_ = ZMQResponse::ZMQ_REP_OK;
         rep->data_ = std::move(sockets[iter->zmq_socket_]);
         responses.push_back({iter->callback_, rep});
 
