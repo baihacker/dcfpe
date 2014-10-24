@@ -293,4 +293,12 @@ std::string PhysicalAddress()
   return address = base::MD5String(id);
 }
 
+void AddPaAndTs(base::DictionaryValue* value)
+{
+  if (value)
+  {
+    value->SetString("pa", base::PhysicalAddress());
+    value->SetString("ts", base::StringPrintf("%lld", base::Time::Now().ToInternalValue()));
+  }
+}
 }

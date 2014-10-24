@@ -40,10 +40,10 @@ private:
   
   int32_t       handle_message(int32_t handle, const std::string& data) override;
   
-  void          HandleHeartBeatMessage(base::DictionaryValue* message);
-  void          HandleInitJobMessage(base::DictionaryValue* message);
-  void          HandleDoTaskMessage(base::DictionaryValue* message);
-  void          HandleCloseDeviceMessage(base::DictionaryValue* message);
+  void          HandleHeartBeatMessage(const std::string& smsg, base::DictionaryValue* message);
+  void          HandleInitJobMessage(const std::string& smsg, base::DictionaryValue* message);
+  void          HandleDoTaskMessage(const std::string& smsg, base::DictionaryValue* message);
+  void          HandleCloseDeviceMessage(const std::string& smsg, base::DictionaryValue* message);
 
   scoped_refptr<Compiler> MakeNewCompiler(CompileJob* job);
   void          OnCompileFinished(CompileJob* job) override;

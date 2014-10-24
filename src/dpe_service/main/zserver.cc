@@ -73,10 +73,7 @@ std::string ZServer::handle_request(base::ServerContext& context)
   base::DictionaryValue rep;
   rep.SetString("type", "rsc");
   rep.SetString("error_code", "-1");
-  rep.SetString("pa", base::PhysicalAddress());
-  rep.SetString("ts",
-        base::StringPrintf("%lld", base::Time::Now().ToInternalValue())
-      );
+  base::AddPaAndTs(&rep);
 
   base::Value* v = base::JSONReader::Read(
           context.data_.c_str(), base::JSON_ALLOW_TRAILING_COMMAS);
@@ -123,6 +120,10 @@ std::string ZServer::handle_request(base::ServerContext& context)
     {
       HandleCreateDPEDeviceRequest(dv, &rep);
     }
+    else if (val == "Hello")
+    {
+      HandleHelloRequest(dv, &rep);
+    }
   } while (false);
   
   delete v;
@@ -157,4 +158,10 @@ void ZServer::HandleCreateDPEDeviceRequest(
   reply->SetString("error_code", "0");
 }
 
+void ZServer::HandleHelloRequest(
+        base::DictionaryValue* req, base::DictionaryValue* reply)
+{
+  reply->SetString("reply", "HelloResponse");
+  reply->SetString("error_code", "0");
+}
 }

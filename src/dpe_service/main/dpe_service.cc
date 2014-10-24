@@ -10,6 +10,155 @@
 using namespace std;
 namespace ds
 {
+DPENode::DPENode(int32_t node_id, const std::string& address, bool is_local) :
+  node_id_(node_id),
+  server_address_(address),
+  is_local_(is_local),
+  response_time_(base::TimeDelta::FromInternalValue(0)),
+  response_count_(0),
+  zclient_(new ZServerClient(address)),
+  weakptr_factory_(this)
+{
+}
+
+DPENode::~DPENode()
+{
+}
+
+DPENodeManager::DPENodeManager() :
+  next_node_id_(0),
+  weakptr_factory_(this)
+{
+}
+
+DPENodeManager::~DPENodeManager()
+{
+}
+
+void  DPENodeManager::AddNode(int32_t ip, int32_t port)
+{
+  AddNode(base::AddressHelper::MakeZMQTCPAddress(ip, port));
+}
+
+void  DPENodeManager::AddNode(const std::string& address)
+{
+  for (auto iter = node_list_.begin(); iter != node_list_.end();)
+  {
+    if ((*iter)->server_address_ == address)
+    {
+      return;
+    }
+    else
+    {
+      ++iter;
+    }
+  }
+  
+  auto node = new DPENode(next_node_id_++, address, false);
+  node_list_.push_back(node);
+  node->GetZClient()->SayHello(
+    base::Bind(&DPENodeManager::HandleResponse,
+      weakptr_factory_.GetWeakPtr(),
+      node->GetNodeId())
+    );
+}
+
+void  DPENodeManager::RemoveNode(int32_t ip, int32_t port)
+{
+  RemoveNode(base::AddressHelper::MakeZMQTCPAddress(ip, port));
+}
+
+void  DPENodeManager::RemoveNode(const std::string& address)
+{
+  for (auto iter = node_list_.begin(); iter != node_list_.end();)
+  {
+    if ((*iter)->server_address_ == address)
+    {
+      iter = node_list_.erase(iter);
+    }
+    else
+    {
+      ++iter;
+    }
+  }
+}
+
+DPENode*  DPENodeManager::GetNodeById(const int32_t id) const
+{
+  for (auto& it : node_list_)
+  if (it->GetNodeId() == id)
+  {
+    return it;
+  }
+  return NULL;
+}
+
+void  DPENodeManager::HandleResponse(base::WeakPtr<DPENodeManager> self,
+                int32_t node_id,
+                scoped_refptr<base::ZMQResponse> rep)
+{
+  if (DPENodeManager* pThis = self.get())
+  {
+    pThis->HandleResponseImpl(node_id, rep);
+  }
+}
+
+void  DPENodeManager::HandleResponseImpl(int32_t node_id, scoped_refptr<base::ZMQResponse> rep)
+{
+  if (rep->error_code_ != 0)
+  {
+    LOG(INFO) << "DPENodeManager : handle response " << rep->error_code_;
+    return;
+  }
+  
+  base::Value* v = base::JSONReader::Read(rep->data_, base::JSON_ALLOW_TRAILING_COMMAS);
+
+  do
+  {
+    if (!v)
+    {
+      LOG(ERROR) << "\nCan not parse response";
+      break;
+    }
+    
+    base::DictionaryValue* dv = NULL;
+    if (!v->GetAsDictionary(&dv)) break;
+    {
+      std::string val;
+      std::string cookie;
+      if (!dv->GetString("type", &val)) break;
+      if (val != "rsc") break;
+      
+      if (!dv->GetString("src", &val)) break;
+      
+      if (!dv->GetString("dest", &val)) break;
+      
+      if (dv->GetString("cookie", &val))
+      {
+        cookie = std::move(val);
+      }
+      
+      if (!dv->GetString("reply", &val)) break;
+      
+      if (val != "HelloResponse")
+      {
+        if (!dv->GetString("error_code", &val)) break;
+        if (val != "0") break;
+        
+        if (!dv->GetString("ots", &val)) break;
+
+        DPENode* node = GetNodeById(node_id);
+        auto last = base::Time::FromInternalValue(atoll(val.c_str()));
+        auto now = base::Time::Now();
+        dv->GetString("pa", &node->pa_);
+        node->response_time_ += now - last;
+        ++node->response_count_;
+      }
+    }
+  } while (false);
+  
+  delete v;
+}
 
 /*
 *******************************************************************************
@@ -28,8 +177,8 @@ DPEController* ctrl;
 void DPEService::Start()
 {
   LoadConfig();
-  LoadCompilers(base::FilePath(L"D:\\compilers.json"));
-  LOG(INFO) << base::PhysicalAddress();
+  LoadCompilers(config_dir_.Append(L"compilers.json"));
+
   auto mc = base::zmq_message_center();
   for (int i = 0; i < 3; ++i)
   {
@@ -56,19 +205,23 @@ void DPEService::Start()
   
   mc->AddMessageHandler(this);
   
+  // start default server
   ZServer* default_server = new ZServer(this);
   default_server->Start(MAKE_IP(127, 0, 0, 1));
   server_list_.push_back(default_server);
+  
+  node_manager_.AddNode(default_server->GetServerAddress());
+  node_manager_.node_list_.front()->SetIsLocal(true);
   
 #if 1
   ctrl = new DPEController(this);
   ctrl->SetLanguage(PL_CPP);
   ctrl->SetCompilerType(L"mingw");
-  ctrl->SetHomePath(base::FilePath(L"D:\\projects"));
+  ctrl->SetHomePath(home_dir_);
   ctrl->SetJobName(L"test_job");
-  ctrl->SetSource(base::FilePath(L"D:\\Projects\\case\\source.c"));
-  ctrl->SetWorker(base::FilePath(L"D:\\Projects\\case\\worker.c"));
-  ctrl->SetSink(base::FilePath(L"D:\\Projects\\case\\sink.c"));
+  ctrl->SetSource(base::FilePath(L"D:\\dcfpe\\Home\\case\\source.c"));
+  ctrl->SetWorker(base::FilePath(L"D:\\dcfpe\\Home\\case\\worker.c"));
+  ctrl->SetSink(base::FilePath(L"D:\\dcfpe\\Home\\case\\sink.c"));
   ctrl->AddRemoteDPEService(true, default_server->GetServerAddress());
   ctrl->Start();
 #endif
@@ -77,9 +230,8 @@ void DPEService::Start()
 void DPEService::WillStop()
 {
   base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
-    base::Bind(&DPEService::StopImpl, base::Unretained(this)
-      )
-    );
+        base::Bind(&DPEService::StopImpl, base::Unretained(this)
+      ));
 }
 
 void DPEService::StopImpl()
@@ -111,18 +263,50 @@ int32_t DPEService::handle_message(int32_t handle, const std::string& data)
 
 void DPEService::LoadConfig()
 {
-  home_dir_ = base::GetHomeDir().Append(L"dcfpe");
-  base::CreateDirectory(home_dir_);
-
   {
     wchar_t lpszFolder[ MAX_PATH ] = { 0 };
     ::SHGetSpecialFolderPath( NULL, lpszFolder, CSIDL_LOCAL_APPDATA, TRUE);
     config_dir_ = base::FilePath(lpszFolder).DirName().Append(L"LocalLow\\dcfpe");
     base::CreateDirectory(config_dir_);
   }
+  
+  do
+  {
+    base::FilePath path = config_dir_.Append(L"config.json");
+    std::string data;
 
-  base::GetTempDir(&temp_dir_);
-  temp_dir_ = temp_dir_.Append(L"dcfpe");
+    if (!base::ReadFileToString(path, &data)) break;
+    base::Value* root = base::JSONReader::Read(data.c_str(), base::JSON_ALLOW_TRAILING_COMMAS);
+    if (!root) break;
+
+    base::DictionaryValue* dv = NULL;
+    if (!root->GetAsDictionary(&dv)) break;
+    
+    std::string val;
+    if (dv->GetString("home_dir", &val))
+    {
+      home_dir_ = base::FilePath(base::SysUTF8ToWide(val));
+    }
+    if (dv->GetString("temp_dir", &val))
+    {
+      temp_dir_ = base::FilePath(base::SysUTF8ToWide(val));
+    }
+  } while (false);
+
+  if (home_dir_.value().empty())
+  {
+    //home_dir_ = base::GetHomeDir().Append(L"dcfpe");
+    home_dir_ = base::FilePath(L"C:\\Dcfpe\\Home");
+  }
+  
+  if (temp_dir_.value().empty())
+  {
+    //base::GetTempDir(&temp_dir_);
+    //temp_dir_ = temp_dir_.Append(L"dcfpe");
+    temp_dir_ = base::FilePath(L"C:\\Dcfpe\\Temp");
+  }
+  
+  base::CreateDirectory(home_dir_);
   base::CreateDirectory(temp_dir_);
 }
 
@@ -318,7 +502,7 @@ scoped_refptr<DPEDevice> DPEService::CreateDPEDevice(
   {
     return NULL;
   }
-  device->SetHomePath(base::FilePath(L"D:\\worker_home"));
+  device->SetHomePath(home_dir_);
   device->AddRef();
   dpe_device_list_.push_back(device);
   return device;

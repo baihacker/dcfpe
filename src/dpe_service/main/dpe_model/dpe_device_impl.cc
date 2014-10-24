@@ -199,19 +199,19 @@ int32_t DPEDeviceImpl::handle_message(int32_t handle, const std::string& data)
       
       if (val == "HeartBeat")
       {
-        HandleHeartBeatMessage(dv);
+        HandleHeartBeatMessage(data, dv);
       }
       else if (val == "InitJob")
       {
-        HandleInitJobMessage(dv);
+        HandleInitJobMessage(data, dv);
       }
       else if (val == "DoTask")
       {
-        HandleDoTaskMessage(dv);
+        HandleDoTaskMessage(data, dv);
       }
       else if (val == "CloseDevice")
       {
-        HandleCloseDeviceMessage(dv);
+        HandleCloseDeviceMessage(data, dv);
       }
     }
   } while (false);
@@ -221,7 +221,7 @@ int32_t DPEDeviceImpl::handle_message(int32_t handle, const std::string& data)
   return 1;
 }
 
-void DPEDeviceImpl::HandleHeartBeatMessage(base::DictionaryValue* message)
+void DPEDeviceImpl::HandleHeartBeatMessage(const std::string& smsg, base::DictionaryValue* message)
 {
   std::string cookie;
   if (!message->GetString("cookie", &cookie)) return;
@@ -244,7 +244,7 @@ void DPEDeviceImpl::HandleHeartBeatMessage(base::DictionaryValue* message)
   }
 }
 
-void DPEDeviceImpl::HandleInitJobMessage(base::DictionaryValue* message)
+void DPEDeviceImpl::HandleInitJobMessage(const std::string& smsg, base::DictionaryValue* message)
 {
   auto quit_with_state = [&](int32_t state) {
     std::string msg;
@@ -325,8 +325,9 @@ void DPEDeviceImpl::HandleInitJobMessage(base::DictionaryValue* message)
     argument_list_ = cj_->arguments_;
   }
 
+  base::FilePath job_desc_path = job_home_path_.Append(L"job_desc.json");
   // todo : make sure we need not compile
-  if (base::PathExists(image_path_))
+  if (base::PathExists(image_path_) && base::PathExists(job_desc_path))
   {
     std::string msg;
     base::DictionaryValue rep;
@@ -349,15 +350,18 @@ void DPEDeviceImpl::HandleInitJobMessage(base::DictionaryValue* message)
     return;
   }
 
+  base::WriteFile(job_desc_path, smsg.c_str(), smsg.size());
+
   device_state_ = DPE_DEVICE_INITIALIZING;
 }
 
-void DPEDeviceImpl::HandleDoTaskMessage(base::DictionaryValue* message)
+void DPEDeviceImpl::HandleDoTaskMessage(const std::string& smsg, base::DictionaryValue* message)
 {
   auto quit_with_state = [&](int32_t state) {
     std::string msg;
     base::DictionaryValue rep;
     rep.SetString("type", "rsc");
+    base::AddPaAndTs(&rep);
     rep.SetString("pa", base::PhysicalAddress());
     rep.SetString("ts", base::StringPrintf("%lld", base::Time::Now().ToInternalValue()));
     rep.SetString("message", "DoTask");
@@ -405,7 +409,7 @@ void DPEDeviceImpl::HandleDoTaskMessage(base::DictionaryValue* message)
   device_state_ = DPE_DEVICE_RUNNING;
 }
 
-void DPEDeviceImpl::HandleCloseDeviceMessage(base::DictionaryValue* message)
+void DPEDeviceImpl::HandleCloseDeviceMessage(const std::string& smsg, base::DictionaryValue* message)
 {
   CloseDevice();
   base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
@@ -426,8 +430,7 @@ void  DPEDeviceImpl::OnCompileFinished(CompileJob* job)
   base::DictionaryValue rep;
   rep.SetString("type", "rsc");
   rep.SetString("message", "InitJob");
-  rep.SetString("pa", base::PhysicalAddress());
-  rep.SetString("ts", base::StringPrintf("%lld", base::Time::Now().ToInternalValue()));
+  base::AddPaAndTs(&rep);
   rep.SetString("error_code", "-1");
 
   if (cj_->compile_process_->GetProcessContext()->exit_code_ != 0 ||
@@ -457,8 +460,7 @@ void DPEDeviceImpl::OnStop(process::Process* p, process::ProcessContext* context
   std::string msg;
   base::DictionaryValue rep;
   rep.SetString("type", "rsc");
-  rep.SetString("pa", base::PhysicalAddress());
-  rep.SetString("ts", base::StringPrintf("%lld", base::Time::Now().ToInternalValue()));
+  base::AddPaAndTs(&rep);
   rep.SetString("message", "DoTask");
   rep.SetString("task_id", task_id_);
   rep.SetString("error_code", "-1");

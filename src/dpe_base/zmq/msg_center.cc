@@ -354,25 +354,28 @@ unsigned __stdcall MessageCenter::ThreadMain(void * arg)
 
 unsigned    MessageCenter::Run()
 {
-  zmq_pollitem_t  items[128];
-  
   for (int32_t id = 0; !quit_flag_; ++id)
   {
+    std::vector<zmq_pollitem_t> items(1);
+    
     items[0].socket = zmq_ctrl_sub_;
     items[0].fd = NULL;
     items[0].events = ZMQ_POLLIN;
     
     int32_t top = 1;
     
-    subscribers_mutex_.lock(); for (auto& it: subscribers_)
+    subscribers_mutex_.lock();
+    for (auto& it: subscribers_)
     {
-      items[top].socket = it.first;
-      items[top].fd = NULL;
-      items[top].events = ZMQ_POLLIN;
+      zmq_pollitem_t temp;
+      temp.socket = it.first;
+      temp.fd = NULL;
+      temp.events = ZMQ_POLLIN;
       ++top;
+      items.push_back(temp);
     }
     subscribers_mutex_.unlock();
-    int32_t rc = zmq_poll(items, top, id == 0 ? 1 : -1);
+    int32_t rc = zmq_poll(&items[0], top, id == 0 ? 1 : -1);
 
     if (id == 0)
     {

@@ -32,6 +32,8 @@ DPE_BASE_EXPORT NativeString WideToNative(const std::wstring& x);
 DPE_BASE_EXPORT NativeString UTF8ToNative(const std::string& x);
 
 DPE_BASE_EXPORT std::string PhysicalAddress();
+
+DPE_BASE_EXPORT void AddPaAndTs(base::DictionaryValue* value);
 }
 
 #endif

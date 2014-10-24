@@ -4,24 +4,27 @@
 
 namespace ds
 {
-RemoteDPEService::RemoteDPEService(DPEController* ctrl) :
+RemoteDPEDeviceCreator::RemoteDPEDeviceCreator(DPEController* ctrl) :
   ctrl_(ctrl),
-  creating_(false)
+  creating_(false),
+  weakptr_factory_(this)
 {
 
 }
 
-RemoteDPEService::~RemoteDPEService()
+RemoteDPEDeviceCreator::~RemoteDPEDeviceCreator()
 {
 
 }
 
-bool RemoteDPEService::RequestNewDevice()
+bool RemoteDPEDeviceCreator::RequestNewDevice()
 {
   if (creating_) return false;
 
-  if (!zclient_) zclient_ = new ZServerClient(this, server_address_);
-  if (zclient_->CreateDPEDevice())
+  if (!zclient_) zclient_ = new ZServerClient(server_address_);
+  if (zclient_->CreateDPEDevice(
+      base::Bind(&RemoteDPEDeviceCreator::HandleResponse, weakptr_factory_.GetWeakPtr())
+      ))
   {
     creating_ = true;
     return true;
@@ -30,16 +33,25 @@ bool RemoteDPEService::RequestNewDevice()
   return false;
 }
 
-void RemoteDPEService::HandleResponse(base::ZMQResponse* rep, const std::string& data)
+void  RemoteDPEDeviceCreator::HandleResponse(base::WeakPtr<RemoteDPEDeviceCreator> self,
+            scoped_refptr<base::ZMQResponse> rep)
+{
+  if (RemoteDPEDeviceCreator* pThis = self.get())
+  {
+    pThis->HandleResponseImpl(rep);
+  }
+}
+
+void  RemoteDPEDeviceCreator::HandleResponseImpl(scoped_refptr<base::ZMQResponse> rep)
 {
   if (rep->error_code_ != 0)
   {
-    LOG(INFO) << "RemoteDPEService : handle response " << rep->error_code_;
+    LOG(INFO) << "RemoteDPEDeviceCreator : handle response " << rep->error_code_;
     creating_ = false;
     return;
   }
   
-  base::Value* v = base::JSONReader::Read(data, base::JSON_ALLOW_TRAILING_COMMAS);
+  base::Value* v = base::JSONReader::Read(rep->data_, base::JSON_ALLOW_TRAILING_COMMAS);
 
   do
   {
@@ -53,7 +65,7 @@ void RemoteDPEService::HandleResponse(base::ZMQResponse* rep, const std::string&
     if (!v->GetAsDictionary(&dv)) break;
     {
       std::string val;
-      
+      std::string cookie;
       if (!dv->GetString("type", &val)) break;
       if (val != "rsc") break;
       
@@ -61,7 +73,10 @@ void RemoteDPEService::HandleResponse(base::ZMQResponse* rep, const std::string&
       
       if (!dv->GetString("dest", &val)) break;
       
-      if (!dv->GetString("cookie", &val)) ;
+      if (dv->GetString("cookie", &val))
+      {
+        cookie = std::move(val);
+      }
       
       if (!dv->GetString("reply", &val)) break;
       
@@ -175,13 +190,12 @@ bool  RemoteDPEDevice::Stop()
     std::string msg;
     base::DictionaryValue req;
     req.SetString("type", "rsc");
+    base::AddPaAndTs(&req);
     req.SetString("message", "CloseDevice");
     
     req.SetString("dest", send_address_);
     req.SetString("session", session_);
-    req.SetString("ts",
-        base::StringPrintf("%lld", base::Time::Now().ToInternalValue())
-      );
+    
     base::JSONWriter::Write(&req, &msg);
     auto mc = base::zmq_message_center();
     mc->SendMessage(send_channel_, msg.c_str(), msg.size());
@@ -226,10 +240,7 @@ bool RemoteDPEDevice::InitJob(
   {
     base::DictionaryValue req;
     req.SetString("type", "rsc");
-    req.SetString("pa", base::PhysicalAddress());
-    req.SetString("ts",
-        base::StringPrintf("%lld", base::Time::Now().ToInternalValue())
-      );
+    base::AddPaAndTs(&req);
     req.SetString("message", "InitJob");
     req.SetString("job_name", job_name);
     req.SetInteger("language", language);
@@ -264,10 +275,7 @@ bool RemoteDPEDevice::DoTask(const std::string& task_id, const std::string& data
   {
     base::DictionaryValue req;
     req.SetString("type", "rsc");
-    req.SetString("pa", base::PhysicalAddress());
-    req.SetString("ts",
-        base::StringPrintf("%lld", base::Time::Now().ToInternalValue())
-      );
+    base::AddPaAndTs(&req);
     req.SetString("message", "DoTask");
     req.SetString("task_id", task_id);
     req.SetString("task_input", data);
@@ -327,14 +335,13 @@ void RemoteDPEDevice::CheckHeartBeatImpl()
     std::string msg;
     base::DictionaryValue req;
     req.SetString("type", "rsc");
+    base::AddPaAndTs(&req);
     req.SetString("message", "HeartBeat");
 
     req.SetString("cookie", base::StringPrintf("%d", heart_beat_id_));
     req.SetString("dest", send_address_);
     req.SetString("session", session_);
-    req.SetString("ts",
-        base::StringPrintf("%lld", base::Time::Now().ToInternalValue())
-      );
+    
     if (!base::JSONWriter::Write(&req, &msg))
     {
       LOG(ERROR) << "can not write Heart Beat message";
@@ -476,7 +483,7 @@ bool  DPEController::AddRemoteDPEService(bool is_local, const std::string& serve
       return true;
   }
 
-  auto s = new RemoteDPEService(this);
+  auto s = new RemoteDPEDeviceCreator(this);
   s->is_local_ = is_local;
   s->server_address_ = server_address;
 

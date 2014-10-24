@@ -13,16 +13,20 @@ class DPEController;
 class DPEService;
 class RemoteDPEDevice;
 
-struct RemoteDPEService : public base::RefCounted<RemoteDPEService>, public ZServerClientHost
+struct RemoteDPEDeviceCreator : public base::RefCounted<RemoteDPEDeviceCreator>
 {
   friend class DPEController;
 
 public:
-  RemoteDPEService(DPEController* ctrl);
-  ~RemoteDPEService();
+  RemoteDPEDeviceCreator(DPEController* ctrl);
+  ~RemoteDPEDeviceCreator();
   
   bool  RequestNewDevice();
-  void  HandleResponse(base::ZMQResponse* rep, const std::string& data);
+  
+private:
+  static void  HandleResponse(base::WeakPtr<RemoteDPEDeviceCreator> self,
+                scoped_refptr<base::ZMQResponse> rep);
+  void  HandleResponseImpl(scoped_refptr<base::ZMQResponse> rep);
   
 private:
   DPEController*  ctrl_;
@@ -32,6 +36,8 @@ private:
   
   scoped_refptr<ZServerClient>                  zclient_;
   std::vector<scoped_refptr<RemoteDPEDevice> >  device_list_;
+  
+  base::WeakPtrFactory<RemoteDPEDeviceCreator>  weakptr_factory_;
 };
 
 class RemoteDPEDevice : public base::RefCounted<RemoteDPEDevice>, public base::MessageHandler
@@ -144,7 +150,7 @@ private:
 private:
   DPEService*                     dpe_;
   
-  std::vector<scoped_refptr<RemoteDPEService> >  dpe_list_;
+  std::vector<scoped_refptr<RemoteDPEDeviceCreator> >  dpe_list_;
   std::vector<scoped_refptr<RemoteDPEDevice> >   device_list_;
 
   std::wstring                    job_name_;

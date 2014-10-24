@@ -10,8 +10,59 @@
 
 namespace ds
 {
-// ipc message handling: bind and receive
-// ipc message notification: bind and send
+class DPENodeManager;
+class DPEService;
+class DPENode : public base::RefCounted<DPENode>
+{
+friend class DPENodeManager;
+public:
+  DPENode(int32_t node_id, const std::string& address, bool is_local = false);
+  ~DPENode();
+
+  void  SetIsLocal(bool is_local){is_local_ = is_local;}
+  int32_t GetNodeId() const {return node_id_;}
+  
+  base::WeakPtr<DPENode>  GetWeakPtr(){return weakptr_factory_.GetWeakPtr();}
+  scoped_refptr<ZServerClient>  GetZClient(){return zclient_;}
+  bool operator == (const DPENode& other) const {return server_address_ == other.server_address_;}
+
+private:
+  int32_t                                       node_id_;
+  std::string                                   server_address_;
+  bool                                          is_local_;
+  std::string                                   pa_;
+  base::TimeDelta                               response_time_;
+  int32_t                                       response_count_;
+  scoped_refptr<ZServerClient>                  zclient_;
+  base::WeakPtrFactory<DPENode>                 weakptr_factory_;
+};
+
+class DPENodeManager
+{
+friend class DPEService;
+public:
+  DPENodeManager();
+  ~DPENodeManager();
+
+  void  AddNode(int32_t ip, int32_t port = kServerPort);
+  void  AddNode(const std::string& address);
+  void  RemoveNode(int32_t ip, int32_t port = kServerPort);
+  void  RemoveNode(const std::string& address);
+  const std::vector<scoped_refptr<DPENode> >& NodeList() const {return node_list_;}
+  DPENode*  GetNodeById(const int32_t id) const;
+  
+private:
+  static void  HandleResponse(base::WeakPtr<DPENodeManager> self,
+                int32_t node_id,
+                scoped_refptr<base::ZMQResponse> rep);
+  void  HandleResponseImpl(int32_t node_id, scoped_refptr<base::ZMQResponse> rep);
+
+private:
+  std::vector<scoped_refptr<DPENode> >          node_list_;
+  int32_t                                       next_node_id_;
+  base::WeakPtrFactory<DPENodeManager>          weakptr_factory_;
+};
+
 class DPEService : public base::MessageHandler
 {
 public:
@@ -20,15 +71,21 @@ public:
   
   void Start();
   void WillStop();
+  DPENodeManager& GetNodeManager() {return node_manager_;}
 
+public:
+  // resource management
   std::wstring  GetDefaultCompilerType(int32_t language);
   
   scoped_refptr<Compiler> CreateCompiler(
-    std::wstring type, const std::wstring& version, int32_t arch,
-    int32_t language, const std::vector<base::FilePath>& source_file = std::vector<base::FilePath>());
+          std::wstring type, const std::wstring& version, int32_t arch,
+          int32_t language, const std::vector<base::FilePath>&
+          source_file = std::vector<base::FilePath>()
+        );
 
   scoped_refptr<DPEDevice> CreateDPEDevice(
-      ZServer* zserver, base::DictionaryValue* request);
+          ZServer* zserver, base::DictionaryValue* request
+          );
 
   void  RemoveDPEDevice(DPEDevice* device);
 
@@ -48,7 +105,8 @@ private:
   
   std::vector<ZServer*>       server_list_;
   std::vector<DPEDevice*>     dpe_device_list_;
-
+  DPENodeManager              node_manager_;
+  
   // config
   base::FilePath              home_dir_;
   base::FilePath              config_dir_;

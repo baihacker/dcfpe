@@ -34,7 +34,9 @@ private:
 
   void HandleCreateDPEDeviceRequest(
         base::DictionaryValue* req, base::DictionaryValue* reply);
-
+        
+  void HandleHelloRequest(
+        base::DictionaryValue* req, base::DictionaryValue* reply);
 public:
   // remote message handling: bind and receive and send
   int32_t     server_state_;

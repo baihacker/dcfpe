@@ -256,10 +256,10 @@ unsigned __stdcall ZMQServer::ThreadMain(void * arg)
 
 unsigned ZMQServer::Run()
 {
-  zmq_pollitem_t  items[128];
-  
   for (int32_t id = 0; !quit_flag_; ++id)
   {
+    std::vector<zmq_pollitem_t> items(context_.size() + 1);
+    
     items[0].socket = zmq_ctrl_sub_;
     items[0].fd = NULL;
     items[0].events = ZMQ_POLLIN;
@@ -279,7 +279,7 @@ unsigned ZMQServer::Run()
     }
     context_mutex_.unlock();
 
-    int32_t rc = zmq_poll(items, top, id == 0 ? 1 : -1);
+    int32_t rc = zmq_poll(&items[0], top, id == 0 ? 1 : -1);
 
     if (id == 0)
     {
