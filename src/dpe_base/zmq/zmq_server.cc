@@ -210,6 +210,13 @@ bool ZMQServer::StartServer(const std::string& address, RequestHandler* handler)
       zmq_close(skt);
       return false;
     }
+    zmq_pollitem_t item;
+    {
+      item.socket = skt;
+      item.fd = NULL;
+      item.events = ZMQ_POLLIN;
+      zmq_poll(&item, 1, 1);
+    }
     context_.push_back({reinterpret_cast<int32_t>(skt), skt, handler, address, STATE_LISTENING});
   }
   for (int32_t id = 0; id < 3; ++id)

@@ -72,6 +72,7 @@ public:
   bool          RemoveChannel(int32_t channel_id);
   const char*   GetAddressByHandle(int32_t channel_id);
   
+  void          SayHello(int32_t times = 3);
   int32_t       SendMessage(int32_t channel_id, const char* msg, int32_t length);
   int32_t       WorkerHandle() {return reinterpret_cast<int32_t>(thread_handle_);}
   

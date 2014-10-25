@@ -260,7 +260,6 @@ bool RemoteDPEDevice::InitJob(
   }
 
   auto mc = base::zmq_message_center();
-
   mc->SendMessage(send_channel_, msg.c_str(), msg.size());
   device_state_ = STATE_INITIALIZING;
 
@@ -318,11 +317,11 @@ void RemoteDPEDevice::ScheduleCheckHeartBeat(int32_t delay)
   }
 }
 
-void RemoteDPEDevice::CheckHeartBeat(base::WeakPtr<RemoteDPEDevice> dev)
+void RemoteDPEDevice::CheckHeartBeat(base::WeakPtr<RemoteDPEDevice> self)
 {
-  if (RemoteDPEDevice* pThis = dev.get())
+  if (RemoteDPEDevice* pThis = self.get())
   {
-    dev->CheckHeartBeatImpl();
+    self->CheckHeartBeatImpl();
   }
 }
 
@@ -497,7 +496,7 @@ void  DPEController::AddRemoteDPEDevice(scoped_refptr<RemoteDPEDevice> device)
   if (!device) return;
   device_list_.push_back(device);
   device->InitJob(
-        base::SysWideToUTF8(job_name_),
+        base::NativeToUTF8(job_name_),
         language_, 
         worker_path_,
         base::SysWideToUTF8(compiler_type_));

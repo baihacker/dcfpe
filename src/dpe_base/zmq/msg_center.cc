@@ -121,7 +121,13 @@ int32_t MessageCenter::RegisterChannel(int32_t channel_type, const std::string& 
       zmq_close(publisher);
       return INVALID_CHANNEL_ID;
     }
-    
+    zmq_pollitem_t item;
+    {
+      item.socket = publisher;
+      item.fd = NULL;
+      item.events = ZMQ_POLLOUT;
+      zmq_poll(&item, 1, 1);
+    }
     publishers_.push_back({publisher, address});
     socket_address_.push_back({publisher, address});
     return reinterpret_cast<int32_t>(publisher);
@@ -130,7 +136,8 @@ int32_t MessageCenter::RegisterChannel(int32_t channel_type, const std::string& 
   {
     void* subscriber = NULL;
     {
-      std::lock_guard<std::mutex> lock(subscribers_mutex_); for (auto& it: subscribers_) if (it.second == address)
+      std::lock_guard<std::mutex> lock(subscribers_mutex_);
+      for (auto& it: subscribers_) if (it.second == address)
       {
         return reinterpret_cast<int32_t>(it.first);
       }
@@ -154,6 +161,13 @@ int32_t MessageCenter::RegisterChannel(int32_t channel_type, const std::string& 
         return INVALID_CHANNEL_ID;
       }
       subscribers_.push_back({subscriber, address});
+      zmq_pollitem_t item;
+      {
+        item.socket = subscriber;
+        item.fd = NULL;
+        item.events = ZMQ_POLLIN;
+        zmq_poll(&item, 1, 1);
+      }
     }
     socket_address_.push_back({subscriber, address});
     
@@ -189,8 +203,6 @@ bool MessageCenter::RemoveChannel(int32_t channel_id)
       return reinterpret_cast<int32_t>(x.first) == channel_id;
     });
   
-  Sleep(0);
-  
   return true;
 }
 
@@ -212,6 +224,18 @@ const char* MessageCenter::GetAddressByHandle(int32_t channel_id)
   }
   
   return "";
+}
+
+void MessageCenter::SayHello(int32_t times)
+{
+  if (times <= 0) times = 1;
+  if (times > 5) times = 5;
+  
+  for (int32_t id = 0; id < times; ++id)
+  {
+    int32_t cmd = CMD_HELLO;
+    SendCtrlMessage((const char*)&cmd, sizeof(cmd));
+  }
 }
 
 int32_t MessageCenter::SendCtrlMessage(const char* msg, int32_t length)
@@ -475,12 +499,18 @@ void  MessageCenter::HandleMessage(base::WeakPtr<MessageCenter> center, int32_t 
 
 void  MessageCenter::HandleMessageImpl(int32_t socket, const std::string& data)
 {
+  bool handled = false;
   for (auto it: handlers_)
   {
     if (it->handle_message(socket, data))
     {
+      handled = true;
       break;
     }
+  }
+  if (!handled)
+  {
+    LOG(WARNING) << "Unhandled message : \n" << data;
   }
 }
 }
