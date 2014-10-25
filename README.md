@@ -66,6 +66,14 @@ Development Environment:
 * Run command: python build.py
 * Run command: ninja -C output\Release
 
+## linux
+# ubuntu 14.04 32
+
+### Build
+* Config win_toolchain, modify src\build\win_toolchain.json
+* Make sure os.environ['GYP_GENERATORS'] = 'ninja' in build.py.(ignore os.environ['GYP_MSVS_VERSION'])
+* Run command: python build.py
+* Run command: ninja -C output\Release
 
 
 Updated:
