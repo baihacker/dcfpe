@@ -67,7 +67,7 @@ Development Environment:
 * Run command: ninja -C output\Release
 
 ## linux
-# ubuntu 14.04 32
+### ubuntu 14.04 x86
 
 ### Build
 * Config win_toolchain, modify src\build\win_toolchain.json
