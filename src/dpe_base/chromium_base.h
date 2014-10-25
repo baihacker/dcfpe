@@ -52,8 +52,8 @@
 #include "third_party/chromium/base/synchronization/waitable_event.h"
 #include "third_party/chromium/base/threading/thread_checker.h"
 
-#include "third_party/chromium/base/win/wrapped_window_proc.h"
-#include "third_party/chromium/base/win/scoped_handle.h"
+//#include "third_party/chromium/base/win/wrapped_window_proc.h"
+//#include "third_party/chromium/base/win/scoped_handle.h"
 #include "third_party/chromium/base/debug/alias.h"
 
 #include "third_party/chromium/base/message_loop/message_loop.h"

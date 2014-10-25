@@ -213,4 +213,77 @@
       ],
     },
   ],
+  'conditions':[
+    ['os_posix==1 and OS!="mac" and OS!="ios"', {
+      'targets': [
+        {
+          'target_name': 'symbolize',
+          'type': 'static_library',
+          'toolsets': ['host', 'target'],
+          'variables': {
+            'chromium_code': 0,
+          },
+          'conditions': [
+            ['OS == "solaris"', {
+              'include_dirs': [
+                '/usr/gnu/include',
+                '/usr/gnu/include/libelf',
+              ],
+            },],
+          ],
+          'cflags': [
+            '-Wno-sign-compare',
+          ],
+          'cflags!': [
+            '-Wextra',
+          ],
+          'defines': [
+            'GLOG_BUILD_CONFIG_INCLUDE="build/build_config.h"',
+          ],
+          'sources': [
+            'third_party/symbolize/config.h',
+            'third_party/symbolize/demangle.cc',
+            'third_party/symbolize/demangle.h',
+            'third_party/symbolize/glog/logging.h',
+            'third_party/symbolize/glog/raw_logging.h',
+            'third_party/symbolize/symbolize.cc',
+            'third_party/symbolize/symbolize.h',
+            'third_party/symbolize/utilities.h',
+          ],
+          'include_dirs': [
+            '..',
+          ],
+        },
+        {
+          'target_name': 'xdg_mime',
+          'type': 'static_library',
+          'toolsets': ['host', 'target'],
+          'variables': {
+            'chromium_code': 0,
+          },
+          'cflags!': [
+            '-Wextra',
+          ],
+          'sources': [
+            'third_party/xdg_mime/xdgmime.c',
+            'third_party/xdg_mime/xdgmime.h',
+            'third_party/xdg_mime/xdgmimealias.c',
+            'third_party/xdg_mime/xdgmimealias.h',
+            'third_party/xdg_mime/xdgmimecache.c',
+            'third_party/xdg_mime/xdgmimecache.h',
+            'third_party/xdg_mime/xdgmimeglob.c',
+            'third_party/xdg_mime/xdgmimeglob.h',
+            'third_party/xdg_mime/xdgmimeicon.c',
+            'third_party/xdg_mime/xdgmimeicon.h',
+            'third_party/xdg_mime/xdgmimeint.c',
+            'third_party/xdg_mime/xdgmimeint.h',
+            'third_party/xdg_mime/xdgmimemagic.c',
+            'third_party/xdg_mime/xdgmimemagic.h',
+            'third_party/xdg_mime/xdgmimeparent.c',
+            'third_party/xdg_mime/xdgmimeparent.h',
+          ],
+        },
+      ],
+    }],
+  ]
 }

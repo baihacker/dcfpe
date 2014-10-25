@@ -39,7 +39,7 @@ def build_dcfpe():
   args.extend(['-D', 'component='+os.environ.get('ENV_COMPONENT')])
   args.extend(['-D', 'build_dir='+os.environ.get('ENV_BUILD_DIR')])
   # do not use common.gypi, because it conflicts with third_party\chromium\build\common.gypi
-  args.append('-I'+os.path.join(ENV_SOLUTION_DIRECTORY, 'build\\common.gypi'))
+  args.append('-I'+os.path.join(ENV_SOLUTION_DIRECTORY, 'build/common.gypi'))
   ret = gyp.main(args)
   
   dest_dir = os.path.join(ENV_SOLUTION_DIRECTORY, os.environ.get('ENV_BUILD_DIR'))
