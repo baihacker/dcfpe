@@ -7,6 +7,7 @@
 #include <mutex>
 #include <windows.h>
 
+#include "dpe_base/dpe_base_export.h"
 #include "dpe_base/chromium_base.h"
 
 namespace base
@@ -15,7 +16,7 @@ namespace base
 #define MAKE_IP(a, b, c, d) (((a) << 24) | ((b) << 16) | ((c) << 8) | (d))
 const int32_t kMinPort = 20000;
 const int32_t kMaxPort = 40000;
-class AddressHelper
+class DPE_BASE_EXPORT AddressHelper
 {
 public:
   // address management
@@ -58,7 +59,7 @@ enum
   CHANNEL_TYPE_SUB,
 };
 
-class MessageCenter
+class DPE_BASE_EXPORT MessageCenter
 {
 public:
   MessageCenter();
@@ -135,14 +136,14 @@ struct ServerContext
   std::string     data_;
 };
 
-class RequestHandler
+class DPE_BASE_EXPORT RequestHandler
 {
 public:
 virtual ~RequestHandler(){};
 virtual std::string handle_request(ServerContext& context) = 0;
 };
 
-class ZMQServer
+class DPE_BASE_EXPORT ZMQServer
 {
 public:
   ZMQServer();
@@ -213,7 +214,7 @@ struct RequestContext
   int32_t         time_out_;
 };
 
-class ZMQClient
+class DPE_BASE_EXPORT ZMQClient
 {
 public:
   ZMQClient();

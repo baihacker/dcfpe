@@ -15,6 +15,8 @@
 #include "third_party/chromium/base/task_runner_util.h"
 #include "third_party/chromium/base/time/time.h"
 
+#include "dpe_base/dpe_base_export.h"
+
 namespace base {
 class MessageLoop;
 class SequencedWorkerPool;
@@ -33,7 +35,7 @@ class ThreadPoolImpl;
    << ::base::ThreadPool::GetDCheckCurrentlyOnErrorMessage(   \
           thread_identifier))
 
-class ThreadPool {
+class DPE_BASE_EXPORT ThreadPool {
  public:
   enum ID {
     UI,
