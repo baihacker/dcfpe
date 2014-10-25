@@ -260,8 +260,8 @@ bool RemoteDPEDevice::InitJob(
   }
 
   auto mc = base::zmq_message_center();
-  mc->SendMessage(send_channel_, msg.c_str(), msg.size());
 
+  mc->SendMessage(send_channel_, msg.c_str(), msg.size());
   device_state_ = STATE_INITIALIZING;
 
   return true;

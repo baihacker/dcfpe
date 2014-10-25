@@ -1281,7 +1281,7 @@
 
     # Enable TCMalloc.
     # Default of 'use_allocator' is set to 'none' if OS=='android' later.
-    'use_allocator%': 'tcmalloc',
+    'use_allocator%': 'none',
 
     # Set to 1 to link against libgnome-keyring instead of using dlopen().
     'linux_link_gnome_keyring%': 0,
@@ -5146,8 +5146,8 @@
           'VCLibrarianTool': {
             'AdditionalOptions': ['/ignore:4221'],
             'AdditionalLibraryDirectories': [
-	      #'<(windows_sdk_path)/Lib/win8/um/x86',
-              #'$(OutDir)\\$(Configuration)\\lib\\',
+            #'<(windows_sdk_path)/Lib/win8/um/x86',
+            #'$(OutDir)\\$(Configuration)\\lib\\',
             ],
           },
           'VCLinkerTool': {
