@@ -1,7 +1,8 @@
 #ifndef DPE_BASE_DPE_BASE_H_
 #define DPE_BASE_DPE_BASE_H_
 
-#include "dpe_base/native_string.h"
+#include "dpe_base/build_config.h"
+#include "dpe_base/support_string.h"
 
 #include "dpe_base/dpe_base_export.h"
 #include "dpe_base/interface_base.h"
@@ -26,9 +27,9 @@ namespace base
 DPE_BASE_EXPORT bool StringEqualCaseInsensitive(const std::wstring& x, const std::wstring& y);
 DPE_BASE_EXPORT bool StringEqualCaseInsensitive(const std::string& x, const std::string& y);
 
-DPE_BASE_EXPORT std::wstring NativeToWide(const NativeString& x);
+//DPE_BASE_EXPORT std::wstring NativeToWide(const NativeString& x);
 DPE_BASE_EXPORT std::string NativeToUTF8(const NativeString& x);
-DPE_BASE_EXPORT NativeString WideToNative(const std::wstring& x);
+//DPE_BASE_EXPORT NativeString WideToNative(const std::wstring& x);
 DPE_BASE_EXPORT NativeString UTF8ToNative(const std::string& x);
 
 DPE_BASE_EXPORT std::string PhysicalAddress();

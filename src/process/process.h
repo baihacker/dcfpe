@@ -4,9 +4,10 @@
 #include <vector>
 #include <string>
 
-#include <windows.h>
-
+#include "dpe_base/build_config.h"
 #include "dpe_base/dpe_base.h"
+
+#include <windows.h>
 
 /*
   Process is owned by its host. Process has a background thread
@@ -79,7 +80,7 @@ public:
   ~ProcessContext();
   bool InitContext(ProcessOption& option);
   bool DeinitContext();
-  
+
   STARTUPINFO                           si_;
   PROCESS_INFORMATION                   process_info_;
   JOBOBJECT_ASSOCIATE_COMPLETION_PORT   job_cp_;
