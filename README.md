@@ -66,6 +66,13 @@ Development Environment:
 * Run command: python build.py
 * Run command: ninja -C output\Release
 
+## linux
+* ubuntu 14.04 x86
+
+### Build
+* Make sure os.environ['GYP_GENERATORS'] = 'ninja' in build.py.(ignore os.environ['GYP_MSVS_VERSION'])
+* Run command: python build.py
+* Run command: ninja -C output\Release
 
 
 Updated:
