@@ -1,0 +1,4 @@
+device->SetHomePath(base::FilePath(L"D:\\worker_home"));
+
+ctrl->SetHomePath(base::FilePath(L"D:\\projects"));
+  ctrl->SetJobName(L"test_job");

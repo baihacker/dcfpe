@@ -122,7 +122,18 @@ def Load(build_files, format, default_variables={},
     'generator_filelist_paths':
         getattr(generator, 'generator_filelist_paths', None),
   }
-
+  #print "Begin Load arguments"
+  #print build_files
+  #print default_variables
+  #print includes
+  #print depth
+  #print generator_input_info
+  #print check
+  #print circular_check
+  #print duplicate_basename_check
+  #print params['parallel']
+  #print params['root_targets']
+  #print "End Load arguments\n"
   # Process the input specific to this generator.
   result = gyp.input.Load(build_files, default_variables, includes[:],
                           depth, generator_input_info, check, circular_check,
@@ -519,8 +530,14 @@ def gyp_main(args):
     # that targets may be built.  Build systems that operate serially or that
     # need to have dependencies defined before dependents reference them should
     # generate targets in the order specified in flat_list.
+    #print "Begin Generate Output:"
+    #print flat_list
+    #print targets
+    #print data
+    #print params
     generator.GenerateOutput(flat_list, targets, data, params)
-
+    #print "End Generate Output\n"
+    
     if options.configs:
       valid_configs = targets[flat_list[0]]['configurations'].keys()
       for conf in options.configs:
@@ -534,6 +551,9 @@ def gyp_main(args):
 
 def main(args):
   try:
+    print "gyp arguments:"
+    print args
+    print ""
     return gyp_main(args)
   except GypError, e:
     sys.stderr.write("gyp: %s\n" % e)

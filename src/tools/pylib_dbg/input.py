@@ -1175,7 +1175,8 @@ def ProcessVariablesAndConditionsInDict(the_dict, phase, variables_in,
   # loading of automatics and the loading of the variables dict.
   variables = variables_in.copy()
   LoadAutomaticVariablesFromDict(variables, the_dict)
-
+  #print "begin dict"
+  #print variables_in
   if 'variables' in the_dict:
     # Make sure all the local variables are added to the variables
     # list before we process them so that you can reference one
@@ -1191,9 +1192,13 @@ def ProcessVariablesAndConditionsInDict(the_dict, phase, variables_in,
     # should just be an ordinary variable in this scope.
     ProcessVariablesAndConditionsInDict(the_dict['variables'], phase,
                                         variables, build_file, 'variables')
-
+  
+  #xprint(variables, variables_in)
+  #print ""
+  #print the_dict, ""
   LoadVariablesFromVariablesDict(variables, the_dict, the_dict_key)
-
+  #xprint(variables, variables_in)
+  #print ""
   for key, value in the_dict.iteritems():
     # Skip "variables", which was already processed if present.
     if key != 'variables' and type(value) is str:
@@ -1203,13 +1208,16 @@ def ProcessVariablesAndConditionsInDict(the_dict, phase, variables_in,
               'Variable expansion in this context permits str and int ' + \
               'only, found ' + expanded.__class__.__name__ + ' for ' + key
       the_dict[key] = expanded
-
+  #print the_dict
+  #print ""
   # Variable expansion may have resulted in changes to automatics.  Reload.
   # TODO(mark): Optimization: only reload if no changes were made.
   variables = variables_in.copy()
   LoadAutomaticVariablesFromDict(variables, the_dict)
   LoadVariablesFromVariablesDict(variables, the_dict, the_dict_key)
-
+  #xprint(variables, variables_in)
+  #print variables
+  #print "end dict \n"
   # Process conditions in this dict.  This is done after variable expansion
   # so that conditions may take advantage of expanded variables.  For example,
   # if the_dict contains:
@@ -2725,7 +2733,7 @@ def Load(build_files, variables, includes, depth, generator_input_info, check,
   # A generator can have other lists (in addition to sources) be processed
   # for rules.
   extra_sources_for_rules = generator_input_info['extra_sources_for_rules']
-
+  
   # Load build files.  This loads every target-containing build file into
   # the |data| dictionary such that the keys to |data| are build file names,
   # and the values are the entire build file contents after "early" or "pre"
@@ -2745,6 +2753,15 @@ def Load(build_files, variables, includes, depth, generator_input_info, check,
   else:
     for build_file in build_files:
       try:
+        #print "Begin LoadTargetBuildFile Arguments"
+        #print build_file
+        #print data
+        #print aux_data
+        #print variables
+        #print includes
+        #print depth
+        #print check
+        #print "End LoadTargetBuildFile Arguments\n"
         LoadTargetBuildFile(build_file, data, aux_data,
                             variables, includes, depth, check, True)
       except Exception, e:
