@@ -8,7 +8,7 @@ def copy_file_if_necessary(src, dest):
 def build_dependencies():
   #os.environ['GYP_GENERATORS'] = 'ninja'
   #os.system(r'python third_party\chromium\build_chromium.py')
-  os.system(r'python third_party\zmq\build_zmq.py')
+  os.system(r'python third_party/zmq/build_zmq.py')
 
 def prepare_path():
   if os.environ['GYP_GENERATORS'] == 'ninja':
@@ -23,7 +23,7 @@ def build_dcfpe():
   os.environ['GYP_MSVS_VERSION'] = '2013'
   prepare_path()
   # base.gyp depends on this directory
-  sys.path.insert(1, os.path.join(ENV_SOLUTION_DIRECTORY, 'third_party\\chromium\\build'))
+  sys.path.insert(1, os.path.join(ENV_SOLUTION_DIRECTORY, 'third_party/chromium/build'))
   import gyp
   
   print 'build dcfpe'
@@ -32,18 +32,18 @@ def build_dcfpe():
   print 'Component='+os.environ['ENV_COMPONENT']
   
   args = []
-  args.append('build\\dcfpe.gyp')
+  args.append('build/dcfpe.gyp')
   args.append('--depth=.')
   args.append('--no-circular-check')
   args.extend(['-G', 'output_dir='+os.environ['ENV_BUILD_DIR']])
   args.extend(['-D', 'component='+os.environ.get('ENV_COMPONENT')])
   args.extend(['-D', 'build_dir='+os.environ.get('ENV_BUILD_DIR')])
   # do not use common.gypi, because it conflicts with third_party\chromium\build\common.gypi
-  # args.append('-I'+os.path.join(ENV_SOLUTION_DIRECTORY, 'build\\common.gypi'))
+  args.append('-I'+os.path.join(ENV_SOLUTION_DIRECTORY, 'build\\common.gypi'))
   ret = gyp.main(args)
   
   dest_dir = os.path.join(ENV_SOLUTION_DIRECTORY, os.environ.get('ENV_BUILD_DIR'))
-  src_dir = os.path.join(ENV_SOLUTION_DIRECTORY, 'third_party\\zmq\\bin')
+  src_dir = os.path.join(ENV_SOLUTION_DIRECTORY, 'third_party/zmq/bin')
   debug_dir = os.path.join(dest_dir, 'Debug')
   release_dir = os.path.join(dest_dir, 'Release')
   if not os.path.exists(debug_dir): os.makedirs(debug_dir)
@@ -61,7 +61,7 @@ if __name__ == '__main__':
   os.environ['ENV_TARGET_OS'] = 'win'
   os.environ['ENV_TARGET_PLATFORM'] = 'x86'
   os.environ['ENV_TOOLS_DIRECTORY'] = os.path.join(ENV_SOLUTION_DIRECTORY, 'tools')
-  os.environ['ENV_GYP_DIRECTORY'] = os.path.join(ENV_SOLUTION_DIRECTORY, r'tools\gyp\pylib')
+  os.environ['ENV_GYP_DIRECTORY'] = os.path.join(ENV_SOLUTION_DIRECTORY, r'tools/gyp/pylib')
   
   # solution
   os.environ['ENV_SOLUTION_DIRECTORY'] = ENV_SOLUTION_DIRECTORY
@@ -74,8 +74,8 @@ if __name__ == '__main__':
   os.environ['ENV_COPY_PROJECT_OUTPUT'] = '1'
   
   # win toolchain configurations
-  os.environ['ENV_WIN_TOOL_CHAIN_DATA'] = os.path.join(ENV_SOLUTION_DIRECTORY, 'build\\win_toolchain.json')
-  os.environ['ENV_WIN_TOOL_CHAIN_SCRIPT'] = os.path.join(ENV_SOLUTION_DIRECTORY, 'build\\vs_toolchain.py')
+  os.environ['ENV_WIN_TOOL_CHAIN_DATA'] = os.path.join(ENV_SOLUTION_DIRECTORY, 'build/win_toolchain.json')
+  os.environ['ENV_WIN_TOOL_CHAIN_SCRIPT'] = os.path.join(ENV_SOLUTION_DIRECTORY, 'build/vs_toolchain.py')
 
   # build dependences
   build_dependencies()

@@ -2967,8 +2967,8 @@
       'Common_Base': {
         'abstract': 1,
         'msvs_configuration_attributes': {
-          'OutputDirectory': '<(DEPTH)\\<(build_dir)\\<(build_dir_prefix)$(ConfigurationName)',
-          'IntermediateDirectory': '$(OutDir)\\obj\\$(ProjectName)',
+          'OutputDirectory': '<(DEPTH)/<(build_dir)/<(build_dir_prefix)$(ConfigurationName)',
+          'IntermediateDirectory': '$(OutDir)/obj/$(ProjectName)',
           'CharacterSet': '1',
         },
         # Add the default import libs.

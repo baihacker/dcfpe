@@ -1,7 +1,7 @@
 {
   'includes':[
-    '..\\build\\common.gypi',
-    '..\\build\\win_precompile.gypi',
+    '../build/common.gypi',
+    '../build/win_precompile.gypi',
     'support_zmq.gypi',
   ],
   'variables':{
@@ -56,32 +56,32 @@
         # interface
         'interface_base.h',
         'utility_interface.h',
-        'utility\\utility_impl.cc',
+        'utility/utility_impl.cc',
         
         # thread pool
         'thread_pool.h',
-        'thread_pool\\thread_pool_impl.h',
-        'thread_pool\\thread_pool_impl.cc',
+        'thread_pool/thread_pool_impl.h',
+        'thread_pool/thread_pool_impl.cc',
         
         # io
         'io_handler.h',
-        'io\\io_handler.cc',
+        'io/io_handler.cc',
         'pipe.h',
-        'io\\pipe.cc',
+        'io/pipe.cc',
         
         # zmq adapter
         'zmq_adapter.h',
-        'zmq\\zmq_adapter.cc',
-        'zmq\\msg_center.cc',
-        'zmq\\zmq_server.cc',
-        'zmq\\zmq_client.cc',
+        'zmq/zmq_adapter.cc',
+        'zmq/msg_center.cc',
+        'zmq/zmq_server.cc',
+        'zmq/zmq_client.cc',
         
         # main
         'dpe_base.h',
         'dpe_base.cc',
         ],
       'dependencies':[
-          '<(DEPTH)\\third_party\\chromium\\base\\base.gyp:base',
+          '<(DEPTH)/third_party/chromium/base/base.gyp:base',
         ],
     },
   ]

@@ -19,9 +19,6 @@
 #include "third_party/chromium/base/run_loop.h"
 #include "third_party/chromium/base/at_exit.h"
 
-#include <iostream>
-using namespace std;
-
 namespace base {
 
 namespace {

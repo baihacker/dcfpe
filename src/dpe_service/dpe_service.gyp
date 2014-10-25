@@ -1,8 +1,8 @@
 {
   'includes':[
-    '..\\build\\common.gypi',
-    '..\\build\\win_precompile.gypi',
-    '..\\dpe_base\\support_zmq.gypi',
+    '../build/common.gypi',
+    '../build/win_precompile.gypi',
+    '../dpe_base/support_zmq.gypi',
   ],
   'variables':{
   },
@@ -44,32 +44,32 @@
         'use_zmq': 1,
       },
       'sources':[
-          'main\\main.cc',
-          'main\\dpe_service.h',
-          'main\\dpe_service.cc',
-          'main\\zserver.h',
-          'main\\zserver.cc',
+          'main/main.cc',
+          'main/dpe_service.h',
+          'main/dpe_service.cc',
+          'main/zserver.h',
+          'main/zserver.cc',
           
-          'main\\zserver_client.h',
-          'main\\zserver_client.cc',
+          'main/zserver_client.h',
+          'main/zserver_client.cc',
           
-          'main\\resource.h',
+          'main/resource.h',
           
-          'main\\compiler\\compiler.h',
-          'main\\compiler\\compiler_impl.h',
-          'main\\compiler\\compiler_impl.cc',
+          'main/compiler/compiler.h',
+          'main/compiler/compiler_impl.h',
+          'main/compiler/compiler_impl.cc',
           
-          'main\\dpe_model\\dpe_device.h',
-          'main\\dpe_model\\dpe_device_impl.h',
-          'main\\dpe_model\\dpe_device_impl.cc',
+          'main/dpe_model/dpe_device.h',
+          'main/dpe_model/dpe_device_impl.h',
+          'main/dpe_model/dpe_device_impl.cc',
           
-          'main\\dpe_model\\dpe_controller.h',
-          'main\\dpe_model\\dpe_controller.cc',
+          'main/dpe_model/dpe_controller.h',
+          'main/dpe_model/dpe_controller.cc',
         ],
       'dependencies':[
-          '<(DEPTH)\\dpe_base\\dpe_base.gyp:dpe_base',
-          '<(DEPTH)\\third_party\\chromium\\base\\base.gyp:base',
-          '<(DEPTH)\\process\\process.gyp:process',
+          '<(DEPTH)/dpe_base/dpe_base.gyp:dpe_base',
+          '<(DEPTH)/third_party/chromium/base/base.gyp:base',
+          '<(DEPTH)/process/process.gyp:process',
         ],
       'msvs_settings': {
       'VCLinkerTool': {
@@ -83,11 +83,24 @@
       'variables': {
         'use_zmq': 1,
       },
-      'sources':['base_test\\base_test.cc'],
+      'sources':['base_test/base_test.cc'],
       'dependencies':[
-          '<(DEPTH)\\dpe_base\\dpe_base.gyp:dpe_base',
-          '<(DEPTH)\\third_party\\chromium\\base\\base.gyp:base',
-          '<(DEPTH)\\process\\process.gyp:process',
+          '<(DEPTH)/dpe_base/dpe_base.gyp:dpe_base',
+          '<(DEPTH)/third_party/chromium/base/base.gyp:base',
+          '<(DEPTH)/process/process.gyp:process',
+        ],
+    },
+    {
+      'target_name': 'base_test1',
+      'type': 'executable',
+      'variables': {
+        'use_zmq': 0,
+      },
+      'sources':['base_test/base_test1.cc'],
+      'dependencies':[
+          #'<(DEPTH)/dpe_base/dpe_base.gyp:dpe_base',
+          '<(DEPTH)/third_party/chromium/base/base.gyp:base',
+          #'<(DEPTH)/process/process.gyp:process',
         ],
     },
     {
@@ -96,10 +109,10 @@
       'variables': {
         'use_zmq': 1,
       },
-      'sources':['zmq_demo\\publisher.cc'],
+      'sources':['zmq_demo/publisher.cc'],
       'dependencies':[
-        '<(DEPTH)\\dpe_base\\dpe_base.gyp:dpe_base',
-        '<(DEPTH)\\third_party\\chromium\\base\\base.gyp:base',
+        '<(DEPTH)/dpe_base/dpe_base.gyp:dpe_base',
+        '<(DEPTH)/third_party/chromium/base/base.gyp:base',
         ],
     },
     {
@@ -108,10 +121,10 @@
       'variables': {
         'use_zmq': 1,
       },
-      'sources':['zmq_demo\\subscriber.cc'],
+      'sources':['zmq_demo/subscriber.cc'],
       'dependencies':[
-        '<(DEPTH)\\dpe_base\\dpe_base.gyp:dpe_base',
-        '<(DEPTH)\\third_party\\chromium\\base\\base.gyp:base',
+        '<(DEPTH)/dpe_base/dpe_base.gyp:dpe_base',
+        '<(DEPTH)/third_party/chromium/base/base.gyp:base',
         ],
     },
   ]

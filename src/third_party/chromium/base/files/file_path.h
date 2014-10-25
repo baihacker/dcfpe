@@ -171,7 +171,7 @@ class BASE_EXPORT FilePath {
   ~FilePath();
   
   FilePath& operator=(const FilePath& that);
-  FilePath& FilePath::operator=(FilePath&& that);
+  FilePath& operator=(FilePath&& that);
   
   bool operator==(const FilePath& that) const;
 

@@ -6,7 +6,7 @@ Index: base/base.gyp
      'chromium_code': 1,
    },
    'includes': [
-+    '../build/common.gypi',
++    #'../build/common.gypi',
      '../build/win_precompile.gypi',
      'base.gypi',
    ],
@@ -1647,7 +1647,7 @@ Index: base/files/file_path.h
 +  
    FilePath& operator=(const FilePath& that);
 -
-+  FilePath& FilePath::operator=(FilePath&& that);
++  FilePath& operator=(FilePath&& that);
 +  
    bool operator==(const FilePath& that) const;
  
@@ -1742,15 +1742,17 @@ Index: build/common.gypi
 ===================================================================
 --- build/common.gypi	(revision 4)
 +++ build/common.gypi	(working copy)
-@@ -2967,7 +2967,7 @@
+@@ -2967,8 +2967,8 @@
        'Common_Base': {
          'abstract': 1,
          'msvs_configuration_attributes': {
 -          'OutputDirectory': '<(DEPTH)\\build\\<(build_dir_prefix)$(ConfigurationName)',
-+          'OutputDirectory': '<(DEPTH)\\<(build_dir)\\<(build_dir_prefix)$(ConfigurationName)',
-           'IntermediateDirectory': '$(OutDir)\\obj\\$(ProjectName)',
+-          'IntermediateDirectory': '$(OutDir)\\obj\\$(ProjectName)',
++          'OutputDirectory': '<(DEPTH)/<(build_dir)/<(build_dir_prefix)$(ConfigurationName)',
++          'IntermediateDirectory': '$(OutDir)/obj/$(ProjectName)',
            'CharacterSet': '1',
          },
+         # Add the default import libs.
 @@ -3035,7 +3035,7 @@
        'Debug_Base': {
          'abstract': 1,

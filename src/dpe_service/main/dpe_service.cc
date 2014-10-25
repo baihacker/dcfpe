@@ -6,8 +6,6 @@
 
 #include <Shlobj.h>
 
-#include <iostream>
-using namespace std;
 namespace ds
 {
 DPENode::DPENode(int32_t node_id, const std::string& address, bool is_local) :
@@ -94,8 +92,7 @@ DPENode*  DPENodeManager::GetNodeById(const int32_t id) const
 }
 
 void  DPENodeManager::HandleResponse(base::WeakPtr<DPENodeManager> self,
-                int32_t node_id,
-                scoped_refptr<base::ZMQResponse> rep)
+                int32_t node_id, scoped_refptr<base::ZMQResponse> rep)
 {
   if (DPENodeManager* pThis = self.get())
   {
@@ -178,7 +175,8 @@ void DPEService::Start()
 {
   LoadConfig();
   LoadCompilers(config_dir_.Append(L"compilers.json"));
-
+  
+  // start ipc
   auto mc = base::zmq_message_center();
   for (int i = 0; i < 3; ++i)
   {
@@ -205,7 +203,7 @@ void DPEService::Start()
   
   mc->AddMessageHandler(this);
   
-  // start default server
+  // we always have a default server
   ZServer* default_server = new ZServer(this);
   default_server->Start(MAKE_IP(127, 0, 0, 1));
   server_list_.push_back(default_server);
@@ -269,19 +267,19 @@ void DPEService::LoadConfig()
     config_dir_ = base::FilePath(lpszFolder).DirName().Append(L"LocalLow\\dcfpe");
     base::CreateDirectory(config_dir_);
   }
-  
+  base::Value* root = NULL;
   do
   {
     base::FilePath path = config_dir_.Append(L"config.json");
     std::string data;
 
     if (!base::ReadFileToString(path, &data)) break;
-    base::Value* root = base::JSONReader::Read(data.c_str(), base::JSON_ALLOW_TRAILING_COMMAS);
+    root = base::JSONReader::Read(data.c_str(), base::JSON_ALLOW_TRAILING_COMMAS);
     if (!root) break;
 
     base::DictionaryValue* dv = NULL;
     if (!root->GetAsDictionary(&dv)) break;
-    
+
     std::string val;
     if (dv->GetString("home_dir", &val))
     {
@@ -291,8 +289,14 @@ void DPEService::LoadConfig()
     {
       temp_dir_ = base::FilePath(base::SysUTF8ToWide(val));
     }
+    LOG(INFO) << "parse config successful";
   } while (false);
 
+  if (root)
+  {
+    delete root;
+  }
+  
   if (home_dir_.value().empty())
   {
     //home_dir_ = base::GetHomeDir().Append(L"dcfpe");
@@ -341,69 +345,69 @@ void DPEService::LoadCompilers(const base::FilePath& file)
   base::ListValue* lv = NULL;
   if (!root->GetAsList(&lv)) return;
 
-    const int n = lv->GetSize();
-    for (int i = 0; i < n; ++i)
+  const int n = lv->GetSize();
+  for (int i = 0; i < n; ++i)
+  {
+    base::DictionaryValue* dv = NULL;
+    if (!lv->GetDictionary(i, &dv)) continue;
+
+    CompilerConfiguration config;
+    config.arch_ = ARCH_UNKNOWN;
+    std::string val;
+    if (dv->GetString("type", &val))
     {
-      base::DictionaryValue* dv = NULL;
-      if (!lv->GetDictionary(i, &dv)) continue;
-
-      CompilerConfiguration config;
-      config.arch_ = ARCH_UNKNOWN;
-      std::string val;
-      if (dv->GetString("type", &val))
-      {
-        config.type_ = base::UTF8ToNative(val);
-      }
-      else
-      {
-        continue;
-      }
-
-      if (dv->GetString("name", &val))
-      {
-        config.name_ = base::UTF8ToNative(val);
-      }
-      else
-      {
-        config.name_ = L"Unknown";
-      }
-      
-      if (dv->GetString("version", &val))
-      {
-        config.version_ = base::UTF8ToNative(val);
-      }
-      if (dv->GetString("image_dir", &val))
-      {
-        config.image_dir_ = base::FilePath(base::UTF8ToNative(val));
-      }
-      if (dv->GetString("arch", &val))
-      {
-        if (base::StringEqualCaseInsensitive(val, "x86"))
-        {
-          config.arch_ = ARCH_X86;
-        }
-        else if (base::StringEqualCaseInsensitive(val, "x64"))
-        {
-          config.arch_ = ARCH_X64;
-        }
-      }
-
-      base::DictionaryValue* ev = NULL;
-      if (dv->GetDictionary("env_var_keep", &ev))
-      {
-        config.env_var_keep_ = ParseEnvVar(ev);
-      }
-      if (dv->GetDictionary("env_var_merge", &ev))
-      {
-        config.env_var_merge_ = ParseEnvVar(ev);
-      }
-      if (dv->GetDictionary("env_var_replace", &ev))
-      {
-        config.env_var_replace_ = ParseEnvVar(ev);
-      }
-
-      compilers_.push_back(config);
+      config.type_ = base::UTF8ToNative(val);
     }
+    else
+    {
+      continue;
+    }
+
+    if (dv->GetString("name", &val))
+    {
+      config.name_ = base::UTF8ToNative(val);
+    }
+    else
+    {
+      config.name_ = L"Unknown";
+    }
+    
+    if (dv->GetString("version", &val))
+    {
+      config.version_ = base::UTF8ToNative(val);
+    }
+    if (dv->GetString("image_dir", &val))
+    {
+      config.image_dir_ = base::FilePath(base::UTF8ToNative(val));
+    }
+    if (dv->GetString("arch", &val))
+    {
+      if (base::StringEqualCaseInsensitive(val, "x86"))
+      {
+        config.arch_ = ARCH_X86;
+      }
+      else if (base::StringEqualCaseInsensitive(val, "x64"))
+      {
+        config.arch_ = ARCH_X64;
+      }
+    }
+
+    base::DictionaryValue* ev = NULL;
+    if (dv->GetDictionary("env_var_keep", &ev))
+    {
+      config.env_var_keep_ = ParseEnvVar(ev);
+    }
+    if (dv->GetDictionary("env_var_merge", &ev))
+    {
+      config.env_var_merge_ = ParseEnvVar(ev);
+    }
+    if (dv->GetDictionary("env_var_replace", &ev))
+    {
+      config.env_var_replace_ = ParseEnvVar(ev);
+    }
+
+    compilers_.push_back(config);
+  }
   delete root;
 }
 
