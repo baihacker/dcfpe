@@ -283,11 +283,11 @@ void DPEService::LoadConfig()
     std::string val;
     if (dv->GetString("home_dir", &val))
     {
-      home_dir_ = base::FilePath(base::SysUTF8ToWide(val));
+      home_dir_ = base::FilePath(base::UTF8ToNative(val));
     }
     if (dv->GetString("temp_dir", &val))
     {
-      temp_dir_ = base::FilePath(base::SysUTF8ToWide(val));
+      temp_dir_ = base::FilePath(base::UTF8ToNative(val));
     }
     LOG(INFO) << "parse config successful";
   } while (false);
@@ -356,7 +356,7 @@ void DPEService::LoadCompilers(const base::FilePath& file)
     std::string val;
     if (dv->GetString("type", &val))
     {
-      config.type_ = base::UTF8ToNative(val);
+      config.type_ = base::UTF8ToWide(val);
     }
     else
     {
@@ -365,7 +365,7 @@ void DPEService::LoadCompilers(const base::FilePath& file)
 
     if (dv->GetString("name", &val))
     {
-      config.name_ = base::UTF8ToNative(val);
+      config.name_ = base::UTF8ToWide(val);
     }
     else
     {
@@ -374,7 +374,7 @@ void DPEService::LoadCompilers(const base::FilePath& file)
     
     if (dv->GetString("version", &val))
     {
-      config.version_ = base::UTF8ToNative(val);
+      config.version_ = base::UTF8ToWide(val);
     }
     if (dv->GetString("image_dir", &val))
     {
