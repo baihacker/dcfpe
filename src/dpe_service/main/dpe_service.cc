@@ -217,9 +217,9 @@ void DPEService::Start()
   ctrl->SetCompilerType(L"mingw");
   ctrl->SetHomePath(home_dir_);
   ctrl->SetJobName(L"test_job");
-  ctrl->SetSource(base::FilePath(L"D:\\dcfpe\\Home\\case\\source.c"));
-  ctrl->SetWorker(base::FilePath(L"D:\\dcfpe\\Home\\case\\worker.c"));
-  ctrl->SetSink(base::FilePath(L"D:\\dcfpe\\Home\\case\\sink.c"));
+  ctrl->SetSource(base::FilePath(L"D:\\usr\\projects\\test_job\\source.c"));
+  ctrl->SetWorker(base::FilePath(L"D:\\usr\\projects\\test_job\\worker.c"));
+  ctrl->SetSink(base::FilePath(L"D:\\usr\\projects\\test_job\\sink.c"));
   ctrl->AddRemoteDPEService(true, default_server->GetServerAddress());
   ctrl->Start();
 #endif
@@ -411,7 +411,7 @@ void DPEService::LoadCompilers(const base::FilePath& file)
   delete root;
 }
 
-std::wstring DPEService::GetDefaultCompilerType(int32_t language)
+std::wstring DPEService::GetDefaultCompilerType(const ProgrammeLanguage& language)
 {
   // todo : get default compiler type from configuration 
   if (language == PL_C || language == PL_CPP) return L"mingw";
@@ -421,8 +421,8 @@ std::wstring DPEService::GetDefaultCompilerType(int32_t language)
 }
 
 scoped_refptr<Compiler> DPEService::CreateCompiler(
-    std::wstring type, const std::wstring& version, int32_t arch, 
-    int32_t language, const std::vector<base::FilePath>& source_file)
+    std::wstring type, const std::wstring& version, ISArch arch, 
+    ProgrammeLanguage language, const std::vector<base::FilePath>& source_file)
 {
   if (language == PL_UNKNOWN) language = DetectLanguage(source_file);
   if (language == PL_UNKNOWN) return NULL;

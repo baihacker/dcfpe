@@ -60,7 +60,7 @@ public:
   bool        Start(const std::string& receive_address,
                     const std::string& send_address, const std::string& session);
   bool        Stop();
-  bool        InitJob(const std::string& job_name, int32_t language,
+  bool        InitJob(const std::string& job_name, const ProgrammeLanguage& language,
                 const base::FilePath& source, const std::string& compiler_type);
   bool        DoTask(const std::string& task_id, const std::string& data);
   
@@ -112,7 +112,7 @@ public:
   DPEController(DPEService* dpe);
   ~DPEController();
 
-  void  SetLanguage(int32_t language) {language_ = language;}
+  void  SetLanguage(const ProgrammeLanguage& language) {language_ = language;}
   void  SetCompilerType(const std::wstring type) {compiler_type_ = type;}
   
   void  SetHomePath(const base::FilePath& path) {home_path_ = path;}
@@ -155,7 +155,7 @@ private:
 
   std::wstring                    job_name_;
   base::FilePath                  home_path_;
-  int32_t                         language_;
+  ProgrammeLanguage               language_;
   std::wstring                    compiler_type_;
   
   base::FilePath                  job_home_path_;

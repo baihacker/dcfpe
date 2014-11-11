@@ -12,7 +12,7 @@ public:
   ~BasicCompiler();
   void OnStop(process::Process* p, process::ProcessContext* exit_code) override;
   void OnOutput(process::Process* p, bool is_std_out, const std::string& data) override;
-  int32               GetArchitecture() const override{return context_.arch_;}
+  ISArch               GetArchitecture() const override{return context_.arch_;}
   
 protected:
   CompileJob*       curr_job_;

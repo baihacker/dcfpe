@@ -267,7 +267,7 @@ void DPEDeviceImpl::HandleInitJobMessage(const std::string& smsg, base::Dictiona
   }
 
   std::string val;
-  int32_t language = PL_UNKNOWN;
+  std::string language;
   std::string compiler_type;
   std::string worker_name;
   std::string data;
@@ -278,7 +278,7 @@ void DPEDeviceImpl::HandleInitJobMessage(const std::string& smsg, base::Dictiona
   message->GetString("pa", &rpa);
   message->GetString("job_name", &job_name);
 
-  message->GetInteger("language", &language);
+  message->GetString("language", &language);
   message->GetString("compiler_type", &compiler_type);
   message->GetString("worker_name", &worker_name);
   message->GetString("data", &data);
@@ -296,7 +296,7 @@ void DPEDeviceImpl::HandleInitJobMessage(const std::string& smsg, base::Dictiona
   base::CreateDirectory(job_home_path_);
   base::WriteFile(worker_path_, data.c_str(), data.size());
 
-  language_ = language;
+  language_ = ProgrammeLanguage::FromUTF8(language);
   compiler_type_ = base::SysUTF8ToWide(compiler_type);
 
   cj_ = new CompileJob();

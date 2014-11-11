@@ -2,27 +2,106 @@
 #define DPE_SERVICE_MAIN_COMPILER_COMPILER_H_
 
 #include "dpe_service/main/resource.h"
+#include "dpe_base/chromium_base.h"
 
 namespace ds
 {
-enum
+
+struct ProgrammeLanguage
 {
-  PL_UNKNOWN = 0,
-  PL_C,
-  PL_CPP,
-  PL_PYTHON,
-  PL_JAVA,
-  PL_HASKELL,
+ProgrammeLanguage(){}
+ProgrammeLanguage(const std::string& lang) : lang_(lang){}
+ProgrammeLanguage(std::string&& lang) : lang_(std::move(lang)){}
+ProgrammeLanguage& operator = (const ProgrammeLanguage& other)
+{
+  lang_ = other.lang_;
+  return *this;
+}
+ProgrammeLanguage& operator = (ProgrammeLanguage&& other)
+{
+  lang_ = std::move(other.lang_);
+  return *this;
+}
+bool operator == (const ProgrammeLanguage& other) const
+{
+  return base::StringEqualCaseInsensitive(lang_, other.lang_);
+}
+bool operator != (const ProgrammeLanguage& other) const
+{
+  return !this->operator == (other);
+}
+static ProgrammeLanguage FromUTF8(const std::string& s){return s;}
+std::string ToUTF8()const {return lang_;}
+
+private:
+std::string lang_;
 };
 
-enum
+struct ISArch
 {
-  ARCH_UNKNOWN = -1,
-  ARCH_X86 = 0,
-  ARCH_X64,
+ISArch(){}
+ISArch(const std::string& arch) : arch_(arch){}
+ISArch(std::string&& arch) : arch_(std::move(arch)){}
+ISArch& operator = (const ISArch& other)
+{
+  arch_ = other.arch_;
+  return *this;
+}
+ISArch& operator = (ISArch&& other)
+{
+  arch_ = std::move(other.arch_);
+  return *this;
+}
+bool operator == (const ISArch& other) const
+{
+  return base::StringEqualCaseInsensitive(arch_, other.arch_);
+}
+bool operator != (const ISArch& other) const
+{
+  return !this->operator == (other);
+}
+static ISArch FromUTF8(const std::string& s){return s;}
+std::string ToUTF8()const {return arch_;}
+
+private:
+std::string arch_;
 };
 
-int32_t DetectLanguage(const std::vector<base::FilePath>& filepath);
+extern const ProgrammeLanguage PL_UNKNOWN;
+extern const ProgrammeLanguage PL_C;
+extern const ProgrammeLanguage PL_CPP;
+extern const ProgrammeLanguage PL_PYTHON;
+extern const ProgrammeLanguage PL_JAVA;
+extern const ProgrammeLanguage PL_HASKELL;
+
+extern const ISArch             ARCH_UNKNOWN;
+extern const ISArch             ARCH_X86;
+extern const ISArch             ARCH_X64;
+/*
+extern const ProgrammeLanguage PL_UNKNOWN = "";
+extern const ProgrammeLanguage PL_C       = "c";
+extern const ProgrammeLanguage PL_CPP     = "cpp";
+extern const ProgrammeLanguage PL_PYTHON  = "python";
+extern const ProgrammeLanguage PL_JAVA    = "java";
+extern const ProgrammeLanguage PL_HASKELL = "haskell";
+
+extern const ISArch             ARCH_UNKNOWN = "";
+extern const ISArch             ARCH_X86     = "x86";
+extern const ISArch             ARCH_X64     = "x64";
+
+#define PL_UNKNOWN  ""
+#define PL_C        "c"
+#define PL_CPP      "cpp"
+#define PL_PYTHON   "python"
+#define PL_JAVA     "java"
+#define PL_HASKELL  "haskell"
+
+#define ARCH_UNKNOWN  ""
+#define ARCH_X86      "x86"
+#define ARCH_X64      "x64"
+*/
+
+ProgrammeLanguage DetectLanguage(const std::vector<base::FilePath>& filepath);
 
 struct CompileJob;
 struct CompilerCallback
@@ -37,7 +116,7 @@ public:
   CompileJob();
   ~CompileJob();
 
-  int32_t                     language_;
+  ProgrammeLanguage           language_;
   std::wstring                compiler_type_;
   
   base::FilePath              current_directory_;
@@ -68,7 +147,13 @@ struct Compiler : public ResourceBase
   // general utility to fill image_path_ and arguments_
   virtual bool                GenerateCmdline(CompileJob* job) = 0;
   
-  virtual int32               GetArchitecture() const = 0;
+  virtual ISArch              GetArchitecture() const = 0;
+};
+
+struct LanguageDetail
+{
+  ProgrammeLanguage     language_;
+  base::FilePath        binary_name_;
 };
 
 struct CompilerConfiguration
@@ -77,11 +162,15 @@ struct CompilerConfiguration
   std::wstring      name_;
   std::wstring      type_;            // basic compile model: [language support, how to find the binary, how to construct command]
   base::FilePath    image_dir_;
-  int32_t           arch_;
+  ISArch            arch_;
   std::wstring      version_;
   env_var_list_t    env_var_keep_;
   env_var_list_t    env_var_merge_;
   env_var_list_t    env_var_replace_;
+  
+  base::FilePath    default_binary_;
+  
+  std::vector<LanguageDetail> language_detail_;
 };
 }
 #endif

@@ -218,7 +218,7 @@ bool  RemoteDPEDevice::Stop()
 
 bool RemoteDPEDevice::InitJob(
                 const std::string& job_name,
-                int32_t language,
+                const ProgrammeLanguage& language,
                 const base::FilePath& source,
                 const std::string& compiler_type)
 {
@@ -243,7 +243,7 @@ bool RemoteDPEDevice::InitJob(
     base::AddPaAndTs(&req);
     req.SetString("message", "InitJob");
     req.SetString("job_name", job_name);
-    req.SetInteger("language", language);
+    req.SetString("language", language.ToUTF8());
     req.SetString("compiler_type", compiler_type);
     req.SetString("worker_name", base::SysWideToUTF8(source.BaseName().value()));
     
@@ -622,10 +622,12 @@ void  DPEController::OnDeviceRunningIdle(RemoteDPEDevice* device)
   }
   else
   {
+    LOG(INFO) << "do write output";
     auto context = sink_process_->GetProcessContext();
     for (auto& it : output_lines_)
     {
-      context->std_in_write_->Write(it.c_str(), it.size());
+      auto data = it + "\n";
+      context->std_in_write_->Write(data.c_str(), data.size());
       context->std_in_write_->WaitForPendingIO(-1);
     }
   }

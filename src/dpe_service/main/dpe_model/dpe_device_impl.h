@@ -63,7 +63,7 @@ private:
   base::FilePath home_path_;
   base::FilePath job_home_path_;
   base::FilePath worker_path_;
-  int32_t        language_;
+  ProgrammeLanguage   language_;
   std::wstring   compiler_type_;
 
   scoped_refptr<CompileJob>       cj_;

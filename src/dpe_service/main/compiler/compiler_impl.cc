@@ -3,6 +3,17 @@
 namespace ds
 {
 
+extern const ProgrammeLanguage PL_UNKNOWN = "";
+extern const ProgrammeLanguage PL_C       = "c";
+extern const ProgrammeLanguage PL_CPP     = "cpp";
+extern const ProgrammeLanguage PL_PYTHON  = "python";
+extern const ProgrammeLanguage PL_JAVA    = "java";
+extern const ProgrammeLanguage PL_HASKELL = "haskell";
+
+extern const ISArch             ARCH_UNKNOWN = "";
+extern const ISArch             ARCH_X86     = "x86";
+extern const ISArch             ARCH_X64     = "x64";
+
 CompileJob::CompileJob() :
   language_(PL_UNKNOWN),
   optimization_option_(2),
@@ -417,7 +428,7 @@ namespace ds
 struct Ext2Lang
 {
   const NativeChar* ext;
-  int32_t         lang;
+  const ProgrammeLanguage    lang;
 };
 
 static Ext2Lang info[] = 
@@ -431,7 +442,7 @@ static Ext2Lang info[] =
 {L".hs", PL_HASKELL},
 };
 
-int32_t DetectLanguage(const std::vector<base::FilePath>& filepath)
+ProgrammeLanguage DetectLanguage(const std::vector<base::FilePath>& filepath)
 {
   static const int32_t info_size = sizeof(info) / sizeof(info[0]);
   for (auto& item: filepath)

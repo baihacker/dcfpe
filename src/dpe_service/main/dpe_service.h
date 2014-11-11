@@ -75,11 +75,11 @@ public:
 
 public:
   // resource management
-  std::wstring  GetDefaultCompilerType(int32_t language);
+  std::wstring  GetDefaultCompilerType(const ProgrammeLanguage& language);
   
   scoped_refptr<Compiler> CreateCompiler(
-          std::wstring type, const std::wstring& version, int32_t arch,
-          int32_t language, const std::vector<base::FilePath>&
+          std::wstring type, const std::wstring& version, ISArch arch,
+          ProgrammeLanguage language, const std::vector<base::FilePath>&
           source_file = std::vector<base::FilePath>()
         );
 
