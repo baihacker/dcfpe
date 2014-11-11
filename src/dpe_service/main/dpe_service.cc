@@ -440,6 +440,15 @@ void DPEService::LoadCompilers(const base::FilePath& file)
     {
       config.language_detail_ = ParseLanguageDetail(lv);
     }
+    
+    for (auto& detail: config.language_detail_)
+    {
+      if (detail.binary_.value().empty())
+      {
+        detail.binary_ = config.default_binary_;
+      }
+    }
+    
     compilers_.push_back(config);
   }
   delete root;
@@ -489,10 +498,6 @@ scoped_refptr<Compiler> DPEService::CreateCompiler(
       else if (base::StringEqualCaseInsensitive(it.type_, L"python"))
       {
         return new PythonCompiler(it);
-      }
-      else if (base::StringEqualCaseInsensitive(it.type_, L"pypy"))
-      {
-        return new PypyCompiler(it);
       }
     }
   }

@@ -165,6 +165,7 @@ struct CompilerConfiguration
   base::FilePath    image_dir_;
   ISArch            arch_;
   std::wstring      version_;
+  
   env_var_list_t    env_var_keep_;
   env_var_list_t    env_var_merge_;
   env_var_list_t    env_var_replace_;

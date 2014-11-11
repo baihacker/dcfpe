@@ -13,9 +13,9 @@ public:
   void OnStop(process::Process* p, process::ProcessContext* exit_code) override;
   void OnOutput(process::Process* p, bool is_std_out, const std::string& data) override;
   ISArch               GetArchitecture() const override{return context_.arch_;}
-  
+  LanguageDetail       GetLanguageDetail(const ProgrammeLanguage& language) const;
 protected:
-  CompileJob*       curr_job_;
+  CompileJob*         curr_job_;
   CompilerConfiguration   context_;
   scoped_refptr<process::Process>  compile_process_;
 };
@@ -58,14 +58,6 @@ public:
   ~PythonCompiler();
 
   bool                StartCompile(CompileJob* job) override;
-  bool                GenerateCmdline(CompileJob* job) override;
-};
-
-class PypyCompiler : public PythonCompiler
-{
-public:
-  PypyCompiler(const CompilerConfiguration& context);
-  ~PypyCompiler();
   bool                GenerateCmdline(CompileJob* job) override;
 };
 

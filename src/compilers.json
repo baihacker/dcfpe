@@ -31,6 +31,13 @@
 "env_var_keep" : {},
 "env_var_merge" : {},
 "env_var_replace" : {},
+"default_binary" : "python.exe",
+"language_detail" : [
+  {
+    "language" : "python",
+    "binary"   : "python.exe",
+  },
+],
 },
 {
 "name" : "ghc",
@@ -41,6 +48,13 @@
 "env_var_keep" : {},
 "env_var_merge" : {"path":"D:\\DevSoft\\Haskell Platform\\2014.2.0.0\\bin"},
 "env_var_replace" : {},
+"default_binary" : "ghc.exe",
+"language_detail" : [
+  {
+    "language" : "haskell",
+    "binary"   : "ghc.exe",
+  },
+],
 },
 {
 "name" : "vc10",
@@ -61,5 +75,16 @@
         "D:\\DevSoft\\Microsoft Visual Studio 10.0\\VC\\INCLUDE;D:\\DevSoft\\Microsoft Visual Studio 10.0\\VC\\ATLMFC\\INCLUDE;C:\\Program Files (x86)\\Microsoft SDKs\\Windows\\v7.0A\\include;"
   },
 "env_var_replace" : {},
+"default_binary" : "cl.exe",
+"language_detail" : [
+  {
+    "language" : "c",
+    "add_args" : "/TC",
+  },
+  {
+    "language" : "c",
+    "add_args" : "/TP",
+  },
+],
 },
 ]

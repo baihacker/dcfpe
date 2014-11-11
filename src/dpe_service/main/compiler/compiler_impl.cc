@@ -66,6 +66,15 @@ void BasicCompiler::OnOutput(process::Process* p, bool is_std_out, const std::st
   }
 }
 
+LanguageDetail BasicCompiler::GetLanguageDetail(const ProgrammeLanguage& language) const
+{
+  for (auto& iter: context_.language_detail_)
+  {
+    if (iter.language_ == language) return iter;
+  }
+  return LanguageDetail();
+}
+
 MingwCompiler::MingwCompiler(const CompilerConfiguration& context) :
   BasicCompiler(context)
 {
@@ -84,13 +93,14 @@ bool MingwCompiler::StartCompile(CompileJob* job)
   if (job->source_files_.empty()) return false;
   if (job->language_ == PL_UNKNOWN) job->language_ = DetectLanguage(job->source_files_);
   if (job->language_ == PL_UNKNOWN) return false;
-  if (job->language_ != PL_C && job->language_ != PL_CPP) return false;
+  if (!context_.Accept(job->language_)) return false;
 
+  auto language_detail = GetLanguageDetail(job->language_);
+  
   compile_process_ = new process::Process(this);
 
   auto& po = compile_process_->GetProcessOption();
-  po.image_path_ = context_.image_dir_.Append(
-    job->language_ == PL_C ? L"gcc.exe" : L"g++.exe");
+  po.image_path_ = context_.image_dir_.Append(language_detail.binary_.value());
   po.inherit_env_var_ = true;
   po.env_var_keep_ = context_.env_var_keep_;
   po.env_var_merge_ = context_.env_var_merge_;
@@ -128,6 +138,12 @@ bool MingwCompiler::StartCompile(CompileJob* job)
   {
     po.argument_list_r_.push_back(job->cflags_);
   }
+  
+  if (language_detail.args_.empty())
+  {
+    po.argument_list_r_.push_back(base::UTF8ToNative(language_detail.args_));
+  }
+  
   std::string().swap(job->compiler_output_);
 
   po.redirect_std_inout_ = true;
@@ -183,12 +199,14 @@ bool VCCompiler::StartCompile(CompileJob* job)
   if (job->source_files_.empty()) return false;
   if (job->language_ == PL_UNKNOWN) job->language_ = DetectLanguage(job->source_files_);
   if (job->language_ == PL_UNKNOWN) return false;
-  if (job->language_ != PL_C && job->language_ != PL_CPP) return false;
+  if (!context_.Accept(job->language_)) return false;
+
+  auto language_detail = GetLanguageDetail(job->language_);
 
   compile_process_ = new process::Process(this);
 
   auto& po = compile_process_->GetProcessOption();
-  po.image_path_ = context_.image_dir_.Append(L"cl.exe");
+  po.image_path_ = context_.image_dir_.Append(language_detail.binary_.value());
   po.inherit_env_var_ = true;
   po.env_var_keep_ = context_.env_var_keep_;
   po.env_var_merge_ = context_.env_var_merge_;
@@ -217,12 +235,16 @@ bool VCCompiler::StartCompile(CompileJob* job)
     }
   }
 
-  po.argument_list_.push_back(job->language_ == PL_C ? L"/TC" : L"/TP");
-  
   if (!job->cflags_.empty())
   {
     po.argument_list_r_.push_back(job->cflags_);
   }
+  
+  if (language_detail.args_.empty())
+  {
+    po.argument_list_r_.push_back(base::UTF8ToNative(language_detail.args_));
+  }
+  
   std::string().swap(job->compiler_output_);
 
   po.redirect_std_inout_ = true;
@@ -279,12 +301,14 @@ bool GHCCompiler::StartCompile(CompileJob* job)
   if (job->source_files_.empty()) return false;
   if (job->language_ == PL_UNKNOWN) job->language_ = DetectLanguage(job->source_files_);
   if (job->language_ == PL_UNKNOWN) return false;
-  if (job->language_ != PL_HASKELL) return false;
+  if (!context_.Accept(job->language_)) return false;
+
+  auto language_detail = GetLanguageDetail(job->language_);
 
   compile_process_ = new process::Process(this);
 
   auto& po = compile_process_->GetProcessOption();
-  po.image_path_ = context_.image_dir_.Append(L"ghc.exe");
+  po.image_path_ = context_.image_dir_.Append(language_detail.binary_.value());
   po.inherit_env_var_ = true;
   po.env_var_keep_ = context_.env_var_keep_;
   po.env_var_merge_ = context_.env_var_merge_;
@@ -301,7 +325,10 @@ bool GHCCompiler::StartCompile(CompileJob* job)
 
   po.argument_list_.push_back(L"-o");
   po.argument_list_.push_back(job->output_file_.value());
-  
+  if (language_detail.args_.empty())
+  {
+    po.argument_list_r_.push_back(base::UTF8ToNative(language_detail.args_));
+  }
 #if 0
   if (job->optimization_option_ > 0)
   {
@@ -374,7 +401,9 @@ bool PythonCompiler::StartCompile(CompileJob* job)
   if (job->source_files_.empty()) return false;
   if (job->language_ == PL_UNKNOWN) job->language_ = DetectLanguage(job->source_files_);
   if (job->language_ == PL_UNKNOWN) return false;
-  if (job->language_ != PL_PYTHON) return false;
+  if (!context_.Accept(job->language_)) return false;
+
+  auto language_detail = GetLanguageDetail(job->language_);
   
   GenerateCmdline(job);
 
@@ -384,43 +413,25 @@ bool PythonCompiler::StartCompile(CompileJob* job)
 bool PythonCompiler::GenerateCmdline(CompileJob* job)
 {
   if (!job) return false;
+  
+  if (job->source_files_.empty()) return false;
+  if (job->language_ == PL_UNKNOWN) job->language_ = DetectLanguage(job->source_files_);
+  if (job->language_ == PL_UNKNOWN) return false;
+  if (!context_.Accept(job->language_)) return false;
+
+  auto language_detail = GetLanguageDetail(job->language_);
 
   if (job->output_file_.empty())
   {
     job->output_file_ = job->source_files_[0];
   }
 
-  job->image_path_ = context_.image_dir_.Append(L"python.exe");
+  job->image_path_ = context_.image_dir_.Append(language_detail.binary_.value());
   job->arguments_.push_back(job->output_file_.value());
 
   return true;
 }
 
-PypyCompiler::PypyCompiler(const CompilerConfiguration& context) :
-  PythonCompiler(context)
-{
-
-}
-
-PypyCompiler::~PypyCompiler()
-{
-
-}
-
-bool PypyCompiler::GenerateCmdline(CompileJob* job)
-{
-  if (!job) return false;
-
-  if (job->output_file_.empty())
-  {
-    job->output_file_ = job->source_files_[0];
-  }
-
-  job->image_path_ = context_.image_dir_.Append(L"pypy.exe");
-  job->arguments_.push_back(job->output_file_.value());
-
-  return true;
-}
 }
 
 namespace ds
