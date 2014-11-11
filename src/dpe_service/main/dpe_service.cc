@@ -213,15 +213,8 @@ void DPEService::Start()
   
 #if 1
   ctrl = new DPEController(this);
-  ctrl->SetLanguage(PL_CPP);
-  ctrl->SetCompilerType(L"mingw");
-  ctrl->SetHomePath(home_dir_);
-  ctrl->SetJobName(L"test_job");
-  ctrl->SetSource(base::FilePath(L"D:\\usr\\projects\\test_job\\source.c"));
-  ctrl->SetWorker(base::FilePath(L"D:\\usr\\projects\\test_job\\worker.c"));
-  ctrl->SetSink(base::FilePath(L"D:\\usr\\projects\\test_job\\sink.c"));
   ctrl->AddRemoteDPEService(true, default_server->GetServerAddress());
-  ctrl->Start();
+  ctrl->Start(base::FilePath(L"D:\\usr\\projects\\test_job\\test.dpe"));
 #endif
 }
 

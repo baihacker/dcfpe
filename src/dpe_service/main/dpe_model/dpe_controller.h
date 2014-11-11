@@ -112,20 +112,11 @@ public:
   DPEController(DPEService* dpe);
   ~DPEController();
 
-  void  SetLanguage(const ProgrammeLanguage& language) {language_ = language;}
-  void  SetCompilerType(const std::wstring type) {compiler_type_ = type;}
-  
-  void  SetHomePath(const base::FilePath& path) {home_path_ = path;}
-  void  SetJobName(const std::wstring& name) {job_name_ = name;}
-  void  SetSource(const base::FilePath& path) {source_path_ = path;}
-  void  SetWorker(const base::FilePath& path) {worker_path_ = path;}
-  void  SetSink(const base::FilePath& path) {sink_path_ = path;}
-
   bool  AddRemoteDPEService(bool is_local, int32_t ip, int32_t port);
   bool  AddRemoteDPEService(bool is_local, const std::string& server_address);
   void  AddRemoteDPEDevice(scoped_refptr<RemoteDPEDevice> device);
   
-  bool  Start();
+  bool  Start(const base::FilePath& job_path);
 
   bool  Stop();
   
@@ -154,7 +145,6 @@ private:
   std::vector<scoped_refptr<RemoteDPEDevice> >   device_list_;
 
   std::wstring                    job_name_;
-  base::FilePath                  home_path_;
   ProgrammeLanguage               language_;
   std::wstring                    compiler_type_;
   

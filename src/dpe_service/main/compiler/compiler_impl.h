@@ -14,6 +14,7 @@ public:
   void OnOutput(process::Process* p, bool is_std_out, const std::string& data) override;
   ISArch               GetArchitecture() const override{return context_.arch_;}
   LanguageDetail       GetLanguageDetail(const ProgrammeLanguage& language) const;
+
 protected:
   CompileJob*         curr_job_;
   CompilerConfiguration   context_;
@@ -28,7 +29,6 @@ public:
 
   bool                StartCompile(CompileJob* job) override;
   bool                GenerateCmdline(CompileJob* job) override;
-
 };
 
 class VCCompiler : public BasicCompiler

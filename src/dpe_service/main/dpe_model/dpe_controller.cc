@@ -502,25 +502,103 @@ void  DPEController::AddRemoteDPEDevice(scoped_refptr<RemoteDPEDevice> device)
         base::SysWideToUTF8(compiler_type_));
 }
 
-bool DPEController::Start()
+bool DPEController::Start(const base::FilePath& job_path)
 {
   if (job_state_ == DPE_JOB_STATE_FAILED ||
       job_state_ == DPE_JOB_STATE_FINISH)
     job_state_ = DPE_JOB_STATE_PREPARE;
   if (job_state_ != DPE_JOB_STATE_PREPARE) return false;
 
-  job_home_path_ = home_path_.Append(job_name_);
-
-  if (!base::CreateDirectory(job_home_path_))
+  std::string data;
+  if (!base::ReadFileToString(job_path, &data))
   {
-    LOG(ERROR) << "DPEController : can not create job home path:"
-                << base::NativeToUTF8(job_home_path_.value());
-    job_state_ = DPE_JOB_STATE_FAILED;
+    LOG(ERROR) << "DPEController::Start ReadFileToString failed";
     return false;
   }
+  
+  base::Value* project = base::JSONReader::Read(data, base::JSON_ALLOW_TRAILING_COMMAS);
+  if (!project)
+  {
+    LOG(ERROR) << "DPEController::Start ParseProject failed";
+    return false;
+  }
+  
+  bool ok = false;
+  do
+  {
+    base::DictionaryValue* dv = NULL;
+    if (!project->GetAsDictionary(&dv)) break;
+    
+    job_home_path_ = job_path.DirName();
+    
+    std::string val;
+    if (dv->GetString("name", &val))
+    {
+      job_name_ = base::SysUTF8ToWide(val);
+    }
+    else
+    {
+      job_name_ = L"Unknown";
+    }
+    
+    if (dv->GetString("compiler_type", &val))
+    {
+      compiler_type_ = base::SysUTF8ToWide(val);
+    }
+    
+    if (dv->GetString("default_language", &val))
+    {
+      language_ = val;
+    }
+    
+    std::string source;
+    std::string worker;
+    std::string sink;
+    if (!dv->GetString("source", &source))
+    {
+      LOG(ERROR) << "DPEController::Start no source";
+      break;
+    }
+    if (!dv->GetString("worker", &worker))
+    {
+      LOG(ERROR) << "DPEController::Start no worker";
+      break;
+    }
+    if (!dv->GetString("sink", &sink))
+    {
+      LOG(ERROR) << "DPEController::Start no sink";
+      break;
+    }
+    
+    source_path_ = job_home_path_.Append(base::UTF8ToNative(source));
+    worker_path_ = job_home_path_.Append(base::UTF8ToNative(worker));
+    sink_path_ = job_home_path_.Append(base::UTF8ToNative(sink));
+    
+    std::string data;
+    if (!base::ReadFileToString(source_path_, &data))
+    {
+      LOG(ERROR) << "DPEController::Start ReadFileToString failed: source";
+      break;
+    }
+    if (!base::ReadFileToString(worker_path_, &data))
+    {
+      LOG(ERROR) << "DPEController::Start ReadFileToString failed: worker";
+      break;
+    }
+    if (!base::ReadFileToString(sink_path_, &sink))
+    {
+      LOG(ERROR) << "DPEController::Start ReadFileToString failed: sink";
+      break;
+    }
+    base::CreateDirectory(job_home_path_.Append(L"running"));
+    ok = true;
+  } while (false);
 
-  output_file_path_ = job_home_path_.Append(L"output.txt");
-  output_temp_file_path_ = job_home_path_.Append(L"output_temp.txt");
+  delete project;
+  if (!ok) return false;
+  
+  output_file_path_ = job_home_path_.Append(L"running/output.txt");
+  output_temp_file_path_ = job_home_path_.Append(L"running/output_temp.txt");
 
   cj_ = new CompileJob();
   cj_->language_ = language_;
@@ -528,7 +606,7 @@ bool DPEController::Start()
   cj_->current_directory_ = job_home_path_;
   cj_->source_files_.clear();
   cj_->source_files_.push_back(source_path_);
-  cj_->output_file_ = base::FilePath(L"source.exe");
+  cj_->output_file_ = base::FilePath(L"running/source.exe");
   cj_->callback_ = this;
 
   compiler_ = MakeNewCompiler(cj_);
@@ -696,7 +774,7 @@ void  DPEController::ScheduleNextStepImpl()
 
       cj_->source_files_.clear();
       cj_->source_files_.push_back(worker_path_);
-      cj_->output_file_ = base::FilePath(L"worker.exe");
+      cj_->output_file_ = base::FilePath(L"running/worker.exe");
 
       compiler_ = MakeNewCompiler(cj_);
 
@@ -714,7 +792,7 @@ void  DPEController::ScheduleNextStepImpl()
     {
       cj_->source_files_.clear();
       cj_->source_files_.push_back(sink_path_);
-      cj_->output_file_ = base::FilePath(L"sink.exe");
+      cj_->output_file_ = base::FilePath(L"running/sink.exe");
 
       compiler_ = MakeNewCompiler(cj_);
 
@@ -772,8 +850,7 @@ void  DPEController::ScheduleNextStepImpl()
         break;
       }
 
-      base::FilePath output = job_home_path_.Append(L"output_temp.txt");
-      base::WriteFile(output, "", 0);
+      base::WriteFile(output_temp_file_path_, "", 0);
       std::string().swap(output_data_);
 
       {
