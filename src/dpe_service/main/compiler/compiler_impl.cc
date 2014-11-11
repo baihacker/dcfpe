@@ -459,4 +459,11 @@ ProgrammeLanguage DetectLanguage(const std::vector<base::FilePath>& filepath)
   return PL_UNKNOWN;
 }
 
+bool CompilerConfiguration::Accept(const ProgrammeLanguage& language) const
+{
+  for (auto& it: language_detail_)
+  if (it.language_ == language) return true;
+  return false;
+}
+
 }

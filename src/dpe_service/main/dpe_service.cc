@@ -334,6 +334,31 @@ ParseEnvVar(base::DictionaryValue* val)
   return ret;
 }
 
+static std::vector<LanguageDetail>
+ParseLanguageDetail(base::ListValue* val)
+{
+  std::vector<LanguageDetail> ret;
+  const int n = val->GetSize();
+  for (int i = 0; i < n; ++i)
+  {
+    base::DictionaryValue* dv = NULL;
+    if (val->GetDictionary(i, &dv))
+    {
+      LanguageDetail detail;
+      std::string language;
+      std::string binary;
+      if (!dv->GetString("language", &language)) continue;
+      if (language.empty()) continue;
+      dv->GetString("add_args", &detail.args_);
+      dv->GetString("binary", &binary);
+      detail.language_ = language;
+      detail.binary_ = base::FilePath(base::UTF8ToNative(binary));
+      ret.push_back(detail);
+    }
+  }
+  return ret;
+}
+
 void DPEService::LoadCompilers(const base::FilePath& file)
 {
   std::string data;
@@ -406,6 +431,15 @@ void DPEService::LoadCompilers(const base::FilePath& file)
       config.env_var_replace_ = ParseEnvVar(ev);
     }
 
+    if (dv->GetString("default_binary", &val))
+    {
+      config.default_binary_ = base::FilePath(base::UTF8ToWide(val));
+    }
+    base::ListValue* lv = NULL;
+    if (dv->GetList("language_detail", &lv))
+    {
+      config.language_detail_ = ParseLanguageDetail(lv);
+    }
     compilers_.push_back(config);
   }
   delete root;
@@ -431,27 +465,12 @@ scoped_refptr<Compiler> DPEService::CreateCompiler(
   {
     type = GetDefaultCompilerType(language);
   }
-  
-  if (base::StringEqualCaseInsensitive(type, L"mingw") ||
-      base::StringEqualCaseInsensitive(type, L"vc"))
-  {
-    if (language != PL_C && language != PL_CPP) return NULL;
-  }
-
-  if (base::StringEqualCaseInsensitive(type, L"ghc"))
-  {
-    if (language != PL_HASKELL) return NULL;
-  }
-
-  if (base::StringEqualCaseInsensitive(type, L"python"))
-  {
-    if (language != PL_PYTHON) return NULL;
-  }
 
   for (auto& it: compilers_)
   {
     if (base::StringEqualCaseInsensitive(it.type_, type))
     {
+      if (!it.Accept(language)) continue;
 
       if (arch != ARCH_UNKNOWN && arch != it.arch_) continue;
 

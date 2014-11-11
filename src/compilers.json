@@ -2,12 +2,25 @@
 {
 "name" : "mingw",
 "type" : "mingw",
-"image_dir" : "D:\\DevSoft\\MinGW\\bin",
+"image_dir" : "C:\\TDM-GCC-64\\bin",
 "arch" : "x64",
 "version" : "4.8.1",
 "env_var_keep" : {},
 "env_var_merge" : {},
 "env_var_replace" : {},
+"default_binary" : "g++.exe",
+"language_detail" : [
+  {
+    "language" : "c",
+    "binary"   : "gcc.exe",
+    "add_args" : "",
+  },
+  {
+    "language" : "cpp",
+    "binary"   : "g++.exe",
+    "add_args" : "",
+  },
+],
 },
 {
 "name" : "python",
