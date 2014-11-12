@@ -15,6 +15,11 @@ public:
   ISArch               GetArchitecture() const override{return context_.arch_;}
   LanguageDetail       GetLanguageDetail(const ProgrammeLanguage& language) const;
 
+  bool                  PreProcessJob(CompileJob* job);
+  std::string           FixString(const std::string& s, const std::map<std::string, std::string>& kv);
+  virtual void          FillOutputFile(CompileJob* job);
+  bool                  GenerateCmdline(CompileJob* job) override;
+  
 protected:
   CompileJob*         curr_job_;
   CompilerConfiguration   context_;
@@ -27,8 +32,8 @@ public:
   MingwCompiler(const CompilerConfiguration& context);
   ~MingwCompiler();
 
+  void                FillOutputFile(CompileJob* job) override;
   bool                StartCompile(CompileJob* job) override;
-  bool                GenerateCmdline(CompileJob* job) override;
 };
 
 class VCCompiler : public BasicCompiler
@@ -37,8 +42,8 @@ public:
   VCCompiler(const CompilerConfiguration& context);
   ~VCCompiler();
 
+  void                FillOutputFile(CompileJob* job) override;
   bool                StartCompile(CompileJob* job) override;
-  bool                GenerateCmdline(CompileJob* job) override;
 };
 
 class GHCCompiler : public BasicCompiler
@@ -47,8 +52,8 @@ public:
   GHCCompiler(const CompilerConfiguration& context);
   ~GHCCompiler();
 
+  void                FillOutputFile(CompileJob* job) override;
   bool                StartCompile(CompileJob* job) override;
-  bool                GenerateCmdline(CompileJob* job) override;
 };
 
 class PythonCompiler : public BasicCompiler
@@ -57,8 +62,8 @@ public:
   PythonCompiler(const CompilerConfiguration& context);
   ~PythonCompiler();
 
+  void                FillOutputFile(CompileJob* job) override;
   bool                StartCompile(CompileJob* job) override;
-  bool                GenerateCmdline(CompileJob* job) override;
 };
 
 }

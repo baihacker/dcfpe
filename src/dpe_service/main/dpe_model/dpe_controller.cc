@@ -590,6 +590,7 @@ bool DPEController::Start(const base::FilePath& job_path)
       LOG(ERROR) << "DPEController::Start ReadFileToString failed: sink";
       break;
     }
+    compiler_home_path_ = job_home_path_.Append(L"running");
     base::CreateDirectory(job_home_path_.Append(L"running"));
     ok = true;
   } while (false);
@@ -603,10 +604,10 @@ bool DPEController::Start(const base::FilePath& job_path)
   cj_ = new CompileJob();
   cj_->language_ = language_;
   cj_->compiler_type_ = compiler_type_;
-  cj_->current_directory_ = job_home_path_;
+  cj_->current_directory_ = compiler_home_path_;
   cj_->source_files_.clear();
   cj_->source_files_.push_back(source_path_);
-  cj_->output_file_ = base::FilePath(L"running/source.exe");
+  cj_->output_file_ = base::FilePath(L"source.exe");
   cj_->callback_ = this;
 
   compiler_ = MakeNewCompiler(cj_);
@@ -649,7 +650,6 @@ bool  DPEController::Stop()
   std::vector<std::string>().swap(output_lines_);
   std::queue<int32_t>().swap(task_queue_);
   std::vector<std::string>().swap(input_lines_);
-  
 
   std::vector<scoped_refptr<RemoteDPEDevice> >().
     swap(device_list_);
@@ -700,7 +700,7 @@ void  DPEController::OnDeviceRunningIdle(RemoteDPEDevice* device)
   }
   else
   {
-    LOG(INFO) << "do write output";
+    LOG(INFO) << "Begin compute result";
     auto context = sink_process_->GetProcessContext();
     for (auto& it : output_lines_)
     {
@@ -708,6 +708,8 @@ void  DPEController::OnDeviceRunningIdle(RemoteDPEDevice* device)
       context->std_in_write_->Write(data.c_str(), data.size());
       context->std_in_write_->WaitForPendingIO(-1);
     }
+    LOG(INFO) << "Finish compute result";
+    job_state_ = DPE_JOB_STATE_FINISH;
   }
 }
 
@@ -774,7 +776,7 @@ void  DPEController::ScheduleNextStepImpl()
 
       cj_->source_files_.clear();
       cj_->source_files_.push_back(worker_path_);
-      cj_->output_file_ = base::FilePath(L"running/worker.exe");
+      cj_->output_file_ = base::FilePath(L"worker.exe");
 
       compiler_ = MakeNewCompiler(cj_);
 
@@ -792,7 +794,7 @@ void  DPEController::ScheduleNextStepImpl()
     {
       cj_->source_files_.clear();
       cj_->source_files_.push_back(sink_path_);
-      cj_->output_file_ = base::FilePath(L"running/sink.exe");
+      cj_->output_file_ = base::FilePath(L"sink.exe");
 
       compiler_ = MakeNewCompiler(cj_);
 

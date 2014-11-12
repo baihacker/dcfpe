@@ -152,9 +152,12 @@ struct Compiler : public ResourceBase
 
 struct LanguageDetail
 {
-  ProgrammeLanguage     language_;
-  base::FilePath        binary_;
-  std::string           args_;
+  ProgrammeLanguage                   language_;
+  base::FilePath                      compile_binary_;
+  std::vector<std::string>            compile_args_;
+  std::string                         default_output_file_;
+  std::string                         running_binary_;
+  std::vector<std::string>            running_args_;
 };
 
 struct CompilerConfiguration
@@ -162,7 +165,7 @@ struct CompilerConfiguration
   typedef std::vector<std::pair<NativeString, NativeString> > env_var_list_t;
   std::wstring      name_;
   std::wstring      type_;      // basic compile model: [language support, how to find the binary, how to construct command]
-  base::FilePath    image_dir_;
+  base::FilePath    compile_binary_dir_;
   ISArch            arch_;
   std::wstring      version_;
   

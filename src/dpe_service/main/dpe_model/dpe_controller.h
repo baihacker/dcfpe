@@ -144,11 +144,13 @@ private:
   std::vector<scoped_refptr<RemoteDPEDeviceCreator> >  dpe_list_;
   std::vector<scoped_refptr<RemoteDPEDevice> >   device_list_;
 
+  // dpe job
   std::wstring                    job_name_;
+  base::FilePath                  job_home_path_;
+  base::FilePath                  compiler_home_path_;
+  
   ProgrammeLanguage               language_;
   std::wstring                    compiler_type_;
-  
-  base::FilePath                  job_home_path_;
   base::FilePath                  source_path_;
   base::FilePath                  worker_path_;
   base::FilePath                  sink_path_;

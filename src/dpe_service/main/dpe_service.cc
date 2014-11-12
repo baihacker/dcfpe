@@ -327,6 +327,25 @@ ParseEnvVar(base::DictionaryValue* val)
   return ret;
 }
 
+static std::vector<std::string>
+ParseStringList(base::ListValue* val)
+{
+  std::vector<std::string> ret;
+  
+  const int n = val->GetSize();
+  
+  for (int i = 0; i < n; ++i)
+  {
+    std::string s;
+    if (val->GetString(i, &s))
+    {
+      ret.push_back(s);
+    }
+  }
+  
+  return ret;
+}
+
 static std::vector<LanguageDetail>
 ParseLanguageDetail(base::ListValue* val)
 {
@@ -339,13 +358,33 @@ ParseLanguageDetail(base::ListValue* val)
     {
       LanguageDetail detail;
       std::string language;
-      std::string binary;
+      
       if (!dv->GetString("language", &language)) continue;
       if (language.empty()) continue;
-      dv->GetString("add_args", &detail.args_);
-      dv->GetString("binary", &binary);
       detail.language_ = language;
-      detail.binary_ = base::FilePath(base::UTF8ToNative(binary));
+      
+      std::string compile_binary;
+      dv->GetString("compile_binary", &compile_binary);
+      detail.compile_binary_ = base::FilePath(base::UTF8ToNative(compile_binary));
+      
+      base::ListValue* lv = NULL;
+      if (dv->GetList("compile_args", &lv))
+      {
+        detail.compile_args_ = ParseStringList(lv);
+      }
+      
+      dv->GetString("default_output_file", &detail.default_output_file_);
+
+      std::string running_binary;
+      if (!dv->GetString("running_binary", &running_binary)) continue;
+      if (running_binary.empty()) continue;
+      detail.running_binary_ = running_binary;
+      
+      if (dv->GetList("running_args", &lv))
+      {
+        detail.running_args_ = ParseStringList(lv);
+      }
+      
       ret.push_back(detail);
     }
   }
@@ -394,9 +433,9 @@ void DPEService::LoadCompilers(const base::FilePath& file)
     {
       config.version_ = base::UTF8ToWide(val);
     }
-    if (dv->GetString("image_dir", &val))
+    if (dv->GetString("compile_binary_dir", &val))
     {
-      config.image_dir_ = base::FilePath(base::UTF8ToNative(val));
+      config.compile_binary_dir_ = base::FilePath(base::UTF8ToNative(val));
     }
     if (dv->GetString("arch", &val))
     {
@@ -436,9 +475,9 @@ void DPEService::LoadCompilers(const base::FilePath& file)
     
     for (auto& detail: config.language_detail_)
     {
-      if (detail.binary_.value().empty())
+      if (detail.compile_binary_.value().empty())
       {
-        detail.binary_ = config.default_binary_;
+        detail.compile_binary_ = config.default_binary_;
       }
     }
     
