@@ -476,7 +476,6 @@ void DPEService::LoadCompilers(const base::FilePath& file)
 
 std::wstring DPEService::GetDefaultCompilerType(const ProgrammeLanguage& language)
 {
-  // todo : get default compiler type from configuration 
   if (language == PL_PYTHON) return L"interpreter";
   return L"compiler";
 }

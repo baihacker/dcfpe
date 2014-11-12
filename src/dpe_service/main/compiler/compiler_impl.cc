@@ -3,16 +3,16 @@
 namespace ds
 {
 
-extern const ProgrammeLanguage  PL_UNKNOWN = "";
-extern const ProgrammeLanguage  PL_C       = "c";
-extern const ProgrammeLanguage  PL_CPP     = "cpp";
-extern const ProgrammeLanguage  PL_PYTHON  = "python";
-extern const ProgrammeLanguage  PL_JAVA    = "java";
-extern const ProgrammeLanguage  PL_HASKELL = "haskell";
+extern const ProgrammeLanguage  PL_UNKNOWN    = "";
+extern const ProgrammeLanguage  PL_C          = "c";
+extern const ProgrammeLanguage  PL_CPP        = "cpp";
+extern const ProgrammeLanguage  PL_PYTHON     = "python";
+extern const ProgrammeLanguage  PL_JAVA       = "java";
+extern const ProgrammeLanguage  PL_HASKELL    = "haskell";
 
-extern const ISArch             ARCH_UNKNOWN = "";
-extern const ISArch             ARCH_X86     = "x86";
-extern const ISArch             ARCH_X64     = "x64";
+extern const ISArch             ARCH_UNKNOWN  = "";
+extern const ISArch             ARCH_X86      = "x86";
+extern const ISArch             ARCH_X64      = "x64";
 
 CompileJob::CompileJob() :
   language_(PL_UNKNOWN),
@@ -156,9 +156,10 @@ bool BasicCompiler::StartCompile(CompileJob* job)
   po.current_directory_ = job->current_directory_;
 
   po.argument_list_.clear();
-  
+  po.argument_list_r_.clear();
+
   std::map<std::string, std::string> kv;
-  
+
   kv["$(COMPILE_BINARY_DIR)"] = base::NativeToUTF8(context_.compile_binary_dir_.value());
   kv["$(OUTPUT_FILE)"] = base::NativeToUTF8(job->output_file_.value());
   kv["$(SOURCE_FILE_PATH)"] = base::NativeToUTF8(job->source_files_[0].value());
@@ -167,7 +168,7 @@ bool BasicCompiler::StartCompile(CompileJob* job)
   kv["$(SOURCE_FILE_BASENAME_NO_EXT)"] = base::NativeToUTF8(job->source_files_[0].BaseName().RemoveExtension().value());
   kv["$(SOURCE_FILE_DIRNAME)"] = base::NativeToUTF8(job->source_files_[0].DirName().value());
   kv["$(OPTIMIZATION_OPTION)"] = base::StringPrintf("%d", job->optimization_option_);
-  
+
   for (auto& it: language_detail.compile_args_)
   {
     if (it == "$(SOURCE_FILES)")
