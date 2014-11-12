@@ -28,7 +28,8 @@ CompileJob::~CompileJob()
 
 BasicCompiler::BasicCompiler(const CompilerConfiguration& context) :
   curr_job_(NULL),
-  context_(context)
+  context_(context),
+  weakptr_factory_(this)
 {
 
 }
@@ -66,6 +67,21 @@ void BasicCompiler::OnOutput(process::Process* p, bool is_std_out, const std::st
   }
 }
 
+void BasicCompiler::ReportCompileSuccess(base::WeakPtr<BasicCompiler> self)
+{
+  if (auto* pThis = self.get())
+  {
+    pThis->OnStop(NULL, NULL);
+  }
+}
+
+void BasicCompiler::ScheduleReportCompileSuccess()
+{
+  base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
+      base::Bind(&BasicCompiler::ReportCompileSuccess,
+            weakptr_factory_.GetWeakPtr()));
+}
+
 LanguageDetail BasicCompiler::GetLanguageDetail(const ProgrammeLanguage& language) const
 {
   for (auto& iter: context_.language_detail_)
@@ -88,10 +104,10 @@ bool BasicCompiler::PreProcessJob(CompileJob* job)
   {
     auto language_detail = GetLanguageDetail(job->language_);
     std::map<std::string, std::string> kv;
-    kv.insert(std::make_pair(std::string("$(COMPILE_BINARY_DIR)"), base::NativeToUTF8(context_.compile_binary_dir_.value())));
-    kv.insert(std::make_pair(std::string("$(OUTPUT_FILE)"), base::NativeToUTF8(job->output_file_.value())));
-    kv.insert(std::make_pair(std::string("$(SOURCE_FILE_NAME)"), base::NativeToUTF8(job->source_files_[0].BaseName().RemoveExtension().value())));
-    
+    kv["$(COMPILE_BINARY_DIR)"] = base::NativeToUTF8(context_.compile_binary_dir_.value());
+    kv["$(OUTPUT_FILE)"] = base::NativeToUTF8(job->output_file_.value());
+    kv["$(SOURCE_FILE_NAME)"] = base::NativeToUTF8(job->source_files_[0].BaseName().RemoveExtension().value());
+    kv["$(SOURCE_FILE_PATH)"] = base::NativeToUTF8(job->source_files_[0].value());
     job->output_file_ = base::FilePath(base::UTF8ToNative(FixString(language_detail.default_output_file_, kv)));
   }
   
@@ -118,9 +134,10 @@ bool BasicCompiler::GenerateCmdline(CompileJob* job)
 
   auto language_detail = GetLanguageDetail(job->language_);
   std::map<std::string, std::string> kv;
-  kv.insert(std::make_pair(std::string("$(COMPILE_BINARY_DIR)"), base::NativeToUTF8(context_.compile_binary_dir_.value())));
-  kv.insert(std::make_pair(std::string("$(OUTPUT_FILE)"), base::NativeToUTF8(job->output_file_.value())));
-  kv.insert(std::make_pair(std::string("$(SOURCE_FILE_NAME)"), base::NativeToUTF8(job->source_files_[0].BaseName().RemoveExtension().value())));
+  kv["$(COMPILE_BINARY_DIR)"] = base::NativeToUTF8(context_.compile_binary_dir_.value());
+  kv["$(OUTPUT_FILE)"] = base::NativeToUTF8(job->output_file_.value());
+  kv["$(SOURCE_FILE_NAME)"] = base::NativeToUTF8(job->source_files_[0].BaseName().RemoveExtension().value());
+  kv["$(SOURCE_FILE_PATH)"] = base::NativeToUTF8(job->source_files_[0].value());
   job->image_path_ = base::FilePath(base::UTF8ToNative(FixString(language_detail.running_binary_, kv)));
 
   job->arguments_.clear();
@@ -427,6 +444,10 @@ bool PythonCompiler::StartCompile(CompileJob* job)
   if (!job || curr_job_) return false;
   
   GenerateCmdline(job);
+
+  curr_job_ = job;
+
+  ScheduleReportCompileSuccess();
 
   return true;
 }

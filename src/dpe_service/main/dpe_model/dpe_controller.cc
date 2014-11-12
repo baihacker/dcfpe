@@ -546,7 +546,7 @@ bool DPEController::Start(const base::FilePath& job_path)
       compiler_type_ = base::SysUTF8ToWide(val);
     }
     
-    if (dv->GetString("default_language", &val))
+    if (dv->GetString("language", &val))
     {
       language_ = val;
     }
@@ -607,7 +607,6 @@ bool DPEController::Start(const base::FilePath& job_path)
   cj_->current_directory_ = compiler_home_path_;
   cj_->source_files_.clear();
   cj_->source_files_.push_back(source_path_);
-  cj_->output_file_ = base::FilePath(L"source.exe");
   cj_->callback_ = this;
 
   compiler_ = MakeNewCompiler(cj_);
@@ -736,12 +735,15 @@ scoped_refptr<Compiler> DPEController::MakeNewCompiler(CompileJob* job)
 
 void DPEController::OnCompileFinished(CompileJob* job)
 {
-  if (cj_->compile_process_->GetProcessContext()->exit_code_ != 0 ||
-      cj_->compile_process_->GetProcessContext()->exit_reason_ != process::EXIT_REASON_EXIT)
+  if (cj_->compile_process_)
   {
-    job_state_ = DPE_JOB_STATE_FAILED;
-    LOG(ERROR) << "DPEController : compile error:\n" << cj_->compiler_output_;
-    return;
+    if (cj_->compile_process_->GetProcessContext()->exit_code_ != 0 ||
+        cj_->compile_process_->GetProcessContext()->exit_reason_ != process::EXIT_REASON_EXIT)
+    {
+      job_state_ = DPE_JOB_STATE_FAILED;
+      LOG(ERROR) << "DPEController : compile error:\n" << cj_->compiler_output_;
+      return;
+    }
   }
 
   base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
@@ -774,9 +776,10 @@ void  DPEController::ScheduleNextStepImpl()
       po.treat_err_as_out_ = false;
      // po.output_buffer_size_ = 64*1024;
 
+      cj_->language_ = language_;
       cj_->source_files_.clear();
       cj_->source_files_.push_back(worker_path_);
-      cj_->output_file_ = base::FilePath(L"worker.exe");
+      cj_->output_file_ = base::FilePath(L"");
 
       compiler_ = MakeNewCompiler(cj_);
 
@@ -792,9 +795,10 @@ void  DPEController::ScheduleNextStepImpl()
     }
     case DPE_JOB_STATE_COMPILING_WORKER:
     {
+      cj_->language_ = language_;
       cj_->source_files_.clear();
       cj_->source_files_.push_back(sink_path_);
-      cj_->output_file_ = base::FilePath(L"sink.exe");
+      cj_->output_file_ = base::FilePath(L"");
 
       compiler_ = MakeNewCompiler(cj_);
 

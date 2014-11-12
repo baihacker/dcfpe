@@ -305,7 +305,6 @@ void DPEDeviceImpl::HandleInitJobMessage(const std::string& smsg, base::Dictiona
   cj_->current_directory_ = job_home_path_;
   cj_->source_files_.clear();
   cj_->source_files_.push_back(worker_path_);
-  cj_->output_file_ = base::FilePath(L"worker.exe");
   cj_->callback_ = this;
 
   compiler_ = MakeNewCompiler(cj_);

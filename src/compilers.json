@@ -2,7 +2,7 @@
 {
 "name" : "mingw",
 "type" : "mingw",
-"image_dir" : "C:\\TDM-GCC-64\\bin",
+"compile_binary_dir" : "C:\\TDM-GCC-64\\bin",
 "arch" : "x64",
 "version" : "4.8.1",
 "env_var_keep" : {},
@@ -12,20 +12,26 @@
 "language_detail" : [
   {
     "language" : "c",
-    "binary"   : "gcc.exe",
-    "add_args" : "",
+    "compile_binary" : "gcc.exe",
+    "compile_args" : [],
+    "default_output_file" : "$(SOURCE_FILE_NAME).exe",
+    "running_binary" : "$(OUTPUT_FILE)",
+    "running_args" : [],
   },
   {
     "language" : "cpp",
-    "binary"   : "g++.exe",
-    "add_args" : "",
+    "compile_binary" : "g++.exe",
+    "compile_args" : [],
+    "default_output_file" : "$(SOURCE_FILE_NAME).exe",
+    "running_binary" : "$(OUTPUT_FILE)",
+    "running_args" : [],
   },
 ],
 },
 {
 "name" : "python",
 "type" : "python",
-"image_dir" : "C:\\Python27",
+"compile_binary_dir" : "C:\\Python27",
 "arch" : "x86",
 "version" : "2.7.3",
 "env_var_keep" : {},
@@ -35,14 +41,17 @@
 "language_detail" : [
   {
     "language" : "python",
-    "binary"   : "python.exe",
+    "compile_binary" : "python.exe",
+    "running_binary" : "$(COMPILE_BINARY_DIR)\\python.exe",
+    "default_output_file" : "$(SOURCE_FILE_PATH)",
+    "running_args" : ["$(OUTPUT_FILE)"],
   },
 ],
 },
 {
 "name" : "ghc",
 "type" : "ghc",
-"image_dir" : "",
+"compile_binary_dir" : "",
 "arch" : "x86",
 "version" : "2014.2.0.0",
 "env_var_keep" : {},
@@ -52,14 +61,14 @@
 "language_detail" : [
   {
     "language" : "haskell",
-    "binary"   : "ghc.exe",
+    "compile_binary" : "ghc.exe",
   },
 ],
 },
 {
 "name" : "vc10",
 "type" : "vc",
-"image_dir" : "D:\\DevSoft\\Microsoft Visual Studio 10.0\\VC\\bin",
+"compile_binary_dir" : "D:\\DevSoft\\Microsoft Visual Studio 10.0\\VC\\bin",
 "arch" : "x86",
 "version" : "10.0",
 "env_var_keep" : {},
@@ -79,12 +88,19 @@
 "language_detail" : [
   {
     "language" : "c",
-    "add_args" : "/TC",
+    "compile_args" : ["/TC"],
+    "default_output_file" : "$(SOURCE_FILE_NAME).exe",
+    "running_binary" : "$(OUTPUT_FILE)",
+    "running_args" : [],
   },
   {
-    "language" : "c",
-    "add_args" : "/TP",
+    "language" : "cpp",
+    "compile_args" : ["/TP"],
+    "default_output_file" : "$(SOURCE_FILE_NAME).exe",
+    "running_binary" : "$(OUTPUT_FILE)",
+    "running_args" : [],
   },
 ],
 },
+
 ]

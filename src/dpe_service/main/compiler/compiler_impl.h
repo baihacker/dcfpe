@@ -20,10 +20,14 @@ public:
   virtual void          FillOutputFile(CompileJob* job);
   bool                  GenerateCmdline(CompileJob* job) override;
   
+  static void           ReportCompileSuccess(base::WeakPtr<BasicCompiler> self);
+  void                  ScheduleReportCompileSuccess();
+  
 protected:
   CompileJob*         curr_job_;
   CompilerConfiguration   context_;
   scoped_refptr<process::Process>  compile_process_;
+  base::WeakPtrFactory<BasicCompiler> weakptr_factory_;
 };
 
 class MingwCompiler : public BasicCompiler

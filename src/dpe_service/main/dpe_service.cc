@@ -467,6 +467,7 @@ void DPEService::LoadCompilers(const base::FilePath& file)
     {
       config.default_binary_ = base::FilePath(base::UTF8ToWide(val));
     }
+    
     base::ListValue* lv = NULL;
     if (dv->GetList("language_detail", &lv))
     {
@@ -506,7 +507,7 @@ scoped_refptr<Compiler> DPEService::CreateCompiler(
   {
     type = GetDefaultCompilerType(language);
   }
-
+  
   for (auto& it: compilers_)
   {
     if (base::StringEqualCaseInsensitive(it.type_, type))
