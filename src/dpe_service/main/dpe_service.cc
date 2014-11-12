@@ -476,7 +476,7 @@ void DPEService::LoadCompilers(const base::FilePath& file)
 
 std::wstring DPEService::GetDefaultCompilerType(const ProgrammeLanguage& language)
 {
-  if (language == PL_PYTHON) return L"interpreter";
+  if (language == PL_PYTHON || language == PL_SCALA) return L"interpreter";
   return L"compiler";
 }
 
@@ -487,14 +487,14 @@ scoped_refptr<Compiler> DPEService::CreateCompiler(
   if (language == PL_UNKNOWN) language = DetectLanguage(source_file);
   if (language == PL_UNKNOWN) return NULL;
 
-  if (type.empty())
+  //if (type.empty())
   {
-    type = GetDefaultCompilerType(language);
+    //type = GetDefaultCompilerType(language);
   }
 
   for (auto& it: compilers_)
   {
-    if (base::StringEqualCaseInsensitive(it.type_, type))
+    //if (base::StringEqualCaseInsensitive(it.type_, type))
     {
       if (!it.Accept(language)) continue;
 

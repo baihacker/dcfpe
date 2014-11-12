@@ -74,6 +74,7 @@ extern const ProgrammeLanguage PL_PYTHON;
 extern const ProgrammeLanguage PL_JAVA;
 extern const ProgrammeLanguage PL_HASKELL;
 extern const ProgrammeLanguage PL_GO;
+extern const ProgrammeLanguage PL_SCALA;
 
 extern const ISArch             ARCH_UNKNOWN;
 extern const ISArch             ARCH_X86;

@@ -10,6 +10,7 @@ extern const ProgrammeLanguage  PL_PYTHON     = "python";
 extern const ProgrammeLanguage  PL_JAVA       = "java";
 extern const ProgrammeLanguage  PL_HASKELL    = "haskell";
 extern const ProgrammeLanguage  PL_GO         = "go";
+extern const ProgrammeLanguage  PL_SCALA      = "scala";
 
 extern const ISArch             ARCH_UNKNOWN  = "";
 extern const ISArch             ARCH_X86      = "x86";
@@ -229,6 +230,7 @@ bool BasicCompiler::GenerateCmdline(CompileJob* job)
   
   job->image_path_ = base::FilePath(base::UTF8ToNative(FixString(language_detail.running_binary_, kv)));
   job->arguments_.clear();
+
   for (auto& iter: language_detail.running_args_)
   {
     job->arguments_.push_back(base::UTF8ToNative(FixString(iter, kv)));
@@ -281,6 +283,7 @@ static Ext2Lang info[] =
 {L".java", PL_JAVA},
 {L".hs", PL_HASKELL},
 {L".go", PL_GO},
+{L".scala", PL_SCALA},
 };
 
 ProgrammeLanguage DetectLanguage(const std::vector<base::FilePath>& filepath)
