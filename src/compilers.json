@@ -14,7 +14,7 @@
     "language" : "c",
     "compile_binary" : "gcc.exe",
     "compile_args" : [],
-    "default_output_file" : "$(SOURCE_FILE_NAME).exe",
+    "default_output_file" : "$(SOURCE_FILE_BASENAME_NO_EXT).exe",
     "running_binary" : "$(OUTPUT_FILE)",
     "running_args" : [],
   },
@@ -22,12 +22,12 @@
     "language" : "cpp",
     "compile_binary" : "g++.exe",
     "compile_args" : [],
-    "default_output_file" : "$(SOURCE_FILE_NAME).exe",
+    "default_output_file" : "$(SOURCE_FILE_BASENAME_NO_EXT).exe",
     "running_binary" : "$(OUTPUT_FILE)",
     "running_args" : [],
-  },
-],
+  },],
 },
+
 {
 "name" : "python",
 "type" : "python",
@@ -43,11 +43,30 @@
     "language" : "python",
     "compile_binary" : "python.exe",
     "running_binary" : "$(COMPILE_BINARY_DIR)\\python.exe",
-    "default_output_file" : "$(SOURCE_FILE_PATH)",
-    "running_args" : ["$(OUTPUT_FILE)"],
-  },
-],
+    "running_args" : ["$(SOURCE_FILE_PATH)"],
+  },],
 },
+
+{
+"name" : "java",
+"type" : "java",
+"compile_binary_dir" : "D:\\DevSoft\\jdk1.7.0_45\\bin",
+"arch" : "x86",
+"version" : "1.7.0.45",
+"env_var_keep" : {},
+"env_var_merge" : {},
+"env_var_replace" : {},
+"default_binary" : "javac.exe",
+"language_detail" : [
+  {
+    "language" : "java",
+    "compile_binary" : "javac.exe",
+    "default_output_file" : "$(SOURCE_FILE_PATH_NO_EXT).class",
+    "running_binary" : "$(COMPILE_BINARY_DIR)\\java.exe",
+    "running_args" : ["-cp", "$(SOURCE_FILE_DIRNAME)", "$(SOURCE_FILE_BASENAME_NO_EXT)"],
+  },],
+},
+
 {
 "name" : "ghc",
 "type" : "ghc",
@@ -62,9 +81,12 @@
   {
     "language" : "haskell",
     "compile_binary" : "ghc.exe",
-  },
-],
+    "default_output_file" : "$(SOURCE_FILE_BASENAME_NO_EXT).exe",
+    "running_binary" : "$(OUTPUT_FILE)",
+    "running_args" : [],
+  },],
 },
+
 {
 "name" : "vc10",
 "type" : "vc",
@@ -89,18 +111,17 @@
   {
     "language" : "c",
     "compile_args" : ["/TC"],
-    "default_output_file" : "$(SOURCE_FILE_NAME).exe",
+    "default_output_file" : "$(SOURCE_FILE_BASENAME_NO_EXT).exe",
     "running_binary" : "$(OUTPUT_FILE)",
     "running_args" : [],
   },
   {
     "language" : "cpp",
     "compile_args" : ["/TP"],
-    "default_output_file" : "$(SOURCE_FILE_NAME).exe",
+    "default_output_file" : "$(SOURCE_FILE_BASENAME_NO_EXT).exe",
     "running_binary" : "$(OUTPUT_FILE)",
     "running_args" : [],
-  },
-],
+  },],
 },
 
 ]

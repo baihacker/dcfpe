@@ -60,6 +60,16 @@ public:
   bool                StartCompile(CompileJob* job) override;
 };
 
+class JavaCompiler : public BasicCompiler
+{
+public:
+  JavaCompiler(const CompilerConfiguration& context);
+  ~JavaCompiler();
+
+  void                FillOutputFile(CompileJob* job) override;
+  bool                StartCompile(CompileJob* job) override;
+};
+
 class PythonCompiler : public BasicCompiler
 {
 public:

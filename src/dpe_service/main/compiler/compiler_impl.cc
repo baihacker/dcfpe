@@ -104,10 +104,15 @@ bool BasicCompiler::PreProcessJob(CompileJob* job)
   {
     auto language_detail = GetLanguageDetail(job->language_);
     std::map<std::string, std::string> kv;
+    
     kv["$(COMPILE_BINARY_DIR)"] = base::NativeToUTF8(context_.compile_binary_dir_.value());
     kv["$(OUTPUT_FILE)"] = base::NativeToUTF8(job->output_file_.value());
-    kv["$(SOURCE_FILE_NAME)"] = base::NativeToUTF8(job->source_files_[0].BaseName().RemoveExtension().value());
     kv["$(SOURCE_FILE_PATH)"] = base::NativeToUTF8(job->source_files_[0].value());
+    kv["$(SOURCE_FILE_PATH_NO_EXT)"] = base::NativeToUTF8(job->source_files_[0].RemoveExtension().value());
+    kv["$(SOURCE_FILE_BASENAME)"] = base::NativeToUTF8(job->source_files_[0].BaseName().value());
+    kv["$(SOURCE_FILE_BASENAME_NO_EXT)"] = base::NativeToUTF8(job->source_files_[0].BaseName().RemoveExtension().value());
+    kv["$(SOURCE_FILE_DIRNAME)"] = base::NativeToUTF8(job->source_files_[0].DirName().value());
+    
     job->output_file_ = base::FilePath(base::UTF8ToNative(FixString(language_detail.default_output_file_, kv)));
   }
   
@@ -134,12 +139,16 @@ bool BasicCompiler::GenerateCmdline(CompileJob* job)
 
   auto language_detail = GetLanguageDetail(job->language_);
   std::map<std::string, std::string> kv;
+  
   kv["$(COMPILE_BINARY_DIR)"] = base::NativeToUTF8(context_.compile_binary_dir_.value());
   kv["$(OUTPUT_FILE)"] = base::NativeToUTF8(job->output_file_.value());
-  kv["$(SOURCE_FILE_NAME)"] = base::NativeToUTF8(job->source_files_[0].BaseName().RemoveExtension().value());
   kv["$(SOURCE_FILE_PATH)"] = base::NativeToUTF8(job->source_files_[0].value());
+  kv["$(SOURCE_FILE_PATH_NO_EXT)"] = base::NativeToUTF8(job->source_files_[0].RemoveExtension().value());
+  kv["$(SOURCE_FILE_BASENAME)"] = base::NativeToUTF8(job->source_files_[0].BaseName().value());
+  kv["$(SOURCE_FILE_BASENAME_NO_EXT)"] = base::NativeToUTF8(job->source_files_[0].BaseName().RemoveExtension().value());
+  kv["$(SOURCE_FILE_DIRNAME)"] = base::NativeToUTF8(job->source_files_[0].DirName().value());
+  
   job->image_path_ = base::FilePath(base::UTF8ToNative(FixString(language_detail.running_binary_, kv)));
-
   job->arguments_.clear();
   for (auto& iter: language_detail.running_args_)
   {
@@ -419,6 +428,78 @@ bool GHCCompiler::StartCompile(CompileJob* job)
 
   return ret;
 }
+
+
+JavaCompiler::JavaCompiler(const CompilerConfiguration& context) :
+  BasicCompiler(context)
+{
+
+}
+
+JavaCompiler::~JavaCompiler()
+{
+
+}
+
+void JavaCompiler::FillOutputFile(CompileJob* job)
+{
+  if (job->output_file_.empty())
+  {
+    job->output_file_ = job->current_directory_.Append(
+                          job->source_files_[0].BaseName().ReplaceExtension(L".class")
+                        );
+  }
+}
+
+bool JavaCompiler::StartCompile(CompileJob* job)
+{
+  if (!job || curr_job_) return false;
+
+  if (!PreProcessJob(job)) return false;
+
+  auto language_detail = GetLanguageDetail(job->language_);
+
+  compile_process_ = new process::Process(this);
+
+  auto& po = compile_process_->GetProcessOption();
+  po.image_path_ = context_.compile_binary_dir_.Append(language_detail.compile_binary_.value());
+  po.inherit_env_var_ = true;
+  po.env_var_keep_ = context_.env_var_keep_;
+  po.env_var_merge_ = context_.env_var_merge_;
+  po.env_var_replace_ = context_.env_var_replace_;
+  po.current_directory_ = job->current_directory_;
+
+  po.argument_list_.clear();
+  for (auto& it : job->source_files_) po.argument_list_.push_back(it.value());
+
+  for (auto& it: language_detail.compile_args_)
+  {
+    po.argument_list_.push_back(base::UTF8ToNative(it));
+  }
+
+  std::string().swap(job->compiler_output_);
+
+  po.redirect_std_inout_ = true;
+  po.treat_err_as_out_ = true;
+  po.create_sub_process_ = true;
+  po.treat_err_as_out_ = true;
+  po.allow_sub_process_breakaway_job_ = true;
+
+  bool ret = compile_process_->Start();
+  if (ret)
+  {
+    curr_job_ = job;
+    job->compile_process_ = compile_process_;
+    LOG(INFO) << "compile command:\n" << base::SysWideToUTF8(compile_process_->GetProcessContext()->cmd_line_);
+  }
+  else
+  {
+    compile_process_ = NULL;
+  }
+
+  return ret;
+}
+
 
 PythonCompiler::PythonCompiler(const CompilerConfiguration& context) :
   BasicCompiler(context)

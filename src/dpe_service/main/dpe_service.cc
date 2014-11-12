@@ -493,6 +493,7 @@ std::wstring DPEService::GetDefaultCompilerType(const ProgrammeLanguage& languag
   if (language == PL_C || language == PL_CPP) return L"mingw";
   if (language == PL_HASKELL) return L"ghc";
   if (language == PL_PYTHON) return L"python";
+  if (language == PL_JAVA) return L"java";
   return L"";
 }
 
@@ -531,6 +532,10 @@ scoped_refptr<Compiler> DPEService::CreateCompiler(
       else if (base::StringEqualCaseInsensitive(it.type_, L"python"))
       {
         return new PythonCompiler(it);
+      }
+      else if (base::StringEqualCaseInsensitive(it.type_, L"java"))
+      {
+        return new JavaCompiler(it);
       }
     }
   }
