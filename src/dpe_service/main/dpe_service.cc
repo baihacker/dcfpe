@@ -214,7 +214,7 @@ void DPEService::Start()
 #if 1
   ctrl = new DPEController(this);
   ctrl->AddRemoteDPEService(true, default_server->GetServerAddress());
-  ctrl->Start(base::FilePath(L"D:\\usr\\projects\\test_job\\test.dpe"));
+  ctrl->Start(base::FilePath(L"D:\\usr\\projects\\dcfpe\\demo\\square_sum\\test.dpe"));
 #endif
 }
 

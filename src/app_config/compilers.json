@@ -45,6 +45,29 @@
 },
 
 {
+"name" : "go",
+"type" : "compiler",
+"compile_binary_dir" : "D:\\DevSoft\\go\\bin",
+"arch" : "x86",
+"version" : "1.4",
+"env_var_keep" : {},
+"env_var_merge" : {},
+"env_var_replace" : {
+    "GOROOT" : "D:\\DevSoft\\go",
+  },
+"language_detail" : [
+  {
+    "language" : "go",
+    "compile_binary" : "go.exe",
+    "compile_args" : ["build", "$(SOURCE_FILES)"],
+    "default_output_file" : "$(SOURCE_FILE_BASENAME_NO_EXT).exe",
+    "running_binary" : "$(OUTPUT_FILE)",
+    "running_args" : [],
+  },],
+},
+
+
+{
 "name" : "java",
 "type" : "compiler",
 "compile_binary_dir" : "D:\\DevSoft\\jdk1.7.0_45\\bin",

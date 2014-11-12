@@ -1,0 +1,11 @@
+{
+"name" : "square_sum",
+
+"source" : "source.go",
+"worker" : "worker.cpp",
+"sink" : "sink.cpp",
+
+"compiler_type" : "",
+"language" : "",
+
+}

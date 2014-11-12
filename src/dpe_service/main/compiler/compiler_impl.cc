@@ -9,6 +9,7 @@ extern const ProgrammeLanguage  PL_CPP        = "cpp";
 extern const ProgrammeLanguage  PL_PYTHON     = "python";
 extern const ProgrammeLanguage  PL_JAVA       = "java";
 extern const ProgrammeLanguage  PL_HASKELL    = "haskell";
+extern const ProgrammeLanguage  PL_GO         = "go";
 
 extern const ISArch             ARCH_UNKNOWN  = "";
 extern const ISArch             ARCH_X86      = "x86";
@@ -279,6 +280,7 @@ static Ext2Lang info[] =
 {L".py", PL_PYTHON},
 {L".java", PL_JAVA},
 {L".hs", PL_HASKELL},
+{L".go", PL_GO},
 };
 
 ProgrammeLanguage DetectLanguage(const std::vector<base::FilePath>& filepath)
