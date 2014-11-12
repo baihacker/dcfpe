@@ -103,17 +103,19 @@ bool BasicCompiler::PreProcessJob(CompileJob* job)
   if (job->output_file_.empty())
   {
     auto language_detail = GetLanguageDetail(job->language_);
-    std::map<std::string, std::string> kv;
-    
-    kv["$(COMPILE_BINARY_DIR)"] = base::NativeToUTF8(context_.compile_binary_dir_.value());
-    kv["$(OUTPUT_FILE)"] = base::NativeToUTF8(job->output_file_.value());
-    kv["$(SOURCE_FILE_PATH)"] = base::NativeToUTF8(job->source_files_[0].value());
-    kv["$(SOURCE_FILE_PATH_NO_EXT)"] = base::NativeToUTF8(job->source_files_[0].RemoveExtension().value());
-    kv["$(SOURCE_FILE_BASENAME)"] = base::NativeToUTF8(job->source_files_[0].BaseName().value());
-    kv["$(SOURCE_FILE_BASENAME_NO_EXT)"] = base::NativeToUTF8(job->source_files_[0].BaseName().RemoveExtension().value());
-    kv["$(SOURCE_FILE_DIRNAME)"] = base::NativeToUTF8(job->source_files_[0].DirName().value());
-    
-    job->output_file_ = base::FilePath(base::UTF8ToNative(FixString(language_detail.default_output_file_, kv)));
+    if (!language_detail.default_output_file_.empty())
+    {
+      std::map<std::string, std::string> kv;
+      
+      kv["$(COMPILE_BINARY_DIR)"] = base::NativeToUTF8(context_.compile_binary_dir_.value());
+      kv["$(SOURCE_FILE_PATH)"] = base::NativeToUTF8(job->source_files_[0].value());
+      kv["$(SOURCE_FILE_PATH_NO_EXT)"] = base::NativeToUTF8(job->source_files_[0].RemoveExtension().value());
+      kv["$(SOURCE_FILE_BASENAME)"] = base::NativeToUTF8(job->source_files_[0].BaseName().value());
+      kv["$(SOURCE_FILE_BASENAME_NO_EXT)"] = base::NativeToUTF8(job->source_files_[0].BaseName().RemoveExtension().value());
+      kv["$(SOURCE_FILE_DIRNAME)"] = base::NativeToUTF8(job->source_files_[0].DirName().value());
+      
+      job->output_file_ = base::FilePath(base::UTF8ToNative(FixString(language_detail.default_output_file_, kv)));
+    }
   }
   
   return true;
@@ -129,8 +131,77 @@ std::string BasicCompiler::FixString(const std::string& s, const std::map<std::s
   return ret;
 }
 
-void BasicCompiler::FillOutputFile(CompileJob* job)
+bool BasicCompiler::StartCompile(CompileJob* job)
 {
+  if (!job || curr_job_) return false;
+
+  if (!PreProcessJob(job)) return false;
+
+  auto language_detail = GetLanguageDetail(job->language_);
+
+  compile_process_ = new process::Process(this);
+
+  auto& po = compile_process_->GetProcessOption();
+  po.image_path_ = context_.compile_binary_dir_.Append(language_detail.compile_binary_.value());
+  po.inherit_env_var_ = true;
+  po.env_var_keep_ = context_.env_var_keep_;
+  po.env_var_merge_ = context_.env_var_merge_;
+  po.env_var_replace_ = context_.env_var_replace_;
+  po.current_directory_ = job->current_directory_;
+
+  po.argument_list_.clear();
+  
+  std::map<std::string, std::string> kv;
+  
+  kv["$(COMPILE_BINARY_DIR)"] = base::NativeToUTF8(context_.compile_binary_dir_.value());
+  kv["$(OUTPUT_FILE)"] = base::NativeToUTF8(job->output_file_.value());
+  kv["$(SOURCE_FILE_PATH)"] = base::NativeToUTF8(job->source_files_[0].value());
+  kv["$(SOURCE_FILE_PATH_NO_EXT)"] = base::NativeToUTF8(job->source_files_[0].RemoveExtension().value());
+  kv["$(SOURCE_FILE_BASENAME)"] = base::NativeToUTF8(job->source_files_[0].BaseName().value());
+  kv["$(SOURCE_FILE_BASENAME_NO_EXT)"] = base::NativeToUTF8(job->source_files_[0].BaseName().RemoveExtension().value());
+  kv["$(SOURCE_FILE_DIRNAME)"] = base::NativeToUTF8(job->source_files_[0].DirName().value());
+  kv["$(OPTIMIZATION_OPTION)"] = base::StringPrintf("%d", job->optimization_option_);
+  
+  for (auto& it: language_detail.compile_args_)
+  {
+    if (it == "$(SOURCE_FILES)")
+    {
+      for (auto& it : job->source_files_) po.argument_list_.push_back(it.value());
+    }
+    else if (it == "$(EXTRA_COMPILE_ARGS)")
+    {
+      if (!job->cflags_.empty())
+      {
+        po.argument_list_r_.push_back(job->cflags_);
+      }
+    }
+    else
+    {
+      po.argument_list_.push_back(base::UTF8ToNative(FixString(it, kv)));
+    }
+  }
+  
+  std::string().swap(job->compiler_output_);
+
+  po.redirect_std_inout_ = true;
+  po.treat_err_as_out_ = true;
+  po.create_sub_process_ = true;
+  po.treat_err_as_out_ = true;
+  po.allow_sub_process_breakaway_job_ = true;
+
+  bool ret = compile_process_->Start();
+  if (ret)
+  {
+    curr_job_ = job;
+    job->compile_process_ = compile_process_;
+    LOG(INFO) << "compile command:\n" << base::SysWideToUTF8(compile_process_->GetProcessContext()->cmd_line_);
+  }
+  else
+  {
+    compile_process_ = NULL;
+  }
+
+  return ret;
 }
 
 bool BasicCompiler::GenerateCmdline(CompileJob* job)
@@ -158,369 +229,18 @@ bool BasicCompiler::GenerateCmdline(CompileJob* job)
   return true;
 }
 
-MingwCompiler::MingwCompiler(const CompilerConfiguration& context) :
+InterpreterCompiler::InterpreterCompiler(const CompilerConfiguration& context) :
   BasicCompiler(context)
 {
 
 }
 
-MingwCompiler::~MingwCompiler()
+InterpreterCompiler::~InterpreterCompiler()
 {
 
 }
 
-void MingwCompiler::FillOutputFile(CompileJob* job)
-{
-  if (job->output_file_.empty())
-  {
-    job->output_file_ = job->source_files_[0].BaseName().ReplaceExtension(L".exe");
-  }
-}
-
-bool MingwCompiler::StartCompile(CompileJob* job)
-{
-  if (!job || curr_job_) return false;
-
-  if (!PreProcessJob(job)) return false;
-
-  auto language_detail = GetLanguageDetail(job->language_);
-
-  compile_process_ = new process::Process(this);
-
-  auto& po = compile_process_->GetProcessOption();
-  po.image_path_ = context_.compile_binary_dir_.Append(language_detail.compile_binary_.value());
-  po.inherit_env_var_ = true;
-  po.env_var_keep_ = context_.env_var_keep_;
-  po.env_var_merge_ = context_.env_var_merge_;
-  po.env_var_replace_ = context_.env_var_replace_;
-  po.current_directory_ = job->current_directory_;
-
-  po.argument_list_.clear();
-  for (auto& it : job->source_files_) po.argument_list_.push_back(it.value());
-
-  po.argument_list_.push_back(L"-o");
-  po.argument_list_.push_back(job->output_file_.value());
-
-  if (job->optimization_option_ > 0)
-  {
-    if (job->optimization_option_ == 1)
-    {
-      po.argument_list_.push_back(L"-O1");
-    }
-    else if (job->optimization_option_ == 2)
-    {
-      po.argument_list_.push_back(L"-O2");
-    }
-    else
-    {
-      po.argument_list_.push_back(L"-O3");
-    }
-  }
-  
-  for (auto& it: language_detail.compile_args_)
-  {
-    po.argument_list_.push_back(base::UTF8ToNative(it));
-  }
-  
-  if (!job->cflags_.empty())
-  {
-    po.argument_list_r_.push_back(job->cflags_);
-  }
-  
-  std::string().swap(job->compiler_output_);
-
-  po.redirect_std_inout_ = true;
-  po.treat_err_as_out_ = true;
-  po.create_sub_process_ = true;
-  po.treat_err_as_out_ = true;
-  po.allow_sub_process_breakaway_job_ = true;
-
-  bool ret = compile_process_->Start();
-  if (ret)
-  {
-    curr_job_ = job;
-    job->compile_process_ = compile_process_;
-    LOG(INFO) << "compile command:\n" << base::SysWideToUTF8(compile_process_->GetProcessContext()->cmd_line_);
-  }
-  else
-  {
-    compile_process_ = NULL;
-  }
-
-  return ret;
-}
-
-VCCompiler::VCCompiler(const CompilerConfiguration& context) :
-  BasicCompiler(context)
-{
-
-}
-
-VCCompiler::~VCCompiler()
-{
-
-}
-
-void VCCompiler::FillOutputFile(CompileJob* job)
-{
-  if (job->output_file_.empty())
-  {
-    job->output_file_ = job->current_directory_.Append(
-                          job->source_files_[0].BaseName().ReplaceExtension(L".exe")
-                        );
-  }
-}
-
-bool VCCompiler::StartCompile(CompileJob* job)
-{
-  if (!job || curr_job_) return false;
-
-  if (!PreProcessJob(job)) return false;
-
-  auto language_detail = GetLanguageDetail(job->language_);
-
-  compile_process_ = new process::Process(this);
-
-  auto& po = compile_process_->GetProcessOption();
-  po.image_path_ = context_.compile_binary_dir_.Append(language_detail.compile_binary_.value());
-  po.inherit_env_var_ = true;
-  po.env_var_keep_ = context_.env_var_keep_;
-  po.env_var_merge_ = context_.env_var_merge_;
-  po.env_var_replace_ = context_.env_var_replace_;
-  po.current_directory_ = job->current_directory_;
-
-  po.argument_list_.clear();
-  for (auto& it : job->source_files_) po.argument_list_.push_back(it.value());
-
-  po.argument_list_.push_back(L"/Fe"+job->output_file_.value());
-
-  if (job->optimization_option_ > 0)
-  {
-    if (job->optimization_option_ == 1)
-    {
-      po.argument_list_.push_back(L"/O1");
-    }
-    else
-    {
-      po.argument_list_.push_back(L"/O2");
-    }
-  }
-  
-  for (auto& it: language_detail.compile_args_)
-  {
-    po.argument_list_.push_back(base::UTF8ToNative(it));
-  }
-  
-  if (!job->cflags_.empty())
-  {
-    po.argument_list_r_.push_back(job->cflags_);
-  }
-  std::string().swap(job->compiler_output_);
-
-  po.redirect_std_inout_ = true;
-  po.treat_err_as_out_ = true;
-  po.create_sub_process_ = true;
-  po.treat_err_as_out_ = true;
-  po.allow_sub_process_breakaway_job_ = true;
-
-  bool ret = compile_process_->Start();
-
-  if (ret)
-  {
-    curr_job_ = job;
-    job->compile_process_ = compile_process_;
-    LOG(INFO) << "compile command:\n" << base::SysWideToUTF8(compile_process_->GetProcessContext()->cmd_line_);
-  }
-  else
-  {
-    compile_process_ = NULL;
-  }
-
-  return ret;
-}
-
-GHCCompiler::GHCCompiler(const CompilerConfiguration& context) :
-  BasicCompiler(context)
-{
-
-}
-
-GHCCompiler::~GHCCompiler()
-{
-
-}
-
-void GHCCompiler::FillOutputFile(CompileJob* job)
-{
-  if (job->output_file_.empty())
-  {
-    job->output_file_ = job->current_directory_.Append(
-                          job->source_files_[0].BaseName().ReplaceExtension(L".exe")
-                        );
-  }
-}
-
-bool GHCCompiler::StartCompile(CompileJob* job)
-{
-  if (!job || curr_job_) return false;
-
-  if (!PreProcessJob(job)) return false;
-
-  auto language_detail = GetLanguageDetail(job->language_);
-
-  compile_process_ = new process::Process(this);
-
-  auto& po = compile_process_->GetProcessOption();
-  po.image_path_ = context_.compile_binary_dir_.Append(language_detail.compile_binary_.value());
-  po.inherit_env_var_ = true;
-  po.env_var_keep_ = context_.env_var_keep_;
-  po.env_var_merge_ = context_.env_var_merge_;
-  po.env_var_replace_ = context_.env_var_replace_;
-  po.current_directory_ = job->current_directory_;
-
-  po.argument_list_.clear();
-  for (auto& it : job->source_files_) po.argument_list_.push_back(it.value());
-
-  po.argument_list_.push_back(L"-o");
-  po.argument_list_.push_back(job->output_file_.value());
-  
-  for (auto& it: language_detail.compile_args_)
-  {
-    po.argument_list_.push_back(base::UTF8ToNative(it));
-  }
-  
-#if 0
-  if (job->optimization_option_ > 0)
-  {
-    if (job->optimization_option_ == 1)
-    {
-      po.argument_list_.push_back(L"/O1");
-    }
-    else if (job->optimization_option_ == 2)
-    {
-      po.argument_list_.push_back(L"/O2");
-    }
-    else
-    {
-      po.argument_list_.push_back(L"/O3");
-    }
-  }
-#endif
-  std::string().swap(job->compiler_output_);
-
-  po.redirect_std_inout_ = true;
-  po.treat_err_as_out_ = true;
-  po.create_sub_process_ = true;
-  po.treat_err_as_out_ = true;
-  po.allow_sub_process_breakaway_job_ = true;
-
-  bool ret = compile_process_->Start();
-  if (ret)
-  {
-    curr_job_ = job;
-    job->compile_process_ = compile_process_;
-    LOG(INFO) << "compile command:\n" << base::SysWideToUTF8(compile_process_->GetProcessContext()->cmd_line_);
-  }
-  else
-  {
-    compile_process_ = NULL;
-  }
-
-  return ret;
-}
-
-
-JavaCompiler::JavaCompiler(const CompilerConfiguration& context) :
-  BasicCompiler(context)
-{
-
-}
-
-JavaCompiler::~JavaCompiler()
-{
-
-}
-
-void JavaCompiler::FillOutputFile(CompileJob* job)
-{
-  if (job->output_file_.empty())
-  {
-    job->output_file_ = job->current_directory_.Append(
-                          job->source_files_[0].BaseName().ReplaceExtension(L".class")
-                        );
-  }
-}
-
-bool JavaCompiler::StartCompile(CompileJob* job)
-{
-  if (!job || curr_job_) return false;
-
-  if (!PreProcessJob(job)) return false;
-
-  auto language_detail = GetLanguageDetail(job->language_);
-
-  compile_process_ = new process::Process(this);
-
-  auto& po = compile_process_->GetProcessOption();
-  po.image_path_ = context_.compile_binary_dir_.Append(language_detail.compile_binary_.value());
-  po.inherit_env_var_ = true;
-  po.env_var_keep_ = context_.env_var_keep_;
-  po.env_var_merge_ = context_.env_var_merge_;
-  po.env_var_replace_ = context_.env_var_replace_;
-  po.current_directory_ = job->current_directory_;
-
-  po.argument_list_.clear();
-  for (auto& it : job->source_files_) po.argument_list_.push_back(it.value());
-
-  for (auto& it: language_detail.compile_args_)
-  {
-    po.argument_list_.push_back(base::UTF8ToNative(it));
-  }
-
-  std::string().swap(job->compiler_output_);
-
-  po.redirect_std_inout_ = true;
-  po.treat_err_as_out_ = true;
-  po.create_sub_process_ = true;
-  po.treat_err_as_out_ = true;
-  po.allow_sub_process_breakaway_job_ = true;
-
-  bool ret = compile_process_->Start();
-  if (ret)
-  {
-    curr_job_ = job;
-    job->compile_process_ = compile_process_;
-    LOG(INFO) << "compile command:\n" << base::SysWideToUTF8(compile_process_->GetProcessContext()->cmd_line_);
-  }
-  else
-  {
-    compile_process_ = NULL;
-  }
-
-  return ret;
-}
-
-
-PythonCompiler::PythonCompiler(const CompilerConfiguration& context) :
-  BasicCompiler(context)
-{
-
-}
-
-PythonCompiler::~PythonCompiler()
-{
-
-}
-
-void PythonCompiler::FillOutputFile(CompileJob* job)
-{
-  if (job->output_file_.empty())
-  {
-    job->output_file_ = job->source_files_[0];
-  }
-}
-
-bool PythonCompiler::StartCompile(CompileJob* job)
+bool InterpreterCompiler::StartCompile(CompileJob* job)
 {
   if (!job || curr_job_) return false;
   

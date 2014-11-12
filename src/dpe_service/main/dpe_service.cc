@@ -490,11 +490,8 @@ void DPEService::LoadCompilers(const base::FilePath& file)
 std::wstring DPEService::GetDefaultCompilerType(const ProgrammeLanguage& language)
 {
   // todo : get default compiler type from configuration 
-  if (language == PL_C || language == PL_CPP) return L"mingw";
-  if (language == PL_HASKELL) return L"ghc";
-  if (language == PL_PYTHON) return L"python";
-  if (language == PL_JAVA) return L"java";
-  return L"";
+  if (language == PL_PYTHON) return L"interpreter";
+  return L"compiler";
 }
 
 scoped_refptr<Compiler> DPEService::CreateCompiler(
@@ -508,7 +505,7 @@ scoped_refptr<Compiler> DPEService::CreateCompiler(
   {
     type = GetDefaultCompilerType(language);
   }
-  
+  LOG(INFO) << base::SysWideToUTF8(type);
   for (auto& it: compilers_)
   {
     if (base::StringEqualCaseInsensitive(it.type_, type))
@@ -517,25 +514,14 @@ scoped_refptr<Compiler> DPEService::CreateCompiler(
 
       if (arch != ARCH_UNKNOWN && arch != it.arch_) continue;
 
-      if (base::StringEqualCaseInsensitive(it.type_, L"mingw"))
+      if (base::StringEqualCaseInsensitive(it.type_, L"default") ||
+          base::StringEqualCaseInsensitive(it.type_, L"compiler"))
       {
-        return new MingwCompiler(it);
+        return new BasicCompiler(it);
       }
-      else if (base::StringEqualCaseInsensitive(it.type_, L"vc"))
+      else if (base::StringEqualCaseInsensitive(it.type_, L"interpreter"))
       {
-        return new VCCompiler(it);
-      }
-      else if (base::StringEqualCaseInsensitive(it.type_, L"ghc"))
-      {
-        return new GHCCompiler(it);
-      }
-      else if (base::StringEqualCaseInsensitive(it.type_, L"python"))
-      {
-        return new PythonCompiler(it);
-      }
-      else if (base::StringEqualCaseInsensitive(it.type_, L"java"))
-      {
-        return new JavaCompiler(it);
+        return new InterpreterCompiler(it);
       }
     }
   }

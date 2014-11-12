@@ -1,7 +1,7 @@
 [
 {
 "name" : "mingw",
-"type" : "mingw",
+"type" : "compiler",
 "compile_binary_dir" : "C:\\TDM-GCC-64\\bin",
 "arch" : "x64",
 "version" : "4.8.1",
@@ -13,7 +13,7 @@
   {
     "language" : "c",
     "compile_binary" : "gcc.exe",
-    "compile_args" : [],
+    "compile_args" : ["$(SOURCE_FILES)", "-o", "$(OUTPUT_FILE)", "-O$(OPTIMIZATION_OPTION)", "$(EXTRA_COMPILE_ARGS)"],
     "default_output_file" : "$(SOURCE_FILE_BASENAME_NO_EXT).exe",
     "running_binary" : "$(OUTPUT_FILE)",
     "running_args" : [],
@@ -21,7 +21,7 @@
   {
     "language" : "cpp",
     "compile_binary" : "g++.exe",
-    "compile_args" : [],
+    "compile_args" : ["$(SOURCE_FILES)", "-o", "$(OUTPUT_FILE)", "-O$(OPTIMIZATION_OPTION)", "$(EXTRA_COMPILE_ARGS)"],
     "default_output_file" : "$(SOURCE_FILE_BASENAME_NO_EXT).exe",
     "running_binary" : "$(OUTPUT_FILE)",
     "running_args" : [],
@@ -30,7 +30,7 @@
 
 {
 "name" : "python",
-"type" : "python",
+"type" : "interpreter",
 "compile_binary_dir" : "C:\\Python27",
 "arch" : "x86",
 "version" : "2.7.3",
@@ -49,7 +49,7 @@
 
 {
 "name" : "java",
-"type" : "java",
+"type" : "compiler",
 "compile_binary_dir" : "D:\\DevSoft\\jdk1.7.0_45\\bin",
 "arch" : "x86",
 "version" : "1.7.0.45",
@@ -61,6 +61,7 @@
   {
     "language" : "java",
     "compile_binary" : "javac.exe",
+    "compile_args" : ["$(SOURCE_FILES)"],
     "default_output_file" : "$(SOURCE_FILE_PATH_NO_EXT).class",
     "running_binary" : "$(COMPILE_BINARY_DIR)\\java.exe",
     "running_args" : ["-cp", "$(SOURCE_FILE_DIRNAME)", "$(SOURCE_FILE_BASENAME_NO_EXT)"],
@@ -69,7 +70,7 @@
 
 {
 "name" : "ghc",
-"type" : "ghc",
+"type" : "compiler",
 "compile_binary_dir" : "",
 "arch" : "x86",
 "version" : "2014.2.0.0",
@@ -81,6 +82,7 @@
   {
     "language" : "haskell",
     "compile_binary" : "ghc.exe",
+    "compile_args" : ["$(SOURCE_FILES)", "/-o", "$(OUTPUT_FILE)", "$(EXTRA_COMPILE_ARGS)"],
     "default_output_file" : "$(SOURCE_FILE_BASENAME_NO_EXT).exe",
     "running_binary" : "$(OUTPUT_FILE)",
     "running_args" : [],
@@ -89,7 +91,7 @@
 
 {
 "name" : "vc10",
-"type" : "vc",
+"type" : "compiler",
 "compile_binary_dir" : "D:\\DevSoft\\Microsoft Visual Studio 10.0\\VC\\bin",
 "arch" : "x86",
 "version" : "10.0",
@@ -110,14 +112,14 @@
 "language_detail" : [
   {
     "language" : "c",
-    "compile_args" : ["/TC"],
+    "compile_args" : ["$(SOURCE_FILES)", "/Fe", "$(OUTPUT_FILE)", "/O$(OPTIMIZATION_OPTION)", "/TC", "$(EXTRA_COMPILE_ARGS)"],
     "default_output_file" : "$(SOURCE_FILE_BASENAME_NO_EXT).exe",
     "running_binary" : "$(OUTPUT_FILE)",
     "running_args" : [],
   },
   {
     "language" : "cpp",
-    "compile_args" : ["/TP"],
+    "compile_args" : ["$(SOURCE_FILES)", "/Fe", "$(OUTPUT_FILE)", "/O$(OPTIMIZATION_OPTION)", "/TP", "$(EXTRA_COMPILE_ARGS)"],
     "default_output_file" : "$(SOURCE_FILE_BASENAME_NO_EXT).exe",
     "running_binary" : "$(OUTPUT_FILE)",
     "running_args" : [],

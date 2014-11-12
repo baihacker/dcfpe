@@ -17,68 +17,28 @@ public:
 
   bool                  PreProcessJob(CompileJob* job);
   std::string           FixString(const std::string& s, const std::map<std::string, std::string>& kv);
-  virtual void          FillOutputFile(CompileJob* job);
+  bool                  StartCompile(CompileJob* job) override;
   bool                  GenerateCmdline(CompileJob* job) override;
   
   static void           ReportCompileSuccess(base::WeakPtr<BasicCompiler> self);
   void                  ScheduleReportCompileSuccess();
   
 protected:
-  CompileJob*         curr_job_;
-  CompilerConfiguration   context_;
-  scoped_refptr<process::Process>  compile_process_;
-  base::WeakPtrFactory<BasicCompiler> weakptr_factory_;
+  CompileJob*                           curr_job_;
+  CompilerConfiguration                 context_;
+  scoped_refptr<process::Process>       compile_process_;
+  base::WeakPtrFactory<BasicCompiler>   weakptr_factory_;
 };
 
-class MingwCompiler : public BasicCompiler
+class InterpreterCompiler : public BasicCompiler
 {
 public:
-  MingwCompiler(const CompilerConfiguration& context);
-  ~MingwCompiler();
+  InterpreterCompiler(const CompilerConfiguration& context);
+  ~InterpreterCompiler();
 
-  void                FillOutputFile(CompileJob* job) override;
   bool                StartCompile(CompileJob* job) override;
 };
 
-class VCCompiler : public BasicCompiler
-{
-public:
-  VCCompiler(const CompilerConfiguration& context);
-  ~VCCompiler();
-
-  void                FillOutputFile(CompileJob* job) override;
-  bool                StartCompile(CompileJob* job) override;
-};
-
-class GHCCompiler : public BasicCompiler
-{
-public:
-  GHCCompiler(const CompilerConfiguration& context);
-  ~GHCCompiler();
-
-  void                FillOutputFile(CompileJob* job) override;
-  bool                StartCompile(CompileJob* job) override;
-};
-
-class JavaCompiler : public BasicCompiler
-{
-public:
-  JavaCompiler(const CompilerConfiguration& context);
-  ~JavaCompiler();
-
-  void                FillOutputFile(CompileJob* job) override;
-  bool                StartCompile(CompileJob* job) override;
-};
-
-class PythonCompiler : public BasicCompiler
-{
-public:
-  PythonCompiler(const CompilerConfiguration& context);
-  ~PythonCompiler();
-
-  void                FillOutputFile(CompileJob* job) override;
-  bool                StartCompile(CompileJob* job) override;
-};
 
 }
 #endif
