@@ -463,23 +463,10 @@ void DPEService::LoadCompilers(const base::FilePath& file)
       config.env_var_replace_ = ParseEnvVar(ev);
     }
 
-    if (dv->GetString("default_binary", &val))
-    {
-      config.default_binary_ = base::FilePath(base::UTF8ToWide(val));
-    }
-    
     base::ListValue* lv = NULL;
     if (dv->GetList("language_detail", &lv))
     {
       config.language_detail_ = ParseLanguageDetail(lv);
-    }
-    
-    for (auto& detail: config.language_detail_)
-    {
-      if (detail.compile_binary_.value().empty())
-      {
-        detail.compile_binary_ = config.default_binary_;
-      }
     }
     
     compilers_.push_back(config);
@@ -505,7 +492,7 @@ scoped_refptr<Compiler> DPEService::CreateCompiler(
   {
     type = GetDefaultCompilerType(language);
   }
-  LOG(INFO) << base::SysWideToUTF8(type);
+
   for (auto& it: compilers_)
   {
     if (base::StringEqualCaseInsensitive(it.type_, type))

@@ -139,6 +139,12 @@ bool BasicCompiler::StartCompile(CompileJob* job)
 
   auto language_detail = GetLanguageDetail(job->language_);
 
+  if (language_detail.compile_binary_.value().empty())
+  {
+    LOG(ERROR) << "No compile binary";
+    return false;
+  }
+  
   compile_process_ = new process::Process(this);
 
   auto& po = compile_process_->GetProcessOption();

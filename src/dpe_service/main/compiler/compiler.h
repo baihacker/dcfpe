@@ -173,8 +173,6 @@ struct CompilerConfiguration
   env_var_list_t    env_var_merge_;
   env_var_list_t    env_var_replace_;
   
-  base::FilePath    default_binary_;
-  
   std::vector<LanguageDetail> language_detail_;
   
   bool              Accept(const ProgrammeLanguage& language) const;
