@@ -8,7 +8,6 @@
 "env_var_keep" : {},
 "env_var_merge" : {},
 "env_var_replace" : {},
-"default_binary" : "g++.exe",
 "language_detail" : [
   {
     "language" : "c",
@@ -37,11 +36,9 @@
 "env_var_keep" : {},
 "env_var_merge" : {},
 "env_var_replace" : {},
-"default_binary" : "python.exe",
 "language_detail" : [
   {
     "language" : "python",
-    "compile_binary" : "python.exe",
     "running_binary" : "$(COMPILE_BINARY_DIR)\\python.exe",
     "running_args" : ["$(SOURCE_FILE_PATH)"],
   },],
@@ -56,7 +53,6 @@
 "env_var_keep" : {},
 "env_var_merge" : {},
 "env_var_replace" : {},
-"default_binary" : "javac.exe",
 "language_detail" : [
   {
     "language" : "java",
@@ -77,7 +73,6 @@
 "env_var_keep" : {},
 "env_var_merge" : {"path":"D:\\DevSoft\\Haskell Platform\\2014.2.0.0\\bin"},
 "env_var_replace" : {},
-"default_binary" : "ghc.exe",
 "language_detail" : [
   {
     "language" : "haskell",
@@ -108,10 +103,10 @@
         "D:\\DevSoft\\Microsoft Visual Studio 10.0\\VC\\INCLUDE;D:\\DevSoft\\Microsoft Visual Studio 10.0\\VC\\ATLMFC\\INCLUDE;C:\\Program Files (x86)\\Microsoft SDKs\\Windows\\v7.0A\\include;"
   },
 "env_var_replace" : {},
-"default_binary" : "cl.exe",
 "language_detail" : [
   {
     "language" : "c",
+    "compile_binary" : "cl.exe",
     "compile_args" : ["$(SOURCE_FILES)", "/Fe", "$(OUTPUT_FILE)", "/O$(OPTIMIZATION_OPTION)", "/TC", "$(EXTRA_COMPILE_ARGS)"],
     "default_output_file" : "$(SOURCE_FILE_BASENAME_NO_EXT).exe",
     "running_binary" : "$(OUTPUT_FILE)",
@@ -119,6 +114,7 @@
   },
   {
     "language" : "cpp",
+    "compile_binary" : "cl.exe",
     "compile_args" : ["$(SOURCE_FILES)", "/Fe", "$(OUTPUT_FILE)", "/O$(OPTIMIZATION_OPTION)", "/TP", "$(EXTRA_COMPILE_ARGS)"],
     "default_output_file" : "$(SOURCE_FILE_BASENAME_NO_EXT).exe",
     "running_binary" : "$(OUTPUT_FILE)",
