@@ -192,7 +192,7 @@ class DPE_BASE_EXPORT ThreadPool {
 
   
   static void InitializeThreadPool();
-  static int RunMainLoop();
+  static int RunMainLoop(MessagePumpDispatcher* dispatcher = NULL);
   static void DeinitializeThreadPool();
   
  private:

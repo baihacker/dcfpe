@@ -621,9 +621,9 @@ void ThreadPool::InitializeThreadPool()
   }
 }
 
-int ThreadPool::RunMainLoop()
+int ThreadPool::RunMainLoop(MessagePumpDispatcher* dispatcher)
 {
-  base::RunLoop run_loop;
+  base::RunLoop run_loop(dispatcher);
   run_loop.Run();
   return 0;
 }

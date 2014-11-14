@@ -43,6 +43,9 @@
       'variables': {
         'use_zmq': 1,
       },
+      'include_dirs': [
+          '<(DEPTH)\\third_party\\wtl\\Include',
+        ],
       'sources':[
           'main/main.cc',
           'main/dpe_service.h',

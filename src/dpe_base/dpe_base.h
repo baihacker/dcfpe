@@ -15,7 +15,7 @@
 
 namespace base
 {
-DPE_BASE_EXPORT int32_t dpe_base_main(void (*logic_main)());
+DPE_BASE_EXPORT int32_t dpe_base_main(void (*logic_main)(), base::MessagePumpDispatcher* dispatcher = NULL);
 DPE_BASE_EXPORT void quit_main_loop();
 DPE_BASE_EXPORT MessageCenter* zmq_message_center();
 DPE_BASE_EXPORT ZMQServer* zmq_server();

@@ -57,5 +57,6 @@
 #include "third_party/chromium/base/debug/alias.h"
 
 #include "third_party/chromium/base/message_loop/message_loop.h"
+#include "third_party/chromium/base/message_loop/message_pump_dispatcher.h"
 
 #endif

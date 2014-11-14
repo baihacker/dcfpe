@@ -23,7 +23,7 @@ static MessageCenter* msg_center_impl = NULL;
 static ZMQServer* zmq_server_impl = NULL;
 static ZMQClient* zmq_client_impl = NULL;
 
-int32_t dpe_base_main(void (*logic_main)())
+int32_t dpe_base_main(void (*logic_main)(), base::MessagePumpDispatcher* dispatcher)
 {
   {
     auto x = logging::LoggingSettings();
@@ -47,7 +47,7 @@ int32_t dpe_base_main(void (*logic_main)())
         base::Bind(logic_main));
   
   LOG(INFO) << "RunMainLoop";
-  base::ThreadPool::RunMainLoop();
+  base::ThreadPool::RunMainLoop(dispatcher);
   
   delete zmq_client_impl;
   zmq_client_impl = NULL;

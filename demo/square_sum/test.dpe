@@ -1,7 +1,7 @@
 {
 "name" : "square_sum",
 
-"source" : "source.scala",
+"source" : "source.py",
 "worker" : "worker.cpp",
 "sink" : "sink.cpp",
 

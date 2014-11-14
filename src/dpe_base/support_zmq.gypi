@@ -8,7 +8,7 @@
     'target_conditions': [
       ['use_zmq==1', {
           'include_dirs': [
-            '<(DEPTH)\\thrid_party\\zmq\\include',
+            '<(DEPTH)\\third_party\\zmq\\include',
           ],
           'msvs_settings': {
             'VCLinkerTool': {
