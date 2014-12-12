@@ -38,7 +38,12 @@ def build_dcfpe():
   args.extend(['-G', 'output_dir='+os.environ['ENV_BUILD_DIR']])
   args.extend(['-D', 'component='+os.environ.get('ENV_COMPONENT')])
   args.extend(['-D', 'build_dir='+os.environ.get('ENV_BUILD_DIR')])
+  
   # do not use common.gypi, because it conflicts with third_party\chromium\build\common.gypi
+  # the above comment does not take effect since 6a9af727adc6 on Sat Oct 25 20:35:48 2014
+  # When revert the changes to common.gypi in chromium
+  # I keep this comment here to emphasize that we can add a default gypi file here
+  
   args.append('-I'+os.path.join(ENV_SOLUTION_DIRECTORY, 'build/common.gypi'))
   ret = gyp.main(args)
   

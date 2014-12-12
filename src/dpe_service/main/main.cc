@@ -1,5 +1,5 @@
 #include "dpe_base/dpe_base.h"
-#include "dpe_base/wtl_message_loop.h"
+#include "dpe_base/support_wtl_message_loop.h"
 #include "process/process.h"
 #include "dpe_service/main/dpe_service.h"
 

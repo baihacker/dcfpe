@@ -97,17 +97,82 @@ private:
 enum
 {
   DPE_JOB_STATE_PREPARE,
-  DPE_JOB_STATE_COMPILING_SOURCE,
-  DPE_JOB_STATE_COMPILING_WORKER,
-  DPE_JOB_STATE_COMPILING_SINK,
-  DPE_JOB_STATE_GENERATING_INPUT,
+  DPE_JOB_STATE_PREPROCESSING,
   DPE_JOB_STATE_RUNNING,
   DPE_JOB_STATE_FINISH,                 // The same as prepare, but we have output_data
   DPE_JOB_STATE_FAILED,
 };
 
-class DPEController : public ResourceBase, public CompilerCallback, public process::ProcessHost
+class DPEProject : public base::RefCounted<DPEProject>
 {
+public:
+  static scoped_refptr<DPEProject>  FromFile(const base::FilePath& job_path);
+
+  std::wstring                    job_name_;
+  base::FilePath                  job_home_path_;
+  base::FilePath                  job_file_path_;
+
+  std::wstring                    compiler_type_;
+  ProgrammeLanguage               language_;
+
+  base::FilePath                  source_path_;
+  std::string                     source_data_;
+  base::FilePath                  worker_path_;
+  std::string                     worker_data_;
+  base::FilePath                  sink_path_;
+  std::string                     sink_data_;
+};
+
+class DPEController;
+class DPEPreprocessor : public base::RefCounted<DPEPreprocessor>, public CompilerCallback, public process::ProcessHost
+{
+friend class DPEController;
+  enum
+  {
+    PREPROCESS_STATE_IDLE,
+    PREPROCESS_STATE_COMPILING_SOURCE,
+    PREPROCESS_STATE_COMPILING_WORKER,
+    PREPROCESS_STATE_COMPILING_SINK,
+    PREPROCESS_STATE_GENERATING_INPUT,
+    PREPROCESS_STATE_SUCCESS,
+    PREPROCESS_STATE_EEROR,
+  };
+public:
+  DPEPreprocessor(DPEController* host);
+  ~DPEPreprocessor();
+  
+  bool  StartPreprocess(scoped_refptr<DPEProject> dpe_project);
+
+private:
+  scoped_refptr<Compiler> MakeNewCompiler(CompileJob* job);
+  void  OnCompileFinished(CompileJob* job) override;
+
+  void  OnStop(process::Process* p, process::ProcessContext* context) override;
+  void  OnOutput(process::Process* p, bool is_std_out, const std::string& data) override;
+
+  static void  ScheduleNextStep(base::WeakPtr<DPEPreprocessor> ctrl);
+  void  ScheduleNextStepImpl();
+
+private:
+  DPEController*                  host_;
+  int                             state_;
+  scoped_refptr<DPEProject>       dpe_project_;
+  base::FilePath                  compile_home_path_;
+  
+  scoped_refptr<process::Process> source_process_;
+  scoped_refptr<process::Process> sink_process_;
+  
+  std::string                     input_data_;
+
+  scoped_refptr<CompileJob>       cj_;
+  scoped_refptr<Compiler>         compiler_;
+
+  base::WeakPtrFactory<DPEPreprocessor>         weakptr_factory_;
+};
+
+class DPEController : public ResourceBase, public process::ProcessHost
+{
+friend class DPEPreprocessor;
 public:
   DPEController(DPEService* dpe);
   ~DPEController();
@@ -126,10 +191,8 @@ public:
   void  OnDeviceLose(RemoteDPEDevice* device);
   
 private:
-  scoped_refptr<Compiler> MakeNewCompiler(CompileJob* job);
-  void  OnCompileFinished(CompileJob* job) override;
-  static void  ScheduleNextStep(base::WeakPtr<DPEController> ctrl);
-  void  ScheduleNextStepImpl();
+  void  OnPreprocessError();
+  void  OnPreprocessSuccess();
   
   void  ScheduleRefreshRunningState(int32_t delay = 0);
   static void  RefreshRunningState(base::WeakPtr<DPEController> ctrl);
@@ -143,34 +206,24 @@ private:
   
   std::vector<scoped_refptr<RemoteDPEDeviceCreator> >  dpe_list_;
   std::vector<scoped_refptr<RemoteDPEDevice> >   device_list_;
-
   // dpe job
-  std::wstring                    job_name_;
-  base::FilePath                  job_home_path_;
-  base::FilePath                  compiler_home_path_;
+  scoped_refptr<DPEProject>       dpe_project_;
+  scoped_refptr<DPEPreprocessor>  dpe_preprocessor_;
   
-  ProgrammeLanguage               language_;
-  std::wstring                    compiler_type_;
-  base::FilePath                  source_path_;
-  base::FilePath                  worker_path_;
-  base::FilePath                  sink_path_;
   base::FilePath                  output_file_path_;
   base::FilePath                  output_temp_file_path_;
 
   int32_t                         job_state_;
 
+  scoped_refptr<process::Process> source_process_;
+  scoped_refptr<process::Process> sink_process_;
+  
+  std::string                     output_data_;
+  std::string                     input_data_;
   std::vector<std::string>        input_lines_;
   std::queue<int32_t>             task_queue_;
   std::vector<std::string>        output_lines_;
 
-  scoped_refptr<CompileJob>       cj_;
-  scoped_refptr<Compiler>         compiler_;
-  
-  scoped_refptr<process::Process> source_process_;
-  std::string                     input_data_;
-  scoped_refptr<process::Process> sink_process_;
-  std::string                     output_data_;
-  
   base::WeakPtrFactory<DPEController>         weakptr_factory_;
 };
 }

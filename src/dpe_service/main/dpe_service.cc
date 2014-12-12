@@ -51,7 +51,7 @@ void  DPENodeManager::AddNode(const std::string& address)
       ++iter;
     }
   }
-  
+
   auto node = new DPENode(next_node_id_++, address, false);
   node_list_.push_back(node);
   node->GetZClient()->SayHello(
@@ -107,7 +107,7 @@ void  DPENodeManager::HandleResponseImpl(int32_t node_id, scoped_refptr<base::ZM
     LOG(INFO) << "DPENodeManager : handle response " << rep->error_code_;
     return;
   }
-  
+
   base::Value* v = base::JSONReader::Read(rep->data_, base::JSON_ALLOW_TRAILING_COMMAS);
 
   do
@@ -117,7 +117,7 @@ void  DPENodeManager::HandleResponseImpl(int32_t node_id, scoped_refptr<base::ZM
       LOG(ERROR) << "\nCan not parse response";
       break;
     }
-    
+
     base::DictionaryValue* dv = NULL;
     if (!v->GetAsDictionary(&dv)) break;
     {
@@ -125,23 +125,23 @@ void  DPENodeManager::HandleResponseImpl(int32_t node_id, scoped_refptr<base::ZM
       std::string cookie;
       if (!dv->GetString("type", &val)) break;
       if (val != "rsc") break;
-      
+
       if (!dv->GetString("src", &val)) break;
-      
+
       if (!dv->GetString("dest", &val)) break;
-      
+
       if (dv->GetString("cookie", &val))
       {
         cookie = std::move(val);
       }
-      
+
       if (!dv->GetString("reply", &val)) break;
-      
+
       if (val != "HelloResponse")
       {
         if (!dv->GetString("error_code", &val)) break;
         if (val != "0") break;
-        
+
         if (!dv->GetString("ots", &val)) break;
 
         DPENode* node = GetNodeById(node_id);
@@ -153,7 +153,7 @@ void  DPENodeManager::HandleResponseImpl(int32_t node_id, scoped_refptr<base::ZM
       }
     }
   } while (false);
-  
+
   delete v;
 }
 
@@ -175,7 +175,7 @@ void DPEService::Start()
 {
   LoadConfig();
   LoadCompilers(config_dir_.Append(L"compilers.json"));
-  
+
   // start ipc
   auto mc = base::zmq_message_center();
   for (int i = 0; i < 3; ++i)
@@ -200,21 +200,21 @@ void DPEService::Start()
     WillStop();
     return;
   }
-  
+
   mc->AddMessageHandler(this);
-  
+
   // we always have a default server
   ZServer* default_server = new ZServer(this);
   default_server->Start(MAKE_IP(127, 0, 0, 1));
   server_list_.push_back(default_server);
-  
+
   node_manager_.AddNode(default_server->GetServerAddress());
   node_manager_.node_list_.front()->SetIsLocal(true);
-  
+
 #if 1
   ctrl = new DPEController(this);
   ctrl->AddRemoteDPEService(true, default_server->GetServerAddress());
-  ctrl->Start(base::FilePath(L"D:\\usr\\projects\\dcfpe\\demo\\square_sum\\test.dpe"));
+  ctrl->Start(base::FilePath(L"D:\\usr\\projects\\git\\dcfpe\\demo\\square_sum\\test.dpe"));
 #endif
 }
 
@@ -248,7 +248,7 @@ int32_t DPEService::handle_message(int32_t handle, const std::string& data)
   base::Value* v = base::JSONReader::Read(data.c_str(), base::JSON_ALLOW_TRAILING_COMMAS);
   rep.SetString("type", "ipc");
   rep.SetString("error_code", "-1");
-  
+
   return 1;
 }
 
@@ -289,20 +289,20 @@ void DPEService::LoadConfig()
   {
     delete root;
   }
-  
+
   if (home_dir_.value().empty())
   {
     //home_dir_ = base::GetHomeDir().Append(L"dcfpe");
     home_dir_ = base::FilePath(L"C:\\Dcfpe\\Home");
   }
-  
+
   if (temp_dir_.value().empty())
   {
     //base::GetTempDir(&temp_dir_);
     //temp_dir_ = temp_dir_.Append(L"dcfpe");
     temp_dir_ = base::FilePath(L"C:\\Dcfpe\\Temp");
   }
-  
+
   base::CreateDirectory(home_dir_);
   base::CreateDirectory(temp_dir_);
 }
@@ -314,7 +314,7 @@ ParseEnvVar(base::DictionaryValue* val)
   for (auto iter = base::DictionaryValue::Iterator(*val); !iter.IsAtEnd(); iter.Advance())
   {
     std::string val;
-    
+
     if (iter.value().GetAsString(&val))
     {
       ret.push_back(
@@ -331,9 +331,9 @@ static std::vector<std::string>
 ParseStringList(base::ListValue* val)
 {
   std::vector<std::string> ret;
-  
+
   const int n = val->GetSize();
-  
+
   for (int i = 0; i < n; ++i)
   {
     std::string s;
@@ -342,7 +342,7 @@ ParseStringList(base::ListValue* val)
       ret.push_back(s);
     }
   }
-  
+
   return ret;
 }
 
@@ -358,33 +358,33 @@ ParseLanguageDetail(base::ListValue* val)
     {
       LanguageDetail detail;
       std::string language;
-      
+
       if (!dv->GetString("language", &language)) continue;
       if (language.empty()) continue;
       detail.language_ = language;
-      
+
       std::string compile_binary;
       dv->GetString("compile_binary", &compile_binary);
       detail.compile_binary_ = base::FilePath(base::UTF8ToNative(compile_binary));
-      
+
       base::ListValue* lv = NULL;
       if (dv->GetList("compile_args", &lv))
       {
         detail.compile_args_ = ParseStringList(lv);
       }
-      
+
       dv->GetString("default_output_file", &detail.default_output_file_);
 
       std::string running_binary;
       if (!dv->GetString("running_binary", &running_binary)) continue;
       if (running_binary.empty()) continue;
       detail.running_binary_ = running_binary;
-      
+
       if (dv->GetList("running_args", &lv))
       {
         detail.running_args_ = ParseStringList(lv);
       }
-      
+
       ret.push_back(detail);
     }
   }
@@ -428,15 +428,17 @@ void DPEService::LoadCompilers(const base::FilePath& file)
     {
       config.name_ = L"Unknown";
     }
-    
+
     if (dv->GetString("version", &val))
     {
       config.version_ = base::UTF8ToWide(val);
     }
+
     if (dv->GetString("compile_binary_dir", &val))
     {
       config.compile_binary_dir_ = base::FilePath(base::UTF8ToNative(val));
     }
+
     if (dv->GetString("arch", &val))
     {
       if (base::StringEqualCaseInsensitive(val, "x86"))
@@ -468,7 +470,7 @@ void DPEService::LoadCompilers(const base::FilePath& file)
     {
       config.language_detail_ = ParseLanguageDetail(lv);
     }
-    
+
     compilers_.push_back(config);
   }
   delete root;
@@ -481,7 +483,7 @@ std::wstring DPEService::GetDefaultCompilerType(const ProgrammeLanguage& languag
 }
 
 scoped_refptr<Compiler> DPEService::CreateCompiler(
-    std::wstring type, const std::wstring& version, ISArch arch, 
+    std::wstring type, const std::wstring& version, ISArch arch,
     ProgrammeLanguage language, const std::vector<base::FilePath>& source_file)
 {
   if (language == PL_UNKNOWN) language = DetectLanguage(source_file);
