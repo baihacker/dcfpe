@@ -4,8 +4,8 @@
 
 namespace ds
 {
-RemoteDPEDeviceCreator::RemoteDPEDeviceCreator(DPEController* ctrl) :
-  ctrl_(ctrl),
+RemoteDPEDeviceCreator::RemoteDPEDeviceCreator(RemoteDPEDeviceManager* host) :
+  host_(host),
   creating_(false),
   weakptr_factory_(this)
 {
@@ -29,7 +29,7 @@ bool RemoteDPEDeviceCreator::RequestNewDevice()
     creating_ = true;
     return true;
   }
-  
+
   return false;
 }
 
@@ -50,7 +50,7 @@ void  RemoteDPEDeviceCreator::HandleResponseImpl(scoped_refptr<base::ZMQResponse
     creating_ = false;
     return;
   }
-  
+
   base::Value* v = base::JSONReader::Read(rep->data_, base::JSON_ALLOW_TRAILING_COMMAS);
 
   do
@@ -60,7 +60,7 @@ void  RemoteDPEDeviceCreator::HandleResponseImpl(scoped_refptr<base::ZMQResponse
       LOG(ERROR) << "\nCan not parse response";
       break;
     }
-    
+
     base::DictionaryValue* dv = NULL;
     if (!v->GetAsDictionary(&dv)) break;
     {
@@ -68,18 +68,18 @@ void  RemoteDPEDeviceCreator::HandleResponseImpl(scoped_refptr<base::ZMQResponse
       std::string cookie;
       if (!dv->GetString("type", &val)) break;
       if (val != "rsc") break;
-      
+
       if (!dv->GetString("src", &val)) break;
-      
+
       if (!dv->GetString("dest", &val)) break;
-      
+
       if (dv->GetString("cookie", &val))
       {
         cookie = std::move(val);
       }
-      
+
       if (!dv->GetString("reply", &val)) break;
-      
+
       if (val != "CreateDPEDeviceResponse") break;
 
       if (!dv->GetString("error_code", &val)) break;
@@ -88,7 +88,7 @@ void  RemoteDPEDeviceCreator::HandleResponseImpl(scoped_refptr<base::ZMQResponse
       std::string ra;
       std::string sa;
       std::string session;
-      
+
       if (!dv->GetString("receive_address", &ra)) break;
       if (!dv->GetString("send_address", &sa)) break;
       if (!dv->GetString("session", &session)) break;
@@ -96,25 +96,26 @@ void  RemoteDPEDeviceCreator::HandleResponseImpl(scoped_refptr<base::ZMQResponse
       if (ra.empty()) break;
       if (sa.empty()) break;
 
-      scoped_refptr<RemoteDPEDevice> d = new RemoteDPEDevice(ctrl_);
+      scoped_refptr<RemoteDPEDevice> d = new RemoteDPEDevice(host_);
+
       if (!d->Start(sa, ra, session))
       {
         LOG(ERROR) << "can not start RemoteDPEDevice";
         break;
       }
       LOG(INFO) << "Create RemoteDPEDevice success";
-      ctrl_->AddRemoteDPEDevice(d);
+      host_->AddRemoteDPEDevice(d);
       device_list_.push_back(d);
     }
   } while (false);
-  
+
   delete v;
-  
+
   creating_ = false;
 }
 
-RemoteDPEDevice::RemoteDPEDevice(DPEController* ctrl) :
-  ctrl_(ctrl),
+RemoteDPEDevice::RemoteDPEDevice(RemoteDPEDeviceManager* host) :
+  host_(host),
   device_state_(STATE_IDLE),
   send_channel_(base::INVALID_CHANNEL_ID),
   receive_channel_(base::INVALID_CHANNEL_ID),
@@ -179,7 +180,7 @@ bool  RemoteDPEDevice::Start(const std::string& receive_address,
 
   mc->AddMessageHandler((base::MessageHandler*)this);
   ScheduleCheckHeartBeat();
-  
+
   return true;
 }
 
@@ -192,10 +193,10 @@ bool  RemoteDPEDevice::Stop()
     req.SetString("type", "rsc");
     base::AddPaAndTs(&req);
     req.SetString("message", "CloseDevice");
-    
+
     req.SetString("dest", send_address_);
     req.SetString("session", session_);
-    
+
     base::JSONWriter::Write(&req, &msg);
     auto mc = base::zmq_message_center();
     mc->SendMessage(send_channel_, msg.c_str(), msg.size());
@@ -208,11 +209,11 @@ bool  RemoteDPEDevice::Stop()
 
   mc->RemoveChannel(send_channel_);
   send_channel_ = base::INVALID_CHANNEL_ID;
-  
+
   mc->RemoveMessageHandler((base::MessageHandler*)this);
-  
+
   device_state_ = STATE_IDLE;
-  
+
   return true;
 }
 
@@ -246,12 +247,12 @@ bool RemoteDPEDevice::InitJob(
     req.SetString("language", language.ToUTF8());
     req.SetString("compiler_type", compiler_type);
     req.SetString("worker_name", base::SysWideToUTF8(source.BaseName().value()));
-    
+
     req.SetString("data", data);
-    
+
     req.SetString("dest", send_address_);
     req.SetString("session", session_);
-    
+
     if (!base::JSONWriter::Write(&req, &msg))
     {
       LOG(ERROR) << "can not write InitJob message";
@@ -266,7 +267,7 @@ bool RemoteDPEDevice::InitJob(
   return true;
 }
 
-bool RemoteDPEDevice::DoTask(const std::string& task_id, const std::string& data)
+bool RemoteDPEDevice::DoTask(int64_t task_id, int32_t task_idx, const std::string& data)
 {
   if (device_state_ != STATE_RUNNING_IDLE) return false;
 
@@ -276,9 +277,9 @@ bool RemoteDPEDevice::DoTask(const std::string& task_id, const std::string& data
     req.SetString("type", "rsc");
     base::AddPaAndTs(&req);
     req.SetString("message", "DoTask");
-    req.SetString("task_id", task_id);
+    req.SetString("task_id", base::StringPrintf("%I64d", task_id));
     req.SetString("task_input", data);
-    
+
     req.SetString("dest", send_address_);
     req.SetString("session", session_);
     if (!base::JSONWriter::Write(&req, &msg))
@@ -291,7 +292,8 @@ bool RemoteDPEDevice::DoTask(const std::string& task_id, const std::string& data
   auto mc = base::zmq_message_center();
   mc->SendMessage(send_channel_, msg.c_str(), msg.size());
 
-  curr_task_id_ = task_id;
+  curr_task_id_ = base::StringPrintf("%I64d", task_id);
+  curr_task_idx_ = task_idx;
   curr_task_input_ = data;
   std::string().swap(curr_task_output_);
   tries_ = 0;
@@ -330,7 +332,7 @@ void RemoteDPEDevice::CheckHeartBeatImpl()
   if (has_reply_)
   {
     ++heart_beat_id_;
-    
+
     std::string msg;
     base::DictionaryValue req;
     req.SetString("type", "rsc");
@@ -340,19 +342,19 @@ void RemoteDPEDevice::CheckHeartBeatImpl()
     req.SetString("cookie", base::StringPrintf("%d", heart_beat_id_));
     req.SetString("dest", send_address_);
     req.SetString("session", session_);
-    
+
     if (!base::JSONWriter::Write(&req, &msg))
     {
       LOG(ERROR) << "can not write Heart Beat message";
       return;
     }
-    
+
     send_time_ = base::Time::Now();
     has_reply_ = false;
 
     auto mc = base::zmq_message_center();
     mc->SendMessage(send_channel_, msg.c_str(), msg.size());
- 
+
     ScheduleCheckHeartBeat(10*1000);
   }
   else
@@ -362,7 +364,7 @@ void RemoteDPEDevice::CheckHeartBeatImpl()
     {
       LOG(ERROR) << "RemoteDPEDevice : heart beat failed";
       device_state_ = STATE_FAILED;
-      ctrl_->OnDeviceLose(this);
+      host_->OnDeviceLose(this);
     }
     else
     {
@@ -374,9 +376,9 @@ void RemoteDPEDevice::CheckHeartBeatImpl()
 int32_t RemoteDPEDevice::handle_message(int32_t handle, const std::string& data)
 {
   if (handle != receive_channel_) return 0;
-  
+
   if (device_state_ == STATE_FAILED || device_state_ == STATE_IDLE) return 1;
-  
+
   LOG(INFO) << "RemoteDPEDevice::handle_message:\n" << data;
   base::Value* v = base::JSONReader::Read(data.c_str(), base::JSON_ALLOW_TRAILING_COMMAS);
 
@@ -387,53 +389,55 @@ int32_t RemoteDPEDevice::handle_message(int32_t handle, const std::string& data)
       LOG(ERROR) << "\nCan not parse response";
       break;
     }
-    
+
     base::DictionaryValue* dv = NULL;
     if (!v->GetAsDictionary(&dv)) break;
     {
       std::string val;
-      
+
       if (!dv->GetString("type", &val)) break;
       if (val != "rsc") break;
-      
+
       //if (!dv->GetString("src", &val)) break;
-      
+
       //if (!dv->GetString("dest", &val)) break;
-      
+
       //if (!dv->GetString("cookie", &val)) ;
-      
+
 
       if (!dv->GetString("message", &val)) break;
-      
+
       if (val == "InitJob")
       {
         if (!dv->GetString("error_code", &val) || val != "0")
         {
           device_state_ = STATE_FAILED;
+          host_->OnInitJobFinish(this);
           break;
         }
         device_state_ = STATE_RUNNING_IDLE;
+        host_->OnInitJobFinish(this);
       }
       else if (val == "DoTask")
       {
         device_state_ = STATE_RUNNING_IDLE;
         if (!dv->GetString("error_code", &val) || val != "0")
         {
-          ctrl_->OnTaskFailed(this);
+          host_->OnTaskFailed(this);
           break;
         }
         std::string task_id;
         if (!dv->GetString("task_id", &task_id) || task_id != curr_task_id_)
         {
-          ctrl_->OnTaskFailed(this);
+          host_->OnTaskFailed(this);
           break;
         }
         if (!dv->GetString("task_output", &curr_task_output_))
         {
-          ctrl_->OnTaskFailed(this);
+          host_->OnTaskFailed(this);
           break;
         }
-        ctrl_->OnTaskSucceed(this);
+        host_->OnTaskSucceed(this);
       }
       else if (val == "HeartBeat")
       {
@@ -445,60 +449,10 @@ int32_t RemoteDPEDevice::handle_message(int32_t handle, const std::string& data)
       }
     }
   } while (false);
-  
+
   delete v;
 
-  if (device_state_ == STATE_RUNNING_IDLE)
-  {
-    ctrl_->OnDeviceRunningIdle(this);
-  }
   return 1;
-}
-
-DPEController::DPEController(DPEService* dpe) :
-  dpe_(dpe),
-  job_state_(DPE_JOB_STATE_PREPARE),
-  weakptr_factory_(this)
-{
-
-}
-
-DPEController::~DPEController()
-{
-  Stop();
-}
-
-bool DPEController::AddRemoteDPEService(bool is_local, int32_t ip, int32_t port)
-{
-  return AddRemoteDPEService(is_local, base::AddressHelper::MakeZMQTCPAddress(ip, port));
-}
-
-bool  DPEController::AddRemoteDPEService(bool is_local, const std::string& server_address)
-{
-  for (auto it : dpe_list_)
-  {
-    if (it->server_address_ == server_address)
-      return true;
-  }
-
-  auto s = new RemoteDPEDeviceCreator(this);
-  s->is_local_ = is_local;
-  s->server_address_ = server_address;
-
-  dpe_list_.push_back(s);
-
-  return true;
-}
-
-void  DPEController::AddRemoteDPEDevice(scoped_refptr<RemoteDPEDevice> device)
-{
-  if (!device) return;
-  device_list_.push_back(device);
-  device->InitJob(
-        base::NativeToUTF8(dpe_project_->job_name_),
-        dpe_project_->language_, 
-        dpe_project_->worker_path_,
-        base::SysWideToUTF8(dpe_project_->compiler_type_));
 }
 
 scoped_refptr<DPEProject> DPEProject::FromFile(const base::FilePath& job_path)
@@ -523,9 +477,9 @@ scoped_refptr<DPEProject> DPEProject::FromFile(const base::FilePath& job_path)
   {
     base::DictionaryValue* dv = NULL;
     if (!project->GetAsDictionary(&dv)) break;
-    
+
     ret->job_home_path_ = job_path.DirName();
-    
+
     std::string val;
     if (dv->GetString("name", &val))
     {
@@ -535,17 +489,17 @@ scoped_refptr<DPEProject> DPEProject::FromFile(const base::FilePath& job_path)
     {
       ret->job_name_ = L"Unknown";
     }
-    
+
     if (dv->GetString("compiler_type", &val))
     {
       ret->compiler_type_ = base::SysUTF8ToWide(val);
     }
-    
+
     if (dv->GetString("language", &val))
     {
       ret->language_ = val;
     }
-    
+
     std::string source;
     std::string worker;
     std::string sink;
@@ -564,11 +518,11 @@ scoped_refptr<DPEProject> DPEProject::FromFile(const base::FilePath& job_path)
       LOG(ERROR) << "DPEProject::No sink";
       break;
     }
-    
+
     ret->source_path_ = ret->job_home_path_.Append(base::UTF8ToNative(source));
     ret->worker_path_ = ret->job_home_path_.Append(base::UTF8ToNative(worker));
     ret->sink_path_ = ret->job_home_path_.Append(base::UTF8ToNative(sink));
-    
+
     if (!base::ReadFileToString(ret->source_path_, &ret->source_data_))
     {
       LOG(ERROR) << "DPEProject::ReadFileToString failed: source";
@@ -614,18 +568,18 @@ bool DPEPreprocessor::StartPreprocess(scoped_refptr<DPEProject> dpe_project)
     LOG(ERROR) << "DPEPreprocessor : invalid state";
     return false;
   }
-  
+
   if (!dpe_project)
   {
     LOG(ERROR) << "DPEPreprocessor : null project";
     return false;
   }
-  
+
   dpe_project_ = dpe_project;
-  
+
   compile_home_path_ = dpe_project_->job_home_path_.Append(L"running");
   base::CreateDirectory(compile_home_path_);
-  
+
   cj_ = new CompileJob();
   cj_->language_ = dpe_project_->language_;
   cj_->compiler_type_ = dpe_project_->compiler_type_;
@@ -796,7 +750,7 @@ void  DPEPreprocessor::ScheduleNextStepImpl()
       break;
     }
   }
-  
+
   if (state_ == PREPROCESS_STATE_SUCCESS)
   {
     host_->OnPreprocessSuccess();
@@ -805,6 +759,186 @@ void  DPEPreprocessor::ScheduleNextStepImpl()
   {
     host_->OnPreprocessError();
   }
+}
+
+RemoteDPEDeviceManager::RemoteDPEDeviceManager(DPEController* host)
+  : host_(host),
+    weakptr_factory_(this)
+{
+}
+
+RemoteDPEDeviceManager::~RemoteDPEDeviceManager()
+{
+  
+}
+
+bool RemoteDPEDeviceManager::AddRemoteDPEService(bool is_local, int32_t ip, int32_t port)
+{
+  return AddRemoteDPEService(is_local, base::AddressHelper::MakeZMQTCPAddress(ip, port));
+}
+
+bool  RemoteDPEDeviceManager::AddRemoteDPEService(bool is_local, const std::string& server_address)
+{
+  for (auto it : dpe_list_)
+  {
+    if (it->server_address_ == server_address)
+      return true;
+  }
+
+  auto s = new RemoteDPEDeviceCreator(this);
+  s->is_local_ = is_local;
+  s->server_address_ = server_address;
+
+  dpe_list_.push_back(s);
+
+  return true;
+}
+
+void  RemoteDPEDeviceManager::AddRemoteDPEDevice(scoped_refptr<RemoteDPEDevice> device)
+{
+  if (!device) return;
+  device_list_.push_back(device);
+  if (host_->job_state_ == DPE_JOB_STATE_RUNNING && host_->dpe_project_)
+  {
+    device->InitJob(
+        base::NativeToUTF8(host_->dpe_project_->job_name_),
+        host_->dpe_project_->language_,
+        host_->dpe_project_->worker_path_,
+        base::SysWideToUTF8(host_->dpe_project_->compiler_type_)
+      );
+  }
+}
+bool  RemoteDPEDeviceManager::AddTask(int64_t task_id, int32_t task_idx, const std::string& task_input)
+{
+  for (auto& iter : device_list_)
+  {
+    if (iter->device_state_ == RemoteDPEDevice::STATE_RUNNING_IDLE)
+    {
+      iter->DoTask(task_id, task_idx, task_input);
+      return true;
+    }
+  }
+  return false;
+}
+
+int32_t RemoteDPEDeviceManager::AvailableWorkerCount()
+{
+  int32_t av = 0;
+  for (auto& iter : device_list_)
+  {
+    if (iter->device_state_ == RemoteDPEDevice::STATE_RUNNING_IDLE)
+    {
+      ++av;
+    }
+  }
+  return av;
+}
+
+void  RemoteDPEDeviceManager::OnInitJobFinish(RemoteDPEDevice* device)
+{
+  if (device->device_state_ == RemoteDPEDevice::STATE_FAILED)
+  {
+    ;//todo
+  }
+  else if (device->device_state_ == RemoteDPEDevice::STATE_RUNNING_IDLE)
+  {
+    host_->OnDeviceAvailable();
+  }
+}
+
+void  RemoteDPEDeviceManager::OnTaskSucceed(RemoteDPEDevice* device)
+{
+  host_->OnTaskSucceed(device);
+  if (device->device_state_ == RemoteDPEDevice::STATE_RUNNING_IDLE)
+  {
+    host_->OnDeviceAvailable();
+  }
+}
+
+void  RemoteDPEDeviceManager::OnTaskFailed(RemoteDPEDevice* device)
+{
+  host_->OnTaskFailed(device);
+  if (device->device_state_ == RemoteDPEDevice::STATE_RUNNING_IDLE)
+  {
+    host_->OnDeviceAvailable();
+  }
+}
+
+void  RemoteDPEDeviceManager::OnDeviceLose(RemoteDPEDevice* device)
+{
+// todo: if running
+  device->Stop();
+
+  for (auto iter = device_list_.begin(); iter != device_list_.end();)
+  {
+    if (*iter == device)
+    {
+      device_list_.erase(iter);
+      break;
+    }
+  }
+}
+
+void  RemoteDPEDeviceManager::ScheduleRefreshDeviceState(int32_t delay)
+{
+  if (delay < 0) delay = 0;
+
+  if (delay == 0)
+  {
+    base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
+      base::Bind(&RemoteDPEDeviceManager::RefreshDeviceState, weakptr_factory_.GetWeakPtr())
+      );
+  }
+  else
+  {
+    base::ThreadPool::PostDelayedTask(base::ThreadPool::UI, FROM_HERE,
+      base::Bind(&RemoteDPEDeviceManager::RefreshDeviceState, weakptr_factory_.GetWeakPtr()),
+      base::TimeDelta::FromMilliseconds(delay));
+  }
+}
+
+void  RemoteDPEDeviceManager::RefreshDeviceState(base::WeakPtr<RemoteDPEDeviceManager> ctrl)
+{
+  if (RemoteDPEDeviceManager* pThis = ctrl.get())
+  {
+    pThis->RefreshDeviceStateImpl();
+  }
+}
+
+void  RemoteDPEDeviceManager::RefreshDeviceStateImpl()
+{
+  for (auto it : dpe_list_)
+  {
+    if (!it->creating_ && it->device_list_.empty())
+    {
+      LOG(INFO) << "DPEController : request new device";
+      it->RequestNewDevice();
+    }
+  }
+  ScheduleRefreshDeviceState(1000);
+}
+
+DPEController::DPEController(DPEService* dpe) :
+  dpe_(dpe),
+  job_state_(DPE_JOB_STATE_PREPARE),
+  weakptr_factory_(this)
+{
+  dpe_worker_manager_ = new RemoteDPEDeviceManager(this);
+}
+
+DPEController::~DPEController()
+{
+  Stop();
+}
+
+bool DPEController::AddRemoteDPEService(bool is_local, int32_t ip, int32_t port)
+{
+  return dpe_worker_manager_->AddRemoteDPEService(is_local, base::AddressHelper::MakeZMQTCPAddress(ip, port));
+}
+
+bool  DPEController::AddRemoteDPEService(bool is_local, const std::string& server_address)
+{
+  return dpe_worker_manager_->AddRemoteDPEService(is_local, server_address);
 }
 
 bool DPEController::Start(const base::FilePath& job_path)
@@ -833,7 +967,7 @@ bool DPEController::Start(const base::FilePath& job_path)
   {
     job_state_ = DPE_JOB_STATE_FAILED;
   }
-  
+
   return job_state_ == DPE_JOB_STATE_PREPROCESSING;
 }
 
@@ -841,71 +975,38 @@ bool  DPEController::Stop()
 {
   job_state_ = DPE_JOB_STATE_PREPARE;
 
+  dpe_preprocessor_ = NULL;
+
+  std::queue<std::pair<int64_t, int32_t> >().swap(task_queue_);
+  std::map<int64_t, int32_t>().swap(running_queue_);
+  std::map<int64_t, int32_t>().swap(id2idx_);
+  std::vector<DPETask>().swap(task_data_);
+  
   sink_process_ = NULL;
   std::string().swap(output_data_);
-  
-  source_process_ = NULL;
-  std::string().swap(input_data_);
 
-  
-  std::vector<std::string>().swap(output_lines_);
-  std::queue<int32_t>().swap(task_queue_);
-  std::vector<std::string>().swap(input_lines_);
-
-  std::vector<scoped_refptr<RemoteDPEDevice> >().
-    swap(device_list_);
-  for (auto& it: dpe_list_)
-  {
-    std::vector<scoped_refptr<RemoteDPEDevice> >().
-      swap(it->device_list_);
-  }
   return true;
 }
 
 void  DPEController::OnTaskSucceed(RemoteDPEDevice* device)
 {
   if (job_state_ != DPE_JOB_STATE_RUNNING) return;
-  
-  int32_t id = atoi(device->curr_task_id_.c_str());
-  
-  if (id >= 0 && id < static_cast<int32_t>(output_lines_.size()))
-  {
-    output_lines_[id] = std::move(device->curr_task_output_);
-  }
-}
 
-void  DPEController::OnTaskFailed(RemoteDPEDevice* device)
-{
-  if (job_state_ != DPE_JOB_STATE_RUNNING) return;
-  
-  /*
-  int32_t id = atoi(device->curr_task_id_.c_str());
-  
-  task_queue_.push(id);
-  */
-  Stop();
-  job_state_ = DPE_JOB_STATE_FAILED;
-}
-
-void  DPEController::OnDeviceRunningIdle(RemoteDPEDevice* device)
-{
-  if (job_state_ != DPE_JOB_STATE_RUNNING) return;
-  
-  if (!task_queue_.empty())
+  int64_t id = atoi(device->curr_task_id_.c_str());
+  auto where = id2idx_.find(id);
+  if (where != id2idx_.end() && where->second >= 0 && where->second < static_cast<int32_t>(task_data_.size()))
   {
-    int32_t curr = task_queue_.front();
-    task_queue_.pop();
-    std::string orz = input_lines_[curr];
-    orz.append(1, '\n');
-    device->DoTask(base::StringPrintf("%d", curr), orz);
+    LOG(INFO) << "RESULT " << device->curr_task_output_;
+    task_data_[where->second].result_ = std::move(device->curr_task_output_);
   }
-  else
+  running_queue_.erase(id);
+  if (task_queue_.empty() && running_queue_.empty())
   {
     LOG(INFO) << "Begin compute result";
     auto context = sink_process_->GetProcessContext();
-    for (auto& it : output_lines_)
+    for (auto& it : task_data_)
     {
-      auto data = it + "\n";
+      auto data = it.result_ + "\n";
       context->std_in_write_->Write(data.c_str(), data.size());
       context->std_in_write_->WaitForPendingIO(-1);
     }
@@ -914,16 +1015,28 @@ void  DPEController::OnDeviceRunningIdle(RemoteDPEDevice* device)
   }
 }
 
-void  DPEController::OnDeviceLose(RemoteDPEDevice* device)
+void  DPEController::OnTaskFailed(RemoteDPEDevice* device)
 {
-  device->Stop();
-  
-  for (auto iter = device_list_.begin(); iter != device_list_.end();)
+  if (job_state_ != DPE_JOB_STATE_RUNNING) return;
+
+  //Stop();
+  //job_state_ = DPE_JOB_STATE_FAILED;
+}
+
+void  DPEController::OnDeviceAvailable()
+{
+  LOG(INFO) << "available";
+  if (job_state_ != DPE_JOB_STATE_RUNNING) return;
+
+  while (!task_queue_.empty() && dpe_worker_manager_->AvailableWorkerCount() > 0)
   {
-    if (*iter == device)
+    auto curr = task_queue_.front();
+    std::string orz = task_data_[curr.second].input_;
+    orz.append(1, '\n');
+    if (dpe_worker_manager_->AddTask(curr.first, curr.second, orz))
     {
-      device_list_.erase(iter);
-      break;
+      running_queue_.insert(curr);
+      task_queue_.pop();
     }
   }
 }
@@ -947,19 +1060,38 @@ void  DPEController::OnPreprocessSuccess()
   LOG(INFO) << "OnPreprocessSuccess";
   do
   {
-    std::vector<std::string>().swap(input_lines_);
-    Tokenize(dpe_preprocessor_->input_data_, "\r\n", &input_lines_);
+    std::vector<std::string> input_lines;
+    Tokenize(dpe_preprocessor_->input_data_, "\r\n", &input_lines);
     
-    const int n = input_lines_.size();
-    std::queue<int32_t>().swap(task_queue_);
-    std::vector<std::string>(n).swap(output_lines_);
+    const int n = input_lines.size();
+    std::queue<std::pair<int64_t, int32_t> >().swap(task_queue_);
+    std::map<int64_t, int32_t>().swap(running_queue_);
+    std::vector<DPETask>(n).swap(task_data_);
+    
     for (int32_t i = 0; i < n; ++i)
     {
-      task_queue_.push(i);
+      std::string& str = input_lines[i];
+      
+      const int len  = str.size();
+      int pos = 0;
+      while (pos < len && str[pos] != ':') ++pos;
+      
+      if (pos < len)
+      {
+        task_data_[i].input_ = str.substr(pos+1);
+        task_data_[i].id_ = atoll(str.substr(0, pos).c_str());
+        task_queue_.push({task_data_[i].id_, i});
+        task_data_[i].state_ = TASK_STATE_PENDING;
+        id2idx_[task_data_[i].id_] = i;
+      }
+      else
+      {
+        task_data_[i].state_ = TASK_STATE_ERROR;
+      }
     }
 
     sink_process_ = dpe_preprocessor_->sink_process_;
-    
+
     if (!sink_process_->Start())
     {
       LOG(ERROR) << "DPEController : can not start sink process";
@@ -970,57 +1102,18 @@ void  DPEController::OnPreprocessSuccess()
     base::WriteFile(output_temp_file_path_, "", 0);
     std::string().swap(output_data_);
     {
-      std::string lines = base::StringPrintf("%d\n", input_lines_.size());
+      std::string data = base::StringPrintf("%d\n", n);
       auto po = sink_process_->GetProcessContext();
-      po->std_in_write_->Write(lines.c_str(), lines.size());
+      po->std_in_write_->Write(data.c_str(), data.size());
       po->std_in_write_->WaitForPendingIO(-1);
       LOG(INFO) << "DPEController : sink process ready";
     }
-    
+
     job_state_ = DPE_JOB_STATE_RUNNING;
-    ScheduleRefreshRunningState();
+    dpe_worker_manager_->ScheduleRefreshDeviceState();
   } while (false);
-}
 
-void  DPEController::ScheduleRefreshRunningState(int32_t delay)
-{
-  if (delay < 0) delay = 0;
-
-  if (delay == 0)
-  {
-    base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
-      base::Bind(&DPEController::RefreshRunningState, weakptr_factory_.GetWeakPtr())
-      );
-  }
-  else
-  {
-    base::ThreadPool::PostDelayedTask(base::ThreadPool::UI, FROM_HERE,
-      base::Bind(&DPEController::RefreshRunningState, weakptr_factory_.GetWeakPtr()),
-      base::TimeDelta::FromMilliseconds(delay));
-  }
-}
-
-void  DPEController::RefreshRunningState(base::WeakPtr<DPEController> ctrl)
-{
-  if (DPEController* pThis = ctrl.get())
-  {
-    pThis->RefreshRunningStateImpl();
-  }
-}
-
-void  DPEController::RefreshRunningStateImpl()
-{
-  if (job_state_ != DPE_JOB_STATE_RUNNING) return;
-
-  for (auto it : dpe_list_)
-  {
-    if (!it->creating_ && it->device_list_.empty())
-    {
-      LOG(INFO) << "DPEController : request new device";
-      it->RequestNewDevice();
-    }
-  }
-  ScheduleRefreshRunningState(1000);
+  dpe_preprocessor_ = NULL;
 }
 
 void DPEController::OnStop(process::Process* p, process::ProcessContext* context)
