@@ -13,6 +13,8 @@ class DPEController;
 class DPEService;
 class RemoteDPEDevice;
 class RemoteDPEDeviceManager;
+class DPEDataManager;
+class DPEScheduler;
 
 struct RemoteDPEDeviceCreator : public base::RefCounted<RemoteDPEDeviceCreator>
 {
@@ -44,7 +46,7 @@ private:
 class RemoteDPEDevice : public base::RefCounted<RemoteDPEDevice>, public base::MessageHandler
 {
   friend class RemoteDPEDeviceManager;
-  friend class DPEController;
+  friend class DPEScheduler;
 public:
   enum
   {
@@ -128,7 +130,8 @@ public:
 
 class DPEPreprocessor : public base::RefCounted<DPEPreprocessor>, public CompilerCallback, public process::ProcessHost
 {
-friend class DPEController;
+friend class DPEDataManager;
+friend class DPEScheduler;
   enum
   {
     PREPROCESS_STATE_IDLE,
@@ -175,15 +178,15 @@ private:
 class RemoteDPEDeviceManager : public base::RefCounted<DPEPreprocessor>
 {
 public:
-  RemoteDPEDeviceManager(DPEController* host);
+  RemoteDPEDeviceManager(DPEScheduler* host);
   ~RemoteDPEDeviceManager();
 
-  bool  AddRemoteDPEService(bool is_local, int32_t ip, int32_t port);
   bool  AddRemoteDPEService(bool is_local, const std::string& server_address);
   void  AddRemoteDPEDevice(scoped_refptr<RemoteDPEDevice> device);
 
   bool  AddTask(int64_t task_id, int32_t task_idx, const std::string& task_input);
   int32_t AvailableWorkerCount();
+  RemoteDPEDevice*  GetWorker();
 
   void  OnInitJobFinish(RemoteDPEDevice* device);
   void  OnTaskSucceed(RemoteDPEDevice* device);
@@ -195,31 +198,85 @@ public:
   void  RefreshDeviceStateImpl();
   
 private:
-  DPEController*                                        host_;
+  DPEScheduler*                                         host_;
   std::vector<scoped_refptr<RemoteDPEDeviceCreator> >   dpe_list_;
   std::vector<scoped_refptr<RemoteDPEDevice> >          device_list_;
   base::WeakPtrFactory<RemoteDPEDeviceManager>          weakptr_factory_;
 };
 
-class DPEController : public ResourceBase, public process::ProcessHost
+class DPEDataManager : public base::RefCounted<DPEDataManager>
 {
-enum
-{
-  TASK_STATE_PENDING,
-  TASK_STATE_RUNNING,
-  TASK_STATE_FINISH,
-  TASK_STATE_ERROR,
+public:
+  enum
+  {
+    TASK_STATE_PENDING,
+    TASK_STATE_RUNNING,
+    TASK_STATE_FINISH,
+    TASK_STATE_ERROR,
+  };
+
+  struct DPETask
+  {
+    DPETask() : id_(-1), state_(TASK_STATE_PENDING) {}
+    int64_t id_;
+    int32_t state_;
+    std::string input_;
+    std::string result_;
+  };
+
+public:
+  DPEDataManager(DPEScheduler* host);
+  ~DPEDataManager();
+  
+  bool  SetData(DPEPreprocessor* processor);
+  bool  MakeTaskQueue(std::queue<std::pair<int64_t, int32_t> >& task_queue);
+  DPETask*  GetTask(int64_t id, int32_t idx = -1);
+  std::vector<DPETask>& TaskData(){return task_data_;}
+
+private:
+  DPEScheduler*                                 host_;
+
+  std::map<int64_t, int32_t>                    id2idx_;
+  std::vector<DPETask>                          task_data_;
 };
-struct DPETask
+
+class DPEScheduler : public base::RefCounted<DPEScheduler>, public process::ProcessHost
 {
-  DPETask() : id_(-1), state_(TASK_STATE_PENDING) {}
-  int64_t id_;
-  int32_t state_;
-  std::string input_;
-  std::string result_;
-};
-friend class DPEPreprocessor;
 friend class RemoteDPEDeviceManager;
+public:
+  DPEScheduler();
+  ~DPEScheduler();
+
+  bool  AddRemoteDPEService(bool is_local, const std::string& server_address);
+
+  bool  Run(DPEProject* project, DPEPreprocessor* processor);
+  bool  Stop();
+
+  void  OnTaskSucceed(RemoteDPEDevice* device);
+  void  OnTaskFailed(RemoteDPEDevice* device);
+  void  OnDeviceAvailable();
+
+  void  OnStop(process::Process* p, process::ProcessContext* context) override;
+  void  OnOutput(process::Process* p, bool is_std_out, const std::string& data) override;
+
+private:
+  scoped_refptr<DPEProject>                     dpe_project_;
+  scoped_refptr<RemoteDPEDeviceManager>         dpe_worker_manager_;
+  scoped_refptr<DPEDataManager>                 dpe_data_manager_;
+
+  std::queue<std::pair<int64_t, int32_t> >      task_queue_;
+  std::map<int64_t, int32_t>                    running_queue_;
+
+  scoped_refptr<process::Process>               sink_process_;
+  base::FilePath                                output_file_path_;
+  base::FilePath                                output_temp_file_path_;
+  std::string                                   output_data_;
+};
+
+class DPEController : public ResourceBase
+{
+friend class DPEPreprocessor;
+friend class DPEScheduler;
 public:
   DPEController(DPEService* dpe);
   ~DPEController();
@@ -235,32 +292,15 @@ private:
   void  OnPreprocessError();
   void  OnPreprocessSuccess();
 
-  void  OnTaskSucceed(RemoteDPEDevice* device);
-  void  OnTaskFailed(RemoteDPEDevice* device);
-  void  OnDeviceAvailable();
-
-  void  OnStop(process::Process* p, process::ProcessContext* context) override;
-  void  OnOutput(process::Process* p, bool is_std_out, const std::string& data) override;
-
 private:
   DPEService*                                   dpe_;
 
+  std::vector<std::pair<bool, std::string> >    servers_;
   scoped_refptr<DPEProject>                     dpe_project_;
   scoped_refptr<DPEPreprocessor>                dpe_preprocessor_;
-  scoped_refptr<RemoteDPEDeviceManager>         dpe_worker_manager_;
-  
-  base::FilePath                                output_file_path_;
-  base::FilePath                                output_temp_file_path_;
+  scoped_refptr<DPEScheduler>                   dpe_scheduler_;
 
   int32_t                                       job_state_;
-
-  std::queue<std::pair<int64_t, int32_t> >      task_queue_;
-  std::map<int64_t, int32_t>                    running_queue_;
-  std::map<int64_t, int32_t>                    id2idx_;
-  std::vector<DPETask>                          task_data_;
-  
-  scoped_refptr<process::Process>               sink_process_;
-  std::string                                   output_data_;
 
   base::WeakPtrFactory<DPEController>           weakptr_factory_;
 };

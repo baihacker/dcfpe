@@ -547,7 +547,6 @@ scoped_refptr<DPEProject> DPEProject::FromFile(const base::FilePath& job_path)
   return ret;
 }
 
-
 DPEPreprocessor::DPEPreprocessor(DPEController* host)
   : host_(host),
     state_(PREPROCESS_STATE_IDLE),
@@ -605,7 +604,7 @@ bool DPEPreprocessor::StartPreprocess(scoped_refptr<DPEProject> dpe_project)
   }
 
   source_process_ = new process::Process(this);
-  sink_process_ = new process::Process(host_);
+  sink_process_ = new process::Process(this);
 
   state_ = PREPROCESS_STATE_COMPILING_SOURCE;
   return true;
@@ -761,7 +760,7 @@ void  DPEPreprocessor::ScheduleNextStepImpl()
   }
 }
 
-RemoteDPEDeviceManager::RemoteDPEDeviceManager(DPEController* host)
+RemoteDPEDeviceManager::RemoteDPEDeviceManager(DPEScheduler* host)
   : host_(host),
     weakptr_factory_(this)
 {
@@ -770,11 +769,6 @@ RemoteDPEDeviceManager::RemoteDPEDeviceManager(DPEController* host)
 RemoteDPEDeviceManager::~RemoteDPEDeviceManager()
 {
   
-}
-
-bool RemoteDPEDeviceManager::AddRemoteDPEService(bool is_local, int32_t ip, int32_t port)
-{
-  return AddRemoteDPEService(is_local, base::AddressHelper::MakeZMQTCPAddress(ip, port));
 }
 
 bool  RemoteDPEDeviceManager::AddRemoteDPEService(bool is_local, const std::string& server_address)
@@ -798,7 +792,7 @@ void  RemoteDPEDeviceManager::AddRemoteDPEDevice(scoped_refptr<RemoteDPEDevice> 
 {
   if (!device) return;
   device_list_.push_back(device);
-  if (host_->job_state_ == DPE_JOB_STATE_RUNNING && host_->dpe_project_)
+  //if (host_->job_state_ == DPE_JOB_STATE_RUNNING && host_->dpe_project_)
   {
     device->InitJob(
         base::NativeToUTF8(host_->dpe_project_->job_name_),
@@ -832,6 +826,18 @@ int32_t RemoteDPEDeviceManager::AvailableWorkerCount()
     }
   }
   return av;
+}
+
+RemoteDPEDevice*  RemoteDPEDeviceManager::GetWorker()
+{
+   for (auto& iter : device_list_)
+  {
+    if (iter->device_state_ == RemoteDPEDevice::STATE_RUNNING_IDLE)
+    {
+      return iter;
+    }
+  }
+  return NULL;
 }
 
 void  RemoteDPEDeviceManager::OnInitJobFinish(RemoteDPEDevice* device)
@@ -918,12 +924,248 @@ void  RemoteDPEDeviceManager::RefreshDeviceStateImpl()
   ScheduleRefreshDeviceState(1000);
 }
 
+
+DPEDataManager::DPEDataManager(DPEScheduler* host)
+  : host_(host)
+{
+}
+
+DPEDataManager::~DPEDataManager()
+{
+}
+
+
+bool  DPEDataManager::SetData(DPEPreprocessor* processor)
+{
+  std::vector<std::string> input_lines;
+  Tokenize(processor->input_data_, "\r\n", &input_lines);
+  
+  const int n = input_lines.size();
+  std::vector<DPETask>(n).swap(task_data_);
+  
+  for (int32_t i = 0; i < n; ++i)
+  {
+    std::string& str = input_lines[i];
+    
+    const int len  = str.size();
+    int pos = 0;
+    while (pos < len && str[pos] != ':') ++pos;
+    
+    if (pos < len)
+    {
+      task_data_[i].input_ = str.substr(pos+1);
+      task_data_[i].id_ = atoll(str.substr(0, pos).c_str());
+      task_data_[i].state_ = TASK_STATE_PENDING;
+      id2idx_[task_data_[i].id_] = i;
+    }
+    else
+    {
+      task_data_[i].state_ = TASK_STATE_ERROR;
+    }
+  }
+
+  return true;
+}
+
+bool  DPEDataManager::MakeTaskQueue(std::queue<std::pair<int64_t, int32_t> >& task_queue)
+{
+  std::queue<std::pair<int64_t, int32_t> >().swap(task_queue);
+
+  const int n = task_data_.size();
+  for (int32_t i = 0; i < n; ++i)
+  {
+    if (task_data_[i].state_ == TASK_STATE_PENDING)
+    {
+      task_queue.push({task_data_[i].id_, i});
+    }
+  }
+  return true;
+}
+
+DPEDataManager::DPETask*  DPEDataManager::GetTask(int64_t id, int32_t idx)
+{
+  const int n = task_data_.size();
+  if (idx < 0 || idx >= n)
+  {
+    auto where = id2idx_.find(id);
+    if (where != id2idx_.end())
+    {
+      idx = where->second;
+    }
+  }
+  if (idx < 0 || idx >= n) return NULL;
+  if (task_data_[idx].id_ != id) return NULL;
+
+  return &task_data_[idx];
+}
+
+DPEScheduler::DPEScheduler()
+{
+}
+
+DPEScheduler::~DPEScheduler()
+{
+}
+
+bool  DPEScheduler::AddRemoteDPEService(bool is_local, const std::string& server_address)
+{
+  return dpe_worker_manager_->AddRemoteDPEService(is_local, server_address);
+}
+
+bool  DPEScheduler::Run(DPEProject* project, DPEPreprocessor* processor)
+{
+  dpe_data_manager_ = new DPEDataManager(this);
+  dpe_worker_manager_ = new RemoteDPEDeviceManager(this);
+  dpe_project_ = project;
+  
+  // step 1: prepare data
+  if (!dpe_data_manager_->SetData(processor))
+  {
+    LOG(ERROR) << "DPEScheduler : cant not set data";
+    return false;
+  }
+
+  // step 2: prepare task queue and running queue
+  std::map<int64_t, int32_t>().swap(running_queue_);
+  if (!dpe_data_manager_->MakeTaskQueue(task_queue_))
+  {
+    LOG(ERROR) << "DPEScheduler : cant not make task queue";
+    return false;
+  }
+
+  // step 3: start sink process
+  output_file_path_ = dpe_project_->job_home_path_.Append(L"running/output.txt");
+  output_temp_file_path_ = dpe_project_->job_home_path_.Append(L"running/output_temp.txt");
+  sink_process_ = processor->sink_process_;
+  sink_process_->SetHost(this);
+  if (!sink_process_->Start())
+  {
+    LOG(ERROR) << "DPEScheduler : can not start sink process";
+    return false;
+  }
+  
+  base::WriteFile(output_temp_file_path_, "", 0);
+  std::string().swap(output_data_);
+  {
+    std::string data = base::StringPrintf("%d\n", dpe_data_manager_->TaskData().size());
+    auto po = sink_process_->GetProcessContext();
+    po->std_in_write_->Write(data.c_str(), data.size());
+    po->std_in_write_->WaitForPendingIO(-1);
+    LOG(INFO) << "DPEScheduler : sink process ready";
+  }
+
+  // step 4: refresh device
+  dpe_worker_manager_->ScheduleRefreshDeviceState();
+
+  return true;
+}
+
+bool  DPEScheduler::Stop()
+{
+  dpe_project_ = NULL;
+  sink_process_ = NULL;
+  dpe_worker_manager_ = NULL;
+  dpe_data_manager_ = NULL;
+  std::string().swap(output_data_);
+  
+  std::queue<std::pair<int64_t, int32_t> >().swap(task_queue_);
+  std::map<int64_t, int32_t>().swap(running_queue_);
+  
+  return true;
+}
+
+void  DPEScheduler::OnTaskSucceed(RemoteDPEDevice* device)
+{
+  int64_t id = atoi(device->curr_task_id_.c_str());
+  auto* task = dpe_data_manager_->GetTask(id);
+  if (task)
+  {
+    task->result_ = std::move(device->curr_task_output_);
+    task->state_ = DPEDataManager::TASK_STATE_FINISH;
+  }
+  running_queue_.erase(id);
+  if (task_queue_.empty() && running_queue_.empty())
+  {
+    LOG(INFO) << "Begin compute result";
+    auto context = sink_process_->GetProcessContext();
+    for (auto& it : dpe_data_manager_->TaskData())
+    {
+      auto data = it.result_ + "\n";
+      context->std_in_write_->Write(data.c_str(), data.size());
+      context->std_in_write_->WaitForPendingIO(-1);
+    }
+    LOG(INFO) << "Finish compute result";
+  }
+}
+
+void  DPEScheduler::OnTaskFailed(RemoteDPEDevice* device)
+{
+  Stop();
+}
+
+void  DPEScheduler::OnDeviceAvailable()
+{
+  while (!task_queue_.empty() && dpe_worker_manager_->AvailableWorkerCount() > 0)
+  {
+    auto curr = task_queue_.front();
+    
+    auto* task = dpe_data_manager_->GetTask(curr.first, curr.second);
+    if (!task)
+    {
+      task_queue_.pop();
+      continue;
+    }
+    
+    auto* worker = dpe_worker_manager_->GetWorker();
+    if (!worker)
+    {
+      continue;
+    }
+    
+    std::string task_input = task->input_;
+    task_input.append(1, '\n');
+    
+    if (worker->DoTask(curr.first, curr.second, task_input))
+    {
+      task->state_ = DPEDataManager::TASK_STATE_RUNNING;
+      running_queue_.insert(curr);
+      task_queue_.pop();
+    }
+  }
+}
+
+void DPEScheduler::OnStop(process::Process* p, process::ProcessContext* context)
+{
+  if (p == sink_process_)
+  {
+    if (context->exit_code_ != 0 || context->exit_reason_ != process::EXIT_REASON_EXIT)
+    {
+      //job_state_ = DPE_JOB_STATE_FAILED;
+      return;
+    }
+    std::string temp = std::move(output_data_);
+    base::WriteFile(output_file_path_, temp.c_str(), temp.size());
+    //Stop();
+    output_data_ = std::move(temp);
+    //job_state_ = DPE_JOB_STATE_FINISH;
+  }
+}
+
+void DPEScheduler::OnOutput(process::Process* p, bool is_std_out, const std::string& data)
+{
+  if (!is_std_out) return;
+  if (p == sink_process_)
+  {
+    output_data_.append(data.begin(), data.end());
+    base::AppendToFile(output_temp_file_path_, data.c_str(), data.size());
+  }
+}
+
 DPEController::DPEController(DPEService* dpe) :
   dpe_(dpe),
   job_state_(DPE_JOB_STATE_PREPARE),
   weakptr_factory_(this)
 {
-  dpe_worker_manager_ = new RemoteDPEDeviceManager(this);
 }
 
 DPEController::~DPEController()
@@ -933,12 +1175,25 @@ DPEController::~DPEController()
 
 bool DPEController::AddRemoteDPEService(bool is_local, int32_t ip, int32_t port)
 {
-  return dpe_worker_manager_->AddRemoteDPEService(is_local, base::AddressHelper::MakeZMQTCPAddress(ip, port));
+  return AddRemoteDPEService(is_local, base::AddressHelper::MakeZMQTCPAddress(ip, port));
 }
 
 bool  DPEController::AddRemoteDPEService(bool is_local, const std::string& server_address)
 {
-  return dpe_worker_manager_->AddRemoteDPEService(is_local, server_address);
+  for (auto& iter: servers_)
+  {
+    if (iter.second == server_address)
+    {
+      return true;
+    }
+  }
+  
+  servers_.emplace_back(is_local, server_address);
+  if (dpe_scheduler_)
+  {
+    dpe_scheduler_->AddRemoteDPEService(is_local, server_address);
+  }
+  return true;
 }
 
 bool DPEController::Start(const base::FilePath& job_path)
@@ -954,9 +1209,6 @@ bool DPEController::Start(const base::FilePath& job_path)
     LOG(ERROR) << "DPEController: Can not load dpe project";
     return false;
   }
-
-  output_file_path_ = dpe_project_->job_home_path_.Append(L"running/output.txt");
-  output_temp_file_path_ = dpe_project_->job_home_path_.Append(L"running/output_temp.txt");
 
   dpe_preprocessor_ = new DPEPreprocessor(this);
   if (dpe_preprocessor_->StartPreprocess(dpe_project_))
@@ -976,76 +1228,16 @@ bool  DPEController::Stop()
   job_state_ = DPE_JOB_STATE_PREPARE;
 
   dpe_preprocessor_ = NULL;
-
-  std::queue<std::pair<int64_t, int32_t> >().swap(task_queue_);
-  std::map<int64_t, int32_t>().swap(running_queue_);
-  std::map<int64_t, int32_t>().swap(id2idx_);
-  std::vector<DPETask>().swap(task_data_);
-  
-  sink_process_ = NULL;
-  std::string().swap(output_data_);
+  dpe_scheduler_ = NULL;
 
   return true;
-}
-
-void  DPEController::OnTaskSucceed(RemoteDPEDevice* device)
-{
-  if (job_state_ != DPE_JOB_STATE_RUNNING) return;
-
-  int64_t id = atoi(device->curr_task_id_.c_str());
-  auto where = id2idx_.find(id);
-  if (where != id2idx_.end() && where->second >= 0 && where->second < static_cast<int32_t>(task_data_.size()))
-  {
-    LOG(INFO) << "RESULT " << device->curr_task_output_;
-    task_data_[where->second].result_ = std::move(device->curr_task_output_);
-  }
-  running_queue_.erase(id);
-  if (task_queue_.empty() && running_queue_.empty())
-  {
-    LOG(INFO) << "Begin compute result";
-    auto context = sink_process_->GetProcessContext();
-    for (auto& it : task_data_)
-    {
-      auto data = it.result_ + "\n";
-      context->std_in_write_->Write(data.c_str(), data.size());
-      context->std_in_write_->WaitForPendingIO(-1);
-    }
-    LOG(INFO) << "Finish compute result";
-    job_state_ = DPE_JOB_STATE_FINISH;
-  }
-}
-
-void  DPEController::OnTaskFailed(RemoteDPEDevice* device)
-{
-  if (job_state_ != DPE_JOB_STATE_RUNNING) return;
-
-  //Stop();
-  //job_state_ = DPE_JOB_STATE_FAILED;
-}
-
-void  DPEController::OnDeviceAvailable()
-{
-  LOG(INFO) << "available";
-  if (job_state_ != DPE_JOB_STATE_RUNNING) return;
-
-  while (!task_queue_.empty() && dpe_worker_manager_->AvailableWorkerCount() > 0)
-  {
-    auto curr = task_queue_.front();
-    std::string orz = task_data_[curr.second].input_;
-    orz.append(1, '\n');
-    if (dpe_worker_manager_->AddTask(curr.first, curr.second, orz))
-    {
-      running_queue_.insert(curr);
-      task_queue_.pop();
-    }
-  }
 }
 
 void  DPEController::OnPreprocessError()
 {
   if (job_state_ == DPE_JOB_STATE_PREPROCESSING)
   {
-    job_state_ = DPE_JOB_STATE_PREPROCESSING;
+    job_state_ = DPE_JOB_STATE_FAILED;
     dpe_preprocessor_ = NULL;
   }
   LOG(INFO) << "OnPreprocessError";
@@ -1060,87 +1252,23 @@ void  DPEController::OnPreprocessSuccess()
   LOG(INFO) << "OnPreprocessSuccess";
   do
   {
-    std::vector<std::string> input_lines;
-    Tokenize(dpe_preprocessor_->input_data_, "\r\n", &input_lines);
-    
-    const int n = input_lines.size();
-    std::queue<std::pair<int64_t, int32_t> >().swap(task_queue_);
-    std::map<int64_t, int32_t>().swap(running_queue_);
-    std::vector<DPETask>(n).swap(task_data_);
-    
-    for (int32_t i = 0; i < n; ++i)
+    dpe_scheduler_ = new DPEScheduler();
+    if (dpe_scheduler_->Run(dpe_project_, dpe_preprocessor_))
     {
-      std::string& str = input_lines[i];
-      
-      const int len  = str.size();
-      int pos = 0;
-      while (pos < len && str[pos] != ':') ++pos;
-      
-      if (pos < len)
+      job_state_ = DPE_JOB_STATE_RUNNING;
+      for (auto& iter: servers_)
       {
-        task_data_[i].input_ = str.substr(pos+1);
-        task_data_[i].id_ = atoll(str.substr(0, pos).c_str());
-        task_queue_.push({task_data_[i].id_, i});
-        task_data_[i].state_ = TASK_STATE_PENDING;
-        id2idx_[task_data_[i].id_] = i;
-      }
-      else
-      {
-        task_data_[i].state_ = TASK_STATE_ERROR;
+        dpe_scheduler_->AddRemoteDPEService(iter.first, iter.second);
       }
     }
-
-    sink_process_ = dpe_preprocessor_->sink_process_;
-
-    if (!sink_process_->Start())
+    else
     {
-      LOG(ERROR) << "DPEController : can not start sink process";
       job_state_ = DPE_JOB_STATE_FAILED;
-      break;
+      dpe_scheduler_ = NULL;
     }
-
-    base::WriteFile(output_temp_file_path_, "", 0);
-    std::string().swap(output_data_);
-    {
-      std::string data = base::StringPrintf("%d\n", n);
-      auto po = sink_process_->GetProcessContext();
-      po->std_in_write_->Write(data.c_str(), data.size());
-      po->std_in_write_->WaitForPendingIO(-1);
-      LOG(INFO) << "DPEController : sink process ready";
-    }
-
-    job_state_ = DPE_JOB_STATE_RUNNING;
-    dpe_worker_manager_->ScheduleRefreshDeviceState();
   } while (false);
 
   dpe_preprocessor_ = NULL;
-}
-
-void DPEController::OnStop(process::Process* p, process::ProcessContext* context)
-{
-  if (p == sink_process_)
-  {
-    if (context->exit_code_ != 0 || context->exit_reason_ != process::EXIT_REASON_EXIT)
-    {
-      job_state_ = DPE_JOB_STATE_FAILED;
-      return;
-    }
-    std::string temp = std::move(output_data_);
-    base::WriteFile(output_file_path_, temp.c_str(), temp.size());
-    Stop();
-    output_data_ = std::move(temp);
-    job_state_ = DPE_JOB_STATE_FINISH;
-  }
-}
-
-void DPEController::OnOutput(process::Process* p, bool is_std_out, const std::string& data)
-{
-  if (!is_std_out) return;
-  if (p == sink_process_)
-  {
-    output_data_.append(data.begin(), data.end());
-    base::AppendToFile(output_temp_file_path_, data.c_str(), data.size());
-  }
 }
 
 }

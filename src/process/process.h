@@ -120,6 +120,7 @@ public:
 
   virtual bool Start();
   virtual bool Stop();
+  virtual bool SetHost(ProcessHost* host){host_ = host; return host;}
 
   ProcessOption&  GetProcessOption() {return process_option_;}
   ProcessContext* GetProcessContext();
