@@ -127,21 +127,33 @@ public:
     std::string result_;
   };
 public:
+  DPEProject();
+  ~DPEProject();
+
   bool  AddInputData(const std::string& input_data);
 
   bool  MakeTaskQueue(std::queue<std::pair<int64_t, int32_t> >& task_queue);
   DPETask*  GetTask(int64_t id, int32_t idx = -1);
   std::vector<DPETask>& TaskData(){return task_data_;}
 
+  bool  LoadSavedState(std::vector<std::pair<int64_t, std::string> >& saved_result);
+
+  bool  SaveProject();
+
 public:
   static scoped_refptr<DPEProject>  FromFile(const base::FilePath& job_path);
 
+public:
   std::wstring                    job_name_;
   base::FilePath                  job_home_path_;
   base::FilePath                  job_file_path_;
 
   std::wstring                    compiler_type_;
   ProgrammeLanguage               language_;
+
+  std::string                     r_source_path_;
+  std::string                     r_worker_path_;
+  std::string                     r_sink_path_;
 
   base::FilePath                  source_path_;
   std::string                     source_data_;
@@ -150,8 +162,9 @@ public:
   base::FilePath                  sink_path_;
   std::string                     sink_data_;
 
-  base::FilePath                  computed_result_path_;
-  std::string                     computed_result_checksum_;
+  std::string                     r_dpe_state_path_;
+  base::FilePath                  dpe_state_path_;
+  std::string                     dpe_state_checksum_;
 
 private:
   std::map<int64_t, int32_t>      id2idx_;
@@ -243,7 +256,8 @@ public:
 
   bool  AddRemoteDPEService(bool is_local, const std::string& server_address);
 
-  bool  Run(DPEProject* project, DPEPreprocessor* processor);
+  bool  Run(const std::vector<std::pair<bool, std::string> >& servers,
+            DPEProject* project, DPEPreprocessor* processor);
   bool  Stop();
 
   void  OnTaskSucceed(RemoteDPEDevice* device);
@@ -254,6 +268,11 @@ public:
   void  OnStop(process::Process* p, process::ProcessContext* context) override;
   void  OnOutput(process::Process* p, bool is_std_out, const std::string& data) override;
 
+private:
+  void  WillReduceResult();
+  static void ReduceResult(base::WeakPtr<DPEScheduler> self);
+  void  ReduceResultImpl();
+  
 private:
   DPEController*                                host_;
   scoped_refptr<DPEProject>                     dpe_project_;
@@ -266,6 +285,8 @@ private:
   base::FilePath                                output_file_path_;
   base::FilePath                                output_temp_file_path_;
   std::string                                   output_data_;
+  
+  base::WeakPtrFactory<DPEScheduler>            weakptr_factory_;
 };
 
 class DPEController : public ResourceBase

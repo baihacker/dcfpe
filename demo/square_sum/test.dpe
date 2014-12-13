@@ -1,11 +1,8 @@
 {
-"name" : "square_sum",
-
-"source" : "source.py",
-"worker" : "worker.cpp",
-"sink" : "sink.cpp",
-
-"compiler_type" : "",
-"language" : "",
-
+   "dpe_state": "dpe_state.txt",
+   "dpe_state_checksum": "d566c0896b4d04425ccb0b7d605ae5ee",
+   "name": "square_sum",
+   "sink": "sink.cpp",
+   "source": "source.py",
+   "worker": "worker.cpp"
 }
