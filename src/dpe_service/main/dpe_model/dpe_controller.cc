@@ -780,7 +780,7 @@ RemoteDPEDeviceManager::RemoteDPEDeviceManager(DPEScheduler* host)
 
 RemoteDPEDeviceManager::~RemoteDPEDeviceManager()
 {
-  LOG(INFO) << this << "RemoteDPEDeviceManager";
+
 }
 
 bool  RemoteDPEDeviceManager::AddRemoteDPEService(bool is_local, const std::string& server_address)
