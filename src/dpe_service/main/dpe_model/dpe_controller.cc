@@ -456,6 +456,69 @@ int32_t RemoteDPEDevice::handle_message(int32_t handle, const std::string& data)
   return 1;
 }
 
+bool  DPEProject::AddInputData(const std::string& input_data)
+{
+  std::vector<std::string> input_lines;
+  Tokenize(input_data, "\r\n", &input_lines);
+  
+  const int n = input_lines.size();
+  std::vector<DPETask>(n).swap(task_data_);
+  
+  for (int32_t i = 0; i < n; ++i)
+  {
+    std::string& str = input_lines[i];
+    
+    const int len  = str.size();
+    int pos = 0;
+    while (pos < len && str[pos] != ':') ++pos;
+    
+    if (pos < len)
+    {
+      task_data_[i].input_ = str.substr(pos+1);
+      task_data_[i].id_ = atoll(str.substr(0, pos).c_str());
+      task_data_[i].state_ = TASK_STATE_PENDING;
+      id2idx_[task_data_[i].id_] = i;
+    }
+    else
+    {
+      task_data_[i].state_ = TASK_STATE_ERROR;
+    }
+  }
+  return true;
+}
+
+bool  DPEProject::MakeTaskQueue(std::queue<std::pair<int64_t, int32_t> >& task_queue)
+{
+  std::queue<std::pair<int64_t, int32_t> >().swap(task_queue);
+
+  const int n = task_data_.size();
+  for (int32_t i = 0; i < n; ++i)
+  {
+    if (task_data_[i].state_ == TASK_STATE_PENDING)
+    {
+      task_queue.push({task_data_[i].id_, i});
+    }
+  }
+  return true;
+}
+
+DPEProject::DPETask*  DPEProject::GetTask(int64_t id, int32_t idx)
+{
+  const int n = task_data_.size();
+  if (idx < 0 || idx >= n)
+  {
+    auto where = id2idx_.find(id);
+    if (where != id2idx_.end())
+    {
+      idx = where->second;
+    }
+  }
+  if (idx < 0 || idx >= n) return NULL;
+  if (task_data_[idx].id_ != id) return NULL;
+
+  return &task_data_[idx];
+}
+
 scoped_refptr<DPEProject> DPEProject::FromFile(const base::FilePath& job_path)
 {
   std::string data;
@@ -508,6 +571,11 @@ scoped_refptr<DPEProject> DPEProject::FromFile(const base::FilePath& job_path)
     else
     {
       ret->computed_result_path_ = ret->job_home_path_.Append(base::FilePath(L"computed_result.txt"));
+    }
+
+    if (dv->GetString("computed_result_checksum", &val))
+    {
+      ret->computed_result_checksum_ = val;
     }
 
     std::string source;
@@ -937,81 +1005,6 @@ void  RemoteDPEDeviceManager::RefreshDeviceStateImpl()
   ScheduleRefreshDeviceState(1000);
 }
 
-
-DPEDataManager::DPEDataManager(DPEScheduler* host)
-  : host_(host)
-{
-}
-
-DPEDataManager::~DPEDataManager()
-{
-}
-
-
-bool  DPEDataManager::SetData(DPEPreprocessor* processor)
-{
-  std::vector<std::string> input_lines;
-  Tokenize(processor->input_data_, "\r\n", &input_lines);
-  
-  const int n = input_lines.size();
-  std::vector<DPETask>(n).swap(task_data_);
-  
-  for (int32_t i = 0; i < n; ++i)
-  {
-    std::string& str = input_lines[i];
-    
-    const int len  = str.size();
-    int pos = 0;
-    while (pos < len && str[pos] != ':') ++pos;
-    
-    if (pos < len)
-    {
-      task_data_[i].input_ = str.substr(pos+1);
-      task_data_[i].id_ = atoll(str.substr(0, pos).c_str());
-      task_data_[i].state_ = TASK_STATE_PENDING;
-      id2idx_[task_data_[i].id_] = i;
-    }
-    else
-    {
-      task_data_[i].state_ = TASK_STATE_ERROR;
-    }
-  }
-
-  return true;
-}
-
-bool  DPEDataManager::MakeTaskQueue(std::queue<std::pair<int64_t, int32_t> >& task_queue)
-{
-  std::queue<std::pair<int64_t, int32_t> >().swap(task_queue);
-
-  const int n = task_data_.size();
-  for (int32_t i = 0; i < n; ++i)
-  {
-    if (task_data_[i].state_ == TASK_STATE_PENDING)
-    {
-      task_queue.push({task_data_[i].id_, i});
-    }
-  }
-  return true;
-}
-
-DPEDataManager::DPETask*  DPEDataManager::GetTask(int64_t id, int32_t idx)
-{
-  const int n = task_data_.size();
-  if (idx < 0 || idx >= n)
-  {
-    auto where = id2idx_.find(id);
-    if (where != id2idx_.end())
-    {
-      idx = where->second;
-    }
-  }
-  if (idx < 0 || idx >= n) return NULL;
-  if (task_data_[idx].id_ != id) return NULL;
-
-  return &task_data_[idx];
-}
-
 DPEScheduler::DPEScheduler(DPEController* host)
   : host_(host)
 {
@@ -1030,20 +1023,19 @@ bool  DPEScheduler::AddRemoteDPEService(bool is_local, const std::string& server
 
 bool  DPEScheduler::Run(DPEProject* project, DPEPreprocessor* processor)
 {
-  dpe_data_manager_ = new DPEDataManager(this);
   dpe_worker_manager_ = new RemoteDPEDeviceManager(this);
   dpe_project_ = project;
   
   // step 1: prepare data
-  if (!dpe_data_manager_->SetData(processor))
+  if (!dpe_project_->AddInputData(processor->InputData()))
   {
-    LOG(ERROR) << "DPEScheduler : cant not set data";
+    LOG(ERROR) << "DPEScheduler : cant not add input data";
     return false;
   }
 
   // step 2: prepare task queue and running queue
   std::map<int64_t, int32_t>().swap(running_queue_);
-  if (!dpe_data_manager_->MakeTaskQueue(task_queue_))
+  if (!dpe_project_->MakeTaskQueue(task_queue_))
   {
     LOG(ERROR) << "DPEScheduler : cant not make task queue";
     return false;
@@ -1052,7 +1044,7 @@ bool  DPEScheduler::Run(DPEProject* project, DPEPreprocessor* processor)
   // step 3: start sink process
   output_file_path_ = dpe_project_->job_home_path_.Append(L"running/output.txt");
   output_temp_file_path_ = dpe_project_->job_home_path_.Append(L"running/output_temp.txt");
-  sink_process_ = processor->sink_process_;
+  sink_process_ = processor->SinkProcess();
   sink_process_->SetHost(this);
   if (!sink_process_->Start())
   {
@@ -1063,7 +1055,7 @@ bool  DPEScheduler::Run(DPEProject* project, DPEPreprocessor* processor)
   base::WriteFile(output_temp_file_path_, "", 0);
   std::string().swap(output_data_);
   {
-    std::string data = base::StringPrintf("%d\n", dpe_data_manager_->TaskData().size());
+    std::string data = base::StringPrintf("%d\n", dpe_project_->TaskData().size());
     auto po = sink_process_->GetProcessContext();
     po->std_in_write_->Write(data.c_str(), data.size());
     po->std_in_write_->WaitForPendingIO(-1);
@@ -1081,7 +1073,6 @@ bool  DPEScheduler::Stop()
   dpe_project_ = NULL;
   sink_process_ = NULL;
   dpe_worker_manager_ = NULL;
-  dpe_data_manager_ = NULL;
   std::string().swap(output_data_);
   
   std::queue<std::pair<int64_t, int32_t> >().swap(task_queue_);
@@ -1096,11 +1087,11 @@ void  DPEScheduler::OnTaskSucceed(RemoteDPEDevice* device)
   int32_t idx = device->curr_task_idx_;
   
   // write result
-  auto* task = dpe_data_manager_->GetTask(id, idx);
+  auto* task = dpe_project_->GetTask(id, idx);
   if (task)
   {
     task->result_ = std::move(device->curr_task_output_);
-    task->state_ = DPEDataManager::TASK_STATE_FINISH;
+    task->state_ = DPEProject::TASK_STATE_FINISH;
   }
   running_queue_.erase(id);
   
@@ -1109,7 +1100,7 @@ void  DPEScheduler::OnTaskSucceed(RemoteDPEDevice* device)
   {
     LOG(INFO) << "Begin compute result";
     auto context = sink_process_->GetProcessContext();
-    for (auto& it : dpe_data_manager_->TaskData())
+    for (auto& it : dpe_project_->TaskData())
     {
       auto data = it.result_ + "\n";
       context->std_in_write_->Write(data.c_str(), data.size());
@@ -1127,10 +1118,10 @@ void  DPEScheduler::OnTaskFailed(RemoteDPEDevice* device)
   running_queue_.erase(id);
   
   // write result
-  auto* task = dpe_data_manager_->GetTask(id, idx);
+  auto* task = dpe_project_->GetTask(id, idx);
   if (task)
   {
-    task->state_ = DPEDataManager::TASK_STATE_ERROR;
+    task->state_ = DPEProject::TASK_STATE_ERROR;
   }
   
   host_->OnRunningFailed();
@@ -1143,10 +1134,10 @@ void  DPEScheduler::OnDeviceLose(RemoteDPEDevice* device, int32_t state)
     int64_t id = atoi(device->curr_task_id_.c_str());
     int32_t idx = device->curr_task_idx_;
     
-    auto* task = dpe_data_manager_->GetTask(id, idx);
+    auto* task = dpe_project_->GetTask(id, idx);
     if (task)
     {
-      task->state_ = DPEDataManager::TASK_STATE_PENDING;
+      task->state_ = DPEProject::TASK_STATE_PENDING;
     }
     
     running_queue_.erase(id);
@@ -1161,7 +1152,7 @@ void  DPEScheduler::OnDeviceAvailable()
   {
     auto curr = task_queue_.front();
     
-    auto* task = dpe_data_manager_->GetTask(curr.first, curr.second);
+    auto* task = dpe_project_->GetTask(curr.first, curr.second);
     if (!task)
     {
       task_queue_.pop();
@@ -1179,7 +1170,7 @@ void  DPEScheduler::OnDeviceAvailable()
     
     if (worker->DoTask(curr.first, curr.second, task_input))
     {
-      task->state_ = DPEDataManager::TASK_STATE_RUNNING;
+      task->state_ = DPEProject::TASK_STATE_RUNNING;
       running_queue_.insert(curr);
       task_queue_.pop();
     }
