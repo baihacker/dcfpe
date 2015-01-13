@@ -1,6 +1,6 @@
-{"runtime_dirs": ["D:\\usr\\projects\\win_toolchain_2013e\\vs2013_files\\sys64", "D:\\usr\\projects\\win_toolchain_2013e\\vs2013_files\\sys32"],
+{"runtime_dirs": ["D:\\DevSoft\\win_toolchain_2013e\\vs2013_files\\sys64", "D:\\DevSoft\\win_toolchain_2013e\\vs2013_files\\sys32"],
 "path": 
-"D:\\usr\\projects\\win_toolchain_2013e\\vs2013_files",
+"D:\\DevSoft\\win_toolchain_2013e\\vs2013_files",
 "version": "2013e",
-"wdk": "D:\\usr\\projects\\win_toolchain_2013e\\vs2013_files\\wdk",
-"win8sdk": "D:\\usr\\projects\\win_toolchain_2013e\\vs2013_files\\win8sdk"}
+"wdk": "D:\\DevSoft\\win_toolchain_2013e\\vs2013_files\\wdk",
+"win8sdk": "D:\\DevSoft\\win_toolchain_2013e\\vs2013_files\\win8sdk"}
