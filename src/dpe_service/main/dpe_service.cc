@@ -214,7 +214,7 @@ void DPEService::Start()
 #if 1
   ctrl = new DPEController(this);
   ctrl->AddRemoteDPEService(true, default_server->GetServerAddress());
-  ctrl->Start(base::FilePath(L"D:\\usr\\projects\\git\\dcfpe\\demo\\square_sum\\test.dpe"));
+  ctrl->Start(base::FilePath(L"D:\\projects\\git\\dcfpe\\demo\\square_sum\\test.dpe"));
 #endif
 }
 
@@ -346,6 +346,26 @@ ParseStringList(base::ListValue* val)
   return ret;
 }
 
+std::map<std::string, std::string>
+ParseVariables(base::DictionaryValue* val)
+{
+  std::map<std::string, std::string> ret;
+  for (auto iter = base::DictionaryValue::Iterator(*val); !iter.IsAtEnd(); iter.Advance())
+  {
+    std::string val;
+
+    if (iter.value().GetAsString(&val))
+    {
+      ret.insert(
+        {
+          "$(" + iter.key() + ")",
+          val
+        });
+    }
+  }
+  return ret;
+}
+
 static std::vector<LanguageDetail>
 ParseLanguageDetail(base::ListValue* val)
 {
@@ -365,7 +385,7 @@ ParseLanguageDetail(base::ListValue* val)
 
       std::string compile_binary;
       dv->GetString("compile_binary", &compile_binary);
-      detail.compile_binary_ = base::FilePath(base::UTF8ToNative(compile_binary));
+      detail.compile_binary_ = compile_binary;
 
       base::ListValue* lv = NULL;
       if (dv->GetList("compile_args", &lv))
@@ -434,11 +454,6 @@ void DPEService::LoadCompilers(const base::FilePath& file)
       config.version_ = base::UTF8ToWide(val);
     }
 
-    if (dv->GetString("compile_binary_dir", &val))
-    {
-      config.compile_binary_dir_ = base::FilePath(base::UTF8ToNative(val));
-    }
-
     if (dv->GetString("arch", &val))
     {
       if (base::StringEqualCaseInsensitive(val, "x86"))
@@ -450,7 +465,13 @@ void DPEService::LoadCompilers(const base::FilePath& file)
         config.arch_ = ARCH_X64;
       }
     }
-
+    
+    base::DictionaryValue* var = NULL;
+    if (dv->GetDictionary("variables", &var))
+    {
+      config.variables_ = ParseVariables(var);
+    }
+    
     base::DictionaryValue* ev = NULL;
     if (dv->GetDictionary("env_var_keep", &ev))
     {

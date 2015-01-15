@@ -107,9 +107,8 @@ bool BasicCompiler::PreProcessJob(CompileJob* job)
     auto language_detail = GetLanguageDetail(job->language_);
     if (!language_detail.default_output_file_.empty())
     {
-      std::map<std::string, std::string> kv;
+      std::map<std::string, std::string> kv = context_.variables_;
       
-      kv["$(COMPILE_BINARY_DIR)"] = base::NativeToUTF8(context_.compile_binary_dir_.value());
       kv["$(SOURCE_FILE_PATH)"] = base::NativeToUTF8(job->source_files_[0].value());
       kv["$(SOURCE_FILE_PATH_NO_EXT)"] = base::NativeToUTF8(job->source_files_[0].RemoveExtension().value());
       kv["$(SOURCE_FILE_BASENAME)"] = base::NativeToUTF8(job->source_files_[0].BaseName().value());
@@ -141,7 +140,7 @@ bool BasicCompiler::StartCompile(CompileJob* job)
 
   auto language_detail = GetLanguageDetail(job->language_);
 
-  if (language_detail.compile_binary_.value().empty())
+  if (language_detail.compile_binary_.empty())
   {
     LOG(ERROR) << "No compile binary";
     return false;
@@ -149,8 +148,17 @@ bool BasicCompiler::StartCompile(CompileJob* job)
   
   compile_process_ = new process::Process(this);
 
+  std::map<std::string, std::string> kv = context_.variables_;
+
+  kv["$(OUTPUT_FILE)"] = base::NativeToUTF8(job->output_file_.value());
+  kv["$(SOURCE_FILE_PATH)"] = base::NativeToUTF8(job->source_files_[0].value());
+  kv["$(SOURCE_FILE_PATH_NO_EXT)"] = base::NativeToUTF8(job->source_files_[0].RemoveExtension().value());
+  kv["$(SOURCE_FILE_BASENAME)"] = base::NativeToUTF8(job->source_files_[0].BaseName().value());
+  kv["$(SOURCE_FILE_BASENAME_NO_EXT)"] = base::NativeToUTF8(job->source_files_[0].BaseName().RemoveExtension().value());
+  kv["$(SOURCE_FILE_DIRNAME)"] = base::NativeToUTF8(job->source_files_[0].DirName().value());
+
   auto& po = compile_process_->GetProcessOption();
-  po.image_path_ = context_.compile_binary_dir_.Append(language_detail.compile_binary_.value());
+  po.image_path_ = base::FilePath(base::UTF8ToNative(FixString(language_detail.compile_binary_, kv)));
   po.inherit_env_var_ = true;
   po.env_var_keep_ = context_.env_var_keep_;
   po.env_var_merge_ = context_.env_var_merge_;
@@ -159,17 +167,6 @@ bool BasicCompiler::StartCompile(CompileJob* job)
 
   po.argument_list_.clear();
   po.argument_list_r_.clear();
-
-  std::map<std::string, std::string> kv;
-
-  kv["$(COMPILE_BINARY_DIR)"] = base::NativeToUTF8(context_.compile_binary_dir_.value());
-  kv["$(OUTPUT_FILE)"] = base::NativeToUTF8(job->output_file_.value());
-  kv["$(SOURCE_FILE_PATH)"] = base::NativeToUTF8(job->source_files_[0].value());
-  kv["$(SOURCE_FILE_PATH_NO_EXT)"] = base::NativeToUTF8(job->source_files_[0].RemoveExtension().value());
-  kv["$(SOURCE_FILE_BASENAME)"] = base::NativeToUTF8(job->source_files_[0].BaseName().value());
-  kv["$(SOURCE_FILE_BASENAME_NO_EXT)"] = base::NativeToUTF8(job->source_files_[0].BaseName().RemoveExtension().value());
-  kv["$(SOURCE_FILE_DIRNAME)"] = base::NativeToUTF8(job->source_files_[0].DirName().value());
-  kv["$(OPTIMIZATION_OPTION)"] = base::StringPrintf("%d", job->optimization_option_);
 
   for (auto& it: language_detail.compile_args_)
   {
@@ -218,9 +215,8 @@ bool BasicCompiler::GenerateCmdline(CompileJob* job)
   if (!PreProcessJob(job)) return false;
 
   auto language_detail = GetLanguageDetail(job->language_);
-  std::map<std::string, std::string> kv;
+  std::map<std::string, std::string> kv = context_.variables_;
   
-  kv["$(COMPILE_BINARY_DIR)"] = base::NativeToUTF8(context_.compile_binary_dir_.value());
   kv["$(OUTPUT_FILE)"] = base::NativeToUTF8(job->output_file_.value());
   kv["$(SOURCE_FILE_PATH)"] = base::NativeToUTF8(job->source_files_[0].value());
   kv["$(SOURCE_FILE_PATH_NO_EXT)"] = base::NativeToUTF8(job->source_files_[0].RemoveExtension().value());
@@ -230,7 +226,7 @@ bool BasicCompiler::GenerateCmdline(CompileJob* job)
   
   job->image_path_ = base::FilePath(base::UTF8ToNative(FixString(language_detail.running_binary_, kv)));
   job->arguments_.clear();
-
+  LOG(INFO) << FixString(language_detail.running_binary_, kv);
   for (auto& iter: language_detail.running_args_)
   {
     job->arguments_.push_back(base::UTF8ToNative(FixString(iter, kv)));

@@ -2,16 +2,18 @@
 {
 "name" : "mingw",
 "type" : "compiler",
-"compile_binary_dir" : "C:\\TDM-GCC-64\\bin",
 "arch" : "x64",
 "version" : "4.8.1",
+"variables" : {
+"ROOT_DIR": "D:\\DevSoft\\MinGW-w64_4.9.2\\mingw64",
+},
 "env_var_keep" : {},
 "env_var_merge" : {},
 "env_var_replace" : {},
 "language_detail" : [
   {
     "language" : "c",
-    "compile_binary" : "gcc.exe",
+    "compile_binary" : "$(ROOT_DIR)\\bin\\gcc.exe",
     "compile_args" : ["$(SOURCE_FILES)", "-o", "$(OUTPUT_FILE)", "-O$(OPTIMIZATION_OPTION)", "$(EXTRA_COMPILE_ARGS)"],
     "default_output_file" : "$(SOURCE_FILE_BASENAME_NO_EXT).exe",
     "running_binary" : "$(OUTPUT_FILE)",
@@ -19,7 +21,7 @@
   },
   {
     "language" : "cpp",
-    "compile_binary" : "g++.exe",
+    "compile_binary" : "$(ROOT_DIR)\\bin\\g++.exe",
     "compile_args" : ["$(SOURCE_FILES)", "-o", "$(OUTPUT_FILE)", "-O$(OPTIMIZATION_OPTION)", "$(EXTRA_COMPILE_ARGS)"],
     "default_output_file" : "$(SOURCE_FILE_BASENAME_NO_EXT).exe",
     "running_binary" : "$(OUTPUT_FILE)",
@@ -30,16 +32,18 @@
 {
 "name" : "python",
 "type" : "interpreter",
-"compile_binary_dir" : "C:\\Python27",
 "arch" : "x86",
 "version" : "2.7.3",
+"variables" : {
+"ROOT_DIR": "C:\\python\\Python27",
+},
 "env_var_keep" : {},
 "env_var_merge" : {},
 "env_var_replace" : {},
 "language_detail" : [
   {
     "language" : "python",
-    "running_binary" : "$(COMPILE_BINARY_DIR)\\python.exe",
+    "running_binary" : "$(ROOT_DIR)\\python.exe",
     "running_args" : ["$(SOURCE_FILE_PATH)"],
   },],
 },
@@ -47,9 +51,11 @@
 {
 "name" : "go",
 "type" : "compiler",
-"compile_binary_dir" : "D:\\DevSoft\\go\\bin",
 "arch" : "x86",
 "version" : "1.4",
+"variables" : {
+"ROOT_DIR" : "D:\\DevSoft\\go",
+},
 "env_var_keep" : {},
 "env_var_merge" : {},
 "env_var_replace" : {
@@ -58,7 +64,7 @@
 "language_detail" : [
   {
     "language" : "go",
-    "compile_binary" : "go.exe",
+    "compile_binary" : "$(ROOT_DIR)\\bin\\go.exe",
     "compile_args" : ["build", "-o", "$(OUTPUT_FILE)", "$(SOURCE_FILES)"],
     "default_output_file" : "$(SOURCE_FILE_BASENAME_NO_EXT).exe",
     "running_binary" : "$(OUTPUT_FILE)",
@@ -69,19 +75,21 @@
 {
 "name" : "java",
 "type" : "compiler",
-"compile_binary_dir" : "D:\\DevSoft\\jdk1.7.0_45\\bin",
 "arch" : "x86",
 "version" : "1.7.0.45",
+"variables" : {
+"ROOT_DIR" : "D:\\DevSoft\\jdk1.7.0_45",
+},
 "env_var_keep" : {},
 "env_var_merge" : {},
 "env_var_replace" : {},
 "language_detail" : [
   {
     "language" : "java",
-    "compile_binary" : "javac.exe",
+    "compile_binary" : "$(ROOT_DIR)\\bin\\javac.exe",
     "compile_args" : ["$(SOURCE_FILES)"],
     "default_output_file" : "$(SOURCE_FILE_PATH_NO_EXT).class",
-    "running_binary" : "$(COMPILE_BINARY_DIR)\\java.exe",
+    "running_binary" : "$(ROOT_DIR)\\bin\\java.exe",
     "running_args" : ["-cp", "$(SOURCE_FILE_DIRNAME)", "$(SOURCE_FILE_BASENAME_NO_EXT)"],
   },],
 },
@@ -89,16 +97,18 @@
 {
 "name" : "scala",
 "type" : "interpreter",
-"compile_binary_dir" : "D:\\DevSoft\\scala\\bin",
 "arch" : "x86",
 "version" : "2.11.4",
+"variables" : {
+"ROOT_DIR": "D:\\DevSoft\\scala",
+},
 "env_var_keep" : {},
 "env_var_merge" : {},
 "env_var_replace" : {},
 "language_detail" : [
   {
     "language" : "scala",
-    "running_binary" : "$(COMPILE_BINARY_DIR)\\scala.bat",
+    "running_binary" : "$(ROOT_DIR)\\bin\\scala.bat",
     "running_args" : ["$(SOURCE_FILE_PATH)"],
   },],
 },
@@ -106,16 +116,18 @@
 {
 "name" : "ghc",
 "type" : "compiler",
-"compile_binary_dir" : "",
 "arch" : "x86",
 "version" : "2014.2.0.0",
+"variables" : {
+"ROOT_DIR" : "D:\\DevSoft\\Haskell Platform\\2014.2.0.0",
+},
 "env_var_keep" : {},
 "env_var_merge" : {"path":"D:\\DevSoft\\Haskell Platform\\2014.2.0.0\\bin"},
 "env_var_replace" : {},
 "language_detail" : [
   {
     "language" : "haskell",
-    "compile_binary" : "ghc.exe",
+    "compile_binary" : "$(ROOT_DIR)\\bin\\ghc.exe",
     "compile_args" : ["$(SOURCE_FILES)", "/-o", "$(OUTPUT_FILE)", "$(EXTRA_COMPILE_ARGS)"],
     "default_output_file" : "$(SOURCE_FILE_BASENAME_NO_EXT).exe",
     "running_binary" : "$(OUTPUT_FILE)",
@@ -124,40 +136,48 @@
 },
 
 {
-"name" : "vc10",
+"name" : "vc",
 "type" : "compiler",
-"compile_binary_dir" : "D:\\DevSoft\\Microsoft Visual Studio 10.0\\VC\\bin",
 "arch" : "x86",
-"version" : "10.0",
+"version" : "12.0",
+"variables" : {
+"VC_DIR": "D:\\DevSoft\\win_toolchain_2013e\\vs2013_files\\VC",
+"SDK_DIR": "D:\\DevSoft\\win_toolchain_2013e\\vs2013_files\\win8sdk",
+"RUN_TIME_DIR": "D:\\DevSoft\\win_toolchain_2013e\\vs2013_files\\sys32",
+},
 "env_var_keep" : {},
 "env_var_merge" :
   {
-  "path" :
-        "C:\\Program Files (x86)\\Microsoft F#\\v4.0\\;D:\\DevSoft\\Microsoft Visual Studio 10.0\\VSTSDB\\Deploy;D:\\DevSoft\\Microsoft Visual Studio 10.0\\Common7\\IDE\\;D:\\DevSoft\\Microsoft Visual Studio 10.0\\VC\\BIN;D:\\DevSoft\\Microsoft Visual Studio 10.0\\Common7\\Tools;C:\\Windows\\Microsoft.NET\\Framework\\v4.0.30319;C:\\Windows\\Microsoft.NET\\Framework\\v3.5;D:\\DevSoft\\Microsoft Visual Studio 10.0\\VC\\VCPackages;C:\\Program Files (x86)\\HTML Help Workshop;D:\\DevSoft\\Microsoft Visual Studio 10.0\\Team Tools\\Performance Tools;C:\\Program Files (x86)\\Microsoft SDKs\\Windows\\v7.0A\\bin\\NETFX 4.0 Tools;C:\\Program Files (x86)\\Microsoft SDKs\\Windows\\v7.0A\\bin;",
+  "PATH" :
+        "$(VC_DIR)\\BIN;$(VC_DIR)\\VCPackages;$(RUN_TIME_DIR);",
   "LIB" :
-        "D:\\DevSoft\\Microsoft Visual Studio 10.0\\VC\\LIB;D:\\DevSoft\\Microsoft Visual Studio 10.0\\VC\\ATLMFC\\LIB;C:\\Program Files (x86)\\Microsoft SDKs\\Windows\\v7.0A\\lib;",
+        "$(VC_DIR)\\LIB;$(SDK_DIR)\\Lib\\win8\\um\\x86;",
   "LIBPATH" :
-        "C:\\Windows\\Microsoft.NET\\Framework\\v4.0.30319;C:\\Windows\\Microsoft.NET\\Framework\\v3.5;D:\\DevSoft\\Microsoft Visual Studio 10.0\\VC\\LIB;D:\\DevSoft\\Microsoft Visual Studio 10.0\\VC\\ATLMFC\\LIB;",
+        "$(VC_DIR)\\LIB;",
   "INCLUDE" :
-        "D:\\DevSoft\\Microsoft Visual Studio 10.0\\VC\\INCLUDE;D:\\DevSoft\\Microsoft Visual Studio 10.0\\VC\\ATLMFC\\INCLUDE;C:\\Program Files (x86)\\Microsoft SDKs\\Windows\\v7.0A\\include;"
+        "$(VC_DIR)\\INCLUDE;$(SDK_DIR)\\Include\\shared;$(SDK_DIR)\\Include\\um;D:\\baihacker\\usr\\include\\;"
   },
 "env_var_replace" : {},
 "language_detail" : [
   {
     "language" : "c",
-    "compile_binary" : "cl.exe",
-    "compile_args" : ["$(SOURCE_FILES)", "/Fe", "$(OUTPUT_FILE)", "/O$(OPTIMIZATION_OPTION)", "/TC", "$(EXTRA_COMPILE_ARGS)"],
-    "default_output_file" : "$(SOURCE_FILE_BASENAME_NO_EXT).exe",
+    "compile_binary" : "$(VC_DIR)\\bin\\cl.exe",
+    "compile_args" : ["$(SOURCE_FILES)", "/Fe$(OUTPUT_FILE)", "/TC", "/Fo\"$(SOURCE_FILE_PATH_NO_EXT).obj\"", "$(EXTRA_COMPILE_ARGS)"],
+    "default_output_file" : "a.exe",
     "running_binary" : "$(OUTPUT_FILE)",
     "running_args" : [],
+    "debug_flags" : ["/Od /EHsc /openmp /Zi"],
+    "release_flags" : ["/Ox /arch:SSE2 /EHsc /openmp"],
   },
   {
     "language" : "cpp",
-    "compile_binary" : "cl.exe",
-    "compile_args" : ["$(SOURCE_FILES)", "/Fe", "$(OUTPUT_FILE)", "/O$(OPTIMIZATION_OPTION)", "/TP", "$(EXTRA_COMPILE_ARGS)"],
-    "default_output_file" : "$(SOURCE_FILE_BASENAME_NO_EXT).exe",
+    "compile_binary" : "$(VC_DIR)\\bin\\cl.exe",
+    "compile_args" : ["$(SOURCE_FILES)", "/Fe\"$(OUTPUT_FILE)\"", "/TP", "/Fo\"$(SOURCE_FILE_PATH_NO_EXT).obj\"", "$(EXTRA_COMPILE_ARGS)"],
+    "default_output_file" : "a.exe",
     "running_binary" : "$(OUTPUT_FILE)",
     "running_args" : [],
+    "debug_flags" : ["/Od /EHsc /openmp /Zi"],
+    "release_flags" : ["/Ox /arch:SSE2 /EHsc /openmp"],
   },],
 },
 
