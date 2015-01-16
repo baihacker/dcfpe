@@ -47,6 +47,8 @@
           '<(DEPTH)\\third_party\\wtl\\Include',
         ],
       'sources':[
+          'main/dpe_service_resource.rc',
+
           'main/main.cc',
           'main/dpe_service.h',
           'main/dpe_service.cc',
@@ -75,8 +77,6 @@
           'main/dpe_model/dpe_controller.h',
           'main/dpe_model/dpe_controller.cc',
           
-          
-          'main/dpe_model/shell_resource.rc',
           'main/dpe_model/dpe_shell.h',
           'main/dpe_model/dpe_shell.cc',
         ],

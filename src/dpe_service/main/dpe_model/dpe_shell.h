@@ -1,4 +1,4 @@
-#include "resource.h"
+#include "dpe_service/main/dpe_service_resource.h"
 
 #ifndef min
 #define ADD_MIN_MAX 1

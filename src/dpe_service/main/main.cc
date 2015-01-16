@@ -1,14 +1,15 @@
 #include "dpe_base/dpe_base.h"
 #include "dpe_base/support_wtl_message_loop.h"
-#include "process/process.h"
 #include "dpe_service/main/dpe_service.h"
 #include "dpe_service/main/dpe_model/dpe_shell.h"
 
 #include <windows.h>
 #include <Objbase.h>
 
-ds::DPEService service;
 CAppModule _Module;
+ds::DPEService service;
+
+
 void dpe_service_main()
 {
   service.Start();
