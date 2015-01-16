@@ -284,7 +284,6 @@ std::string PhysicalAddress()
   {
     driver_id = HardDriverIDImpl(1);
     if (!driver_id.empty()) break;
-    
   }
   LOG(INFO) << "cpuid : " << cpuid;
   LOG(INFO) << "driver id : " << driver_id;

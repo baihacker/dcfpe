@@ -226,7 +226,7 @@ bool BasicCompiler::GenerateCmdline(CompileJob* job)
   
   job->image_path_ = base::FilePath(base::UTF8ToNative(FixString(language_detail.running_binary_, kv)));
   job->arguments_.clear();
-  LOG(INFO) << FixString(language_detail.running_binary_, kv);
+
   for (auto& iter: language_detail.running_args_)
   {
     job->arguments_.push_back(base::UTF8ToNative(FixString(iter, kv)));

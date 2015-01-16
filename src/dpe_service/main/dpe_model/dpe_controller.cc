@@ -456,479 +456,6 @@ int32_t RemoteDPEDevice::handle_message(int32_t handle, const std::string& data)
   return 1;
 }
 
-DPEProject::DPEProject()
-{
-}
-
-DPEProject::~DPEProject()
-{
-
-}
-
-bool  DPEProject::AddInputData(const std::string& input_data)
-{
-  std::vector<std::string> input_lines;
-  Tokenize(input_data, "\r\n", &input_lines);
-
-  const int n = input_lines.size();
-  std::vector<DPETask>(n).swap(task_data_);
-
-  for (int32_t i = 0; i < n; ++i)
-  {
-    std::string& str = input_lines[i];
-
-    const int len  = str.size();
-    int pos = 0;
-    while (pos < len && str[pos] != ':') ++pos;
-
-    if (pos < len)
-    {
-      task_data_[i].input_ = str.substr(pos+1);
-      task_data_[i].id_ = atoll(str.substr(0, pos).c_str());
-      task_data_[i].state_ = TASK_STATE_PENDING;
-      id2idx_[task_data_[i].id_] = i;
-    }
-    else
-    {
-      task_data_[i].state_ = TASK_STATE_ERROR;
-    }
-  }
-  return true;
-}
-
-bool  DPEProject::MakeTaskQueue(std::queue<std::pair<int64_t, int32_t> >& task_queue)
-{
-  std::queue<std::pair<int64_t, int32_t> >().swap(task_queue);
-
-  const int n = task_data_.size();
-  for (int32_t i = 0; i < n; ++i)
-  {
-    if (task_data_[i].state_ == TASK_STATE_PENDING)
-    {
-      task_queue.push({task_data_[i].id_, i});
-    }
-  }
-  return true;
-}
-
-DPEProject::DPETask*  DPEProject::GetTask(int64_t id, int32_t idx)
-{
-  const int n = task_data_.size();
-  if (idx < 0 || idx >= n)
-  {
-    auto where = id2idx_.find(id);
-    if (where != id2idx_.end())
-    {
-      idx = where->second;
-    }
-  }
-  if (idx < 0 || idx >= n) return NULL;
-  if (task_data_[idx].id_ != id) return NULL;
-
-  return &task_data_[idx];
-}
-
-bool  DPEProject::LoadSavedState(std::vector<std::pair<int64_t, std::string> >& saved_result)
-{
-  std::vector<std::pair<int64_t, std::string> >().swap(saved_result);
-
-  // load empty state
-  if (!PathExists(dpe_state_path_)) return true;
-
-  std::string data;
-  if (!base::ReadFileToString(dpe_state_path_, &data))
-  {
-    LOG(ERROR) << "DPEProject::Read saved state failed";
-    return false;
-  }
-
-  if (!dpe_state_checksum_.empty())
-  {
-    std::string checksum = base::MD5String(data);
-    if (dpe_state_checksum_ != checksum)
-    {
-      return false;
-    }
-  }
-
-  std::vector<std::string> lines;
-  Tokenize(data, "\r\n", &lines);
-
-  const int n = lines.size();
-
-  for (int32_t i = 0; i < n; ++i)
-  {
-    std::string& str = lines[i];
-
-    const int len  = str.size();
-    int pos = 0;
-    while (pos < len && str[pos] != ':') ++pos;
-
-    if (pos < len)
-    {
-      saved_result.emplace_back(atoll(str.substr(0, pos).c_str()), str.substr(pos+1));
-    }
-    else
-    {
-      return false;
-    }
-  }
-  return true;
-}
-
-bool  DPEProject::SaveProject()
-{
-  base::DictionaryValue project;
-  project.SetString("name", base::SysWideToUTF8(job_name_));
-  project.SetString("dpe_state", r_dpe_state_path_);
-  project.SetString("source", r_source_path_);
-  project.SetString("worker", r_worker_path_);
-  project.SetString("sink", r_sink_path_);
-
-  std::string state_data;
-  {
-    std::stringstream ss;
-    for (auto& iter: task_data_)
-    {
-      if (iter.state_ == TASK_STATE_FINISH)
-      {
-        ss << iter.id_ << ":" << iter.result_ << "\n";
-      }
-    }
-    state_data = ss.str();
-  }
-  project.SetString("dpe_state_checksum", base::MD5String(state_data));
-
-  std::string project_data;
-  if (!base::JSONWriter::WriteWithOptions(&project, base::JSONWriter::OPTIONS_PRETTY_PRINT, &project_data))
-  {
-    LOG(ERROR) << "SaveProject error";
-    return false;
-  }
-
-  base::FilePath project_backup_path = job_file_path_.AddExtension(L".bak");
-  base::FilePath project_state_backup_path = dpe_state_path_.AddExtension(L".bak");
-
-  base::File::Error err;
-  base::ReplaceFile(job_file_path_, project_backup_path, &err);
-  base::ReplaceFile(dpe_state_path_, project_state_backup_path, &err);
-
-  base::WriteFile(job_file_path_, project_data.c_str(), project_data.size());
-  base::WriteFile(dpe_state_path_, state_data.c_str(), state_data.size());
-
-  return true;
-}
-
-scoped_refptr<DPEProject> DPEProject::FromFile(const base::FilePath& job_path)
-{
-  std::string data;
-  if (!base::ReadFileToString(job_path, &data))
-  {
-    LOG(ERROR) << "DPEProject::Start ReadFileToString failed";
-    return NULL;
-  }
-
-  base::Value* project = base::JSONReader::Read(data, base::JSON_ALLOW_TRAILING_COMMAS);
-  if (!project)
-  {
-    LOG(ERROR) << "DPEProject::Start ParseProject failed";
-    return NULL;
-  }
-
-  scoped_refptr<DPEProject> ret = new DPEProject();
-  bool ok = false;
-  do
-  {
-    base::DictionaryValue* dv = NULL;
-    if (!project->GetAsDictionary(&dv)) break;
-
-    ret->job_home_path_ = job_path.DirName();
-    ret->job_file_path_ = job_path;
-
-    std::string val;
-    if (dv->GetString("name", &val))
-    {
-      ret->job_name_ = base::SysUTF8ToWide(val);
-    }
-    else
-    {
-      ret->job_name_ = L"Unknown";
-    }
-
-    if (dv->GetString("dpe_state", &ret->r_dpe_state_path_))
-    {
-      ret->dpe_state_path_ = ret->job_home_path_.Append(base::UTF8ToNative(ret->r_dpe_state_path_));
-    }
-    else
-    {
-      ret->r_dpe_state_path_ = "dpe_state.txt";
-      ret->dpe_state_path_ = ret->job_home_path_.Append(base::UTF8ToNative(ret->r_dpe_state_path_));
-    }
-
-    if (dv->GetString("dpe_state_checksum", &val))
-    {
-      ret->dpe_state_checksum_ = val;
-    }
-
-    if (!dv->GetString("source", &ret->r_source_path_))
-    {
-      LOG(ERROR) << "DPEProject::No source";
-      break;
-    }
-    if (!dv->GetString("worker", &ret->r_worker_path_))
-    {
-      LOG(ERROR) << "DPEProject::No worker";
-      break;
-    }
-    if (!dv->GetString("sink", &ret->r_sink_path_))
-    {
-      LOG(ERROR) << "DPEProject::No sink";
-      break;
-    }
-
-    ret->source_path_ = ret->job_home_path_.Append(base::UTF8ToNative(ret->r_source_path_));
-    ret->worker_path_ = ret->job_home_path_.Append(base::UTF8ToNative(ret->r_worker_path_));
-    ret->sink_path_ = ret->job_home_path_.Append(base::UTF8ToNative(ret->r_sink_path_));
-
-    if (!base::ReadFileToString(ret->source_path_, &ret->source_data_))
-    {
-      LOG(ERROR) << "DPEProject::ReadFileToString failed: source";
-      break;
-    }
-    if (!base::ReadFileToString(ret->worker_path_, &ret->worker_data_))
-    {
-      LOG(ERROR) << "DPEProject::ReadFileToString failed: worker";
-      break;
-    }
-    if (!base::ReadFileToString(ret->sink_path_, &ret->sink_data_))
-    {
-      LOG(ERROR) << "DPEProject::SReadFileToString failed: sink";
-      break;
-    }
-
-    ok = true;
-  } while (false);
-
-  delete project;
-  if (!ok) return NULL;
-  return ret;
-}
-
-DPEPreprocessor::DPEPreprocessor(DPEController* host)
-  : host_(host),
-    state_(PREPROCESS_STATE_IDLE),
-    weakptr_factory_(this)
-{
-}
-
-DPEPreprocessor::~DPEPreprocessor()
-{
-}
-
-bool DPEPreprocessor::StartPreprocess(scoped_refptr<DPEProject> dpe_project)
-{
-  if (state_ != PREPROCESS_STATE_IDLE &&
-      state_ != PREPROCESS_STATE_SUCCESS &&
-      state_ != PREPROCESS_STATE_EEROR)
-  {
-    LOG(ERROR) << "DPEPreprocessor : invalid state";
-    return false;
-  }
-
-  if (!dpe_project)
-  {
-    LOG(ERROR) << "DPEPreprocessor : null project";
-    return false;
-  }
-
-  dpe_project_ = dpe_project;
-
-  compile_home_path_ = dpe_project_->job_home_path_.Append(L"running");
-  base::CreateDirectory(compile_home_path_);
-
-  cj_ = new CompileJob();
-  cj_->language_ = dpe_project_->language_;
-  cj_->compiler_type_ = dpe_project_->compiler_type_;
-  cj_->current_directory_ = compile_home_path_;
-  cj_->source_files_.clear();
-  cj_->source_files_.push_back(dpe_project_->source_path_);
-  cj_->callback_ = this;
-
-  compiler_ = MakeNewCompiler(cj_);
-
-  if (!compiler_)
-  {
-    LOG(ERROR) << "DPEPreprocessor : can not create compiler:";
-    state_ = PREPROCESS_STATE_EEROR;
-    return false;
-  }
-
-  if (!compiler_->StartCompile(cj_))
-  {
-    LOG(ERROR) << "DPEPreprocessor : can not start compile source";
-    state_ = PREPROCESS_STATE_EEROR;
-    return false;
-  }
-
-  source_process_ = new process::Process(this);
-  sink_process_ = new process::Process(this);
-
-  state_ = PREPROCESS_STATE_COMPILING_SOURCE;
-  return true;
-}
-
-scoped_refptr<Compiler> DPEPreprocessor::MakeNewCompiler(CompileJob* job)
-{
-  scoped_refptr<Compiler> cr =
-    host_->dpe_->CreateCompiler(
-        dpe_project_->compiler_type_, L"", ARCH_UNKNOWN, dpe_project_->language_, job->source_files_
-      );
-  return cr;
-}
-
-void DPEPreprocessor::OnCompileFinished(CompileJob* job)
-{
-  if (cj_->compile_process_)
-  {
-    if (cj_->compile_process_->GetProcessContext()->exit_code_ != 0 ||
-        cj_->compile_process_->GetProcessContext()->exit_reason_ != process::EXIT_REASON_EXIT)
-    {
-      state_ = PREPROCESS_STATE_EEROR;
-      LOG(ERROR) << "DPEPreprocessor : compile error:\n" << cj_->compiler_output_;
-      host_->OnPreprocessError();
-      return;
-    }
-  }
-
-  base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
-      base::Bind(&DPEPreprocessor::ScheduleNextStep,
-            weakptr_factory_.GetWeakPtr()));
-}
-
-void DPEPreprocessor::OnStop(process::Process* p, process::ProcessContext* context)
-{
-  if (p == source_process_)
-  {
-    if (context->exit_code_ != 0 || context->exit_reason_ != process::EXIT_REASON_EXIT)
-    {
-      state_ = PREPROCESS_STATE_EEROR;
-      host_->OnPreprocessError();
-      return;
-    }
-    base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
-      base::Bind(&DPEPreprocessor::ScheduleNextStep,
-          weakptr_factory_.GetWeakPtr()));
-  }
-}
-
-void DPEPreprocessor::OnOutput(process::Process* p, bool is_std_out, const std::string& data)
-{
-  if (!is_std_out) return;
-  if (p == source_process_)
-  {
-    input_data_.append(data.begin(), data.end());
-  }
-}
-
-void  DPEPreprocessor::ScheduleNextStep(base::WeakPtr<DPEPreprocessor> ctrl)
-{
-  if (DPEPreprocessor* pThis = ctrl.get())
-  {
-    pThis->ScheduleNextStepImpl();
-  }
-}
-
-void  DPEPreprocessor::ScheduleNextStepImpl()
-{
-  switch (state_)
-  {
-    case PREPROCESS_STATE_COMPILING_SOURCE:
-    {
-      auto& po = source_process_->GetProcessOption();
-
-      po.image_path_ = cj_->image_path_.IsAbsolute() ?
-                       cj_->image_path_ :
-                       cj_->current_directory_.Append(cj_->image_path_);
-      po.argument_list_ = cj_->arguments_;
-      po.current_directory_ = cj_->current_directory_;
-      po.redirect_std_inout_ = true;
-      po.treat_err_as_out_ = false;
-
-      cj_->language_ = dpe_project_->language_;
-      cj_->source_files_.clear();
-      cj_->source_files_.push_back(dpe_project_->worker_path_);
-      cj_->output_file_ = base::FilePath(L"");
-
-      compiler_ = MakeNewCompiler(cj_);
-
-      if (!compiler_->StartCompile(cj_))
-      {
-        LOG(ERROR) << "DPEPreprocessor : can not start compile worker";
-        state_ = PREPROCESS_STATE_EEROR;
-        break;
-      }
-
-      state_ = PREPROCESS_STATE_COMPILING_WORKER;
-      break;
-    }
-    case PREPROCESS_STATE_COMPILING_WORKER:
-    {
-      cj_->language_ = dpe_project_->language_;
-      cj_->source_files_.clear();
-      cj_->source_files_.push_back(dpe_project_->sink_path_);
-      cj_->output_file_ = base::FilePath(L"");
-
-      compiler_ = MakeNewCompiler(cj_);
-
-      if (!compiler_->StartCompile(cj_))
-      {
-        LOG(ERROR) << "DPEPreprocessor : can not start compile sink";
-        state_ = PREPROCESS_STATE_EEROR;
-        break;
-      }
-
-      state_ = PREPROCESS_STATE_COMPILING_SINK;
-      break;
-    }
-    case PREPROCESS_STATE_COMPILING_SINK:
-    {
-      auto& po = sink_process_->GetProcessOption();
-
-      po.image_path_ = cj_->image_path_.IsAbsolute() ?
-                       cj_->image_path_ :
-                       cj_->current_directory_.Append(cj_->image_path_);
-      po.argument_list_ = cj_->arguments_;
-      po.current_directory_ = cj_->current_directory_;
-      po.redirect_std_inout_ = true;
-      po.treat_err_as_out_ = false;
-
-      std::string().swap(input_data_);
-      if (!source_process_->Start())
-      {
-        LOG(ERROR) << "DPEPreprocessor : can not start source process";
-        state_ = PREPROCESS_STATE_EEROR;
-        break;
-      }
-      state_ = PREPROCESS_STATE_GENERATING_INPUT;
-      break;
-    }
-    case PREPROCESS_STATE_GENERATING_INPUT:
-    {
-      state_ = PREPROCESS_STATE_SUCCESS;
-      break;
-    }
-  }
-
-  if (state_ == PREPROCESS_STATE_SUCCESS)
-  {
-    host_->OnPreprocessSuccess();
-  }
-  else if (state_ == PREPROCESS_STATE_EEROR)
-  {
-    host_->OnPreprocessError();
-  }
-}
-
 RemoteDPEDeviceManager::RemoteDPEDeviceManager(DPEScheduler* host)
   : host_(host),
     weakptr_factory_(this)
@@ -965,7 +492,7 @@ void  RemoteDPEDeviceManager::AddRemoteDPEDevice(scoped_refptr<RemoteDPEDevice> 
   {
     device->InitJob(
         base::NativeToUTF8(host_->dpe_project_->job_name_),
-        host_->dpe_project_->language_,
+        PL_UNKNOWN,
         host_->dpe_project_->worker_path_,
         base::SysWideToUTF8(host_->dpe_project_->compiler_type_)
       );
@@ -1112,80 +639,55 @@ bool  DPEScheduler::AddRemoteDPEService(bool is_local, const std::string& server
 }
 
 bool  DPEScheduler::Run(const std::vector<std::pair<bool, std::string> >& servers,
-        DPEProject* project, DPEPreprocessor* processor)
+        DPEProject* project, DPECompiler* compiler)
 {
   dpe_worker_manager_ = new RemoteDPEDeviceManager(this);
+  project_state_ = new DPEProjectState();
   dpe_project_ = project;
-
-  // step 1: prepare data
-  if (!dpe_project_->AddInputData(processor->InputData()))
+  
+  // source process
+  source_process_ = new process::Process(this);
   {
-    LOG(ERROR) << "DPEScheduler : cant not add input data";
+    auto cj = compiler->SourceCompileJob();
+    auto& po = source_process_->GetProcessOption();
+
+    po.image_path_ = cj->image_path_.IsAbsolute() ?
+                     cj->image_path_ :
+                     cj->current_directory_.Append(cj->image_path_);
+    po.argument_list_ = cj->arguments_;
+    po.current_directory_ = cj->current_directory_;
+    po.redirect_std_inout_ = true;
+    po.treat_err_as_out_ = false;
+  }
+  std::string().swap(input_data_);
+  if (!source_process_->Start())
+  {
+    LOG(ERROR) << "DPEScheduler : can not start source process";
     return false;
+  }
+
+  // sink process
+  sink_process_ = new process::Process(this);
+  {
+    auto cj = compiler->SinkCompileJob();
+    auto& po = sink_process_->GetProcessOption();
+
+    po.image_path_ = cj->image_path_.IsAbsolute() ?
+                     cj->image_path_ :
+                     cj->current_directory_.Append(cj->image_path_);
+    po.argument_list_ = cj->arguments_;
+    po.current_directory_ = cj->current_directory_;
+    po.redirect_std_inout_ = true;
+    po.treat_err_as_out_ = false;
   }
   
-  // step2: load saved state
-  {
-    std::vector<std::pair<int64_t, std::string> > saved_state;
-    if (!dpe_project_->LoadSavedState(saved_state))
-    {
-      LOG(ERROR) << "DPEScheduler : cant not load saved state";
-      return false;
-    }
-    
-    for (auto& iter : saved_state)
-    {
-      auto task = dpe_project_->GetTask(iter.first);
-      if (task)
-      {
-        task->state_ = DPEProject::TASK_STATE_FINISH;
-        task->result_ = iter.second;
-      }
-    }
-  }
-  // step 3: prepare task queue and running queue
-  std::map<int64_t, int32_t>().swap(running_queue_);
-  if (!dpe_project_->MakeTaskQueue(task_queue_))
-  {
-    LOG(ERROR) << "DPEScheduler : cant not make task queue";
-    return false;
-  }
-
-  // step 4: start sink process
-  output_file_path_ = dpe_project_->job_home_path_.Append(L"running/output.txt");
-  output_temp_file_path_ = dpe_project_->job_home_path_.Append(L"running/output_temp.txt");
-  sink_process_ = processor->SinkProcess();
-  sink_process_->SetHost(this);
-  if (!sink_process_->Start())
-  {
-    LOG(ERROR) << "DPEScheduler : can not start sink process";
-    return false;
-  }
-
-  base::WriteFile(output_temp_file_path_, "", 0);
-  std::string().swap(output_data_);
-  {
-    std::string data = base::StringPrintf("%d\n", dpe_project_->TaskData().size());
-    auto po = sink_process_->GetProcessContext();
-    po->std_in_write_->Write(data.c_str(), data.size());
-    po->std_in_write_->WaitForPendingIO(-1);
-    LOG(INFO) << "DPEScheduler : sink process ready";
-  }
-
-  // step 5: we need not compute
-  if (task_queue_.empty())
-  {
-    WillReduceResult();
-    return true;
-  }
-  
-  // step 6: add servers and refresh device
+  // workers
   for (auto& iter: servers)
   {
     dpe_worker_manager_->AddRemoteDPEService(iter.first, iter.second);
   }
   dpe_worker_manager_->ScheduleRefreshDeviceState();
-
+  
   return true;
 }
 
@@ -1208,11 +710,11 @@ void  DPEScheduler::OnTaskSucceed(RemoteDPEDevice* device)
   int32_t idx = device->curr_task_idx_;
 
   // write result
-  auto* task = dpe_project_->GetTask(id, idx);
+  auto* task = project_state_->GetTask(id, idx);
   if (task)
   {
     task->result_ = std::move(device->curr_task_output_);
-    task->state_ = DPEProject::TASK_STATE_FINISH;
+    task->state_ = DPEProjectState::TASK_STATE_FINISH;
   }
   running_queue_.erase(id);
 
@@ -1231,10 +733,10 @@ void  DPEScheduler::OnTaskFailed(RemoteDPEDevice* device)
   running_queue_.erase(id);
 
   // write result
-  auto* task = dpe_project_->GetTask(id, idx);
+  auto* task = project_state_->GetTask(id, idx);
   if (task)
   {
-    task->state_ = DPEProject::TASK_STATE_ERROR;
+    task->state_ = DPEProjectState::TASK_STATE_ERROR;
   }
 
   host_->OnRunningFailed();
@@ -1247,10 +749,10 @@ void  DPEScheduler::OnDeviceLose(RemoteDPEDevice* device, int32_t state)
     int64_t id = atoi(device->curr_task_id_.c_str());
     int32_t idx = device->curr_task_idx_;
 
-    auto* task = dpe_project_->GetTask(id, idx);
+    auto* task = project_state_->GetTask(id, idx);
     if (task)
     {
-      task->state_ = DPEProject::TASK_STATE_PENDING;
+      task->state_ = DPEProjectState::TASK_STATE_PENDING;
     }
 
     running_queue_.erase(id);
@@ -1264,7 +766,7 @@ void  DPEScheduler::OnDeviceAvailable()
   {
     auto curr = task_queue_.front();
 
-    auto* task = dpe_project_->GetTask(curr.first, curr.second);
+    auto* task = project_state_->GetTask(curr.first, curr.second);
     if (!task)
     {
       task_queue_.pop();
@@ -1282,7 +784,7 @@ void  DPEScheduler::OnDeviceAvailable()
 
     if (worker->DoTask(curr.first, curr.second, task_input))
     {
-      task->state_ = DPEProject::TASK_STATE_RUNNING;
+      task->state_ = DPEProjectState::TASK_STATE_RUNNING;
       running_queue_.insert(curr);
       task_queue_.pop();
     }
@@ -1291,7 +793,48 @@ void  DPEScheduler::OnDeviceAvailable()
 
 void DPEScheduler::OnStop(process::Process* p, process::ProcessContext* context)
 {
-  if (p == sink_process_)
+  if (p == source_process_)
+  {
+    project_state_->AddInputData(input_data_);
+    dpe_project_->LoadSavedState(project_state_);
+    
+    std::map<int64_t, int32_t>().swap(running_queue_);
+    if (!project_state_->MakeTaskQueue(task_queue_))
+    {
+      LOG(ERROR) << "DPEScheduler : cant not make task queue";
+      host_->OnRunningFailed();
+      return;
+    }
+    
+    output_file_path_ = dpe_project_->job_home_path_.Append(L"running/output.txt");
+    output_temp_file_path_ = dpe_project_->job_home_path_.Append(L"running/output_temp.txt");
+    if (!sink_process_->Start())
+    {
+      LOG(ERROR) << "DPEScheduler : can not start sink process";
+      host_->OnRunningFailed();
+      return;
+    }
+    
+    base::WriteFile(output_temp_file_path_, "", 0);
+    std::string().swap(output_data_);
+    {
+      std::string data = base::StringPrintf("%d\n", project_state_->TaskData().size());
+      auto po = sink_process_->GetProcessContext();
+      po->std_in_write_->Write(data.c_str(), data.size());
+      po->std_in_write_->WaitForPendingIO(-1);
+      LOG(INFO) << "DPEScheduler : sink process ready";
+    }
+    
+    if (task_queue_.empty())
+    {
+      WillReduceResult();
+    }
+    else
+    {
+      OnDeviceAvailable();
+    }
+  }
+  else if (p == sink_process_)
   {
     if (context->exit_code_ != 0 || context->exit_reason_ != process::EXIT_REASON_EXIT)
     {
@@ -1306,7 +849,11 @@ void DPEScheduler::OnStop(process::Process* p, process::ProcessContext* context)
 void DPEScheduler::OnOutput(process::Process* p, bool is_std_out, const std::string& data)
 {
   if (!is_std_out) return;
-  if (p == sink_process_)
+  if (p == source_process_)
+  {
+    input_data_.append(data.begin(), data.end());
+  }
+  else if (p == sink_process_)
   {
     output_data_.append(data.begin(), data.end());
     base::AppendToFile(output_temp_file_path_, data.c_str(), data.size());
@@ -1337,7 +884,7 @@ void DPEScheduler::ReduceResultImpl()
   
   LOG(INFO) << "Begin reduce result";
   auto context = sink_process_->GetProcessContext();
-  for (auto& it : dpe_project_->TaskData())
+  for (auto& it : project_state_->TaskData())
   {
     auto data = it.result_ + "\n";
     context->std_in_write_->Write(data.c_str(), data.size());
@@ -1395,49 +942,49 @@ bool DPEController::Start(const base::FilePath& job_path)
     return false;
   }
 
-  dpe_preprocessor_ = new DPEPreprocessor(this);
-  if (dpe_preprocessor_->StartPreprocess(dpe_project_))
+  dpe_compiler_ = new DPECompiler(this, dpe_);
+  if (dpe_compiler_->StartCompile(dpe_project_))
   {
-    job_state_ = DPE_JOB_STATE_PREPROCESSING;
+    job_state_ = DPE_JOB_STATE_COMPILING;
   }
   else
   {
     job_state_ = DPE_JOB_STATE_FAILED;
   }
 
-  return job_state_ == DPE_JOB_STATE_PREPROCESSING;
+  return job_state_ == DPE_JOB_STATE_COMPILING;
 }
 
 bool  DPEController::Stop()
 {
   job_state_ = DPE_JOB_STATE_PREPARE;
 
-  dpe_preprocessor_ = NULL;
+  dpe_compiler_ = NULL;
   dpe_scheduler_ = NULL;
 
   return true;
 }
 
-void  DPEController::OnPreprocessError()
+void  DPEController::OnCompileError()
 {
-  LOG(INFO) << "OnPreprocessError";
-  if (job_state_ == DPE_JOB_STATE_PREPROCESSING)
+  LOG(INFO) << "OnCompileError";
+  if (job_state_ == DPE_JOB_STATE_COMPILING)
   {
     job_state_ = DPE_JOB_STATE_FAILED;
-    dpe_preprocessor_ = NULL;
+    dpe_compiler_ = NULL;
   }
 }
 
-void  DPEController::OnPreprocessSuccess()
+void  DPEController::OnCompileSuccess()
 {
-  LOG(INFO) << "OnPreprocessSuccess";
-  if (job_state_ != DPE_JOB_STATE_PREPROCESSING)
+  LOG(INFO) << "OnCompileSuccess";
+  if (job_state_ != DPE_JOB_STATE_COMPILING)
   {
     return;
   }
 
   dpe_scheduler_ = new DPEScheduler(this);
-  if (dpe_scheduler_->Run(servers_, dpe_project_, dpe_preprocessor_))
+  if (dpe_scheduler_->Run(servers_, dpe_project_, dpe_compiler_))
   {
     job_state_ = DPE_JOB_STATE_RUNNING;
   }
@@ -1447,7 +994,7 @@ void  DPEController::OnPreprocessSuccess()
     dpe_scheduler_ = NULL;
   }
 
-  dpe_preprocessor_ = NULL;
+  dpe_compiler_ = NULL;
 }
 
 void  DPEController::OnRunningFailed()
@@ -1455,8 +1002,8 @@ void  DPEController::OnRunningFailed()
   LOG(INFO) << "OnRunningFailed";
   if (job_state_ == DPE_JOB_STATE_RUNNING)
   {
+    dpe_scheduler_->SaveState();
     Stop();
-    dpe_project_->SaveProject();
     job_state_ = DPE_JOB_STATE_FAILED;
   }
 }
@@ -1466,8 +1013,8 @@ void  DPEController::OnRunningSuccess()
   LOG(INFO) << "OnRunningSuccess";
   if (job_state_ == DPE_JOB_STATE_RUNNING)
   {
+    dpe_scheduler_->SaveState();
     Stop();
-    dpe_project_->SaveProject();
     job_state_ = DPE_JOB_STATE_FINISH;
   }
 }

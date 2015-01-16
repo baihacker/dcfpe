@@ -2,8 +2,9 @@
 #define DPE_SERVICE_MAIN_DPE_MODEL_DPE_CONTROLLER_H_
 
 #include "dpe_base/dpe_base.h"
-#include "dpe_service/main/compiler/compiler.h"
 #include "dpe_service/main/dpe_model/dpe_device.h"
+#include "dpe_service/main/dpe_model/dpe_project.h"
+#include "dpe_service/main/dpe_model/dpe_compiler.h"
 #include "dpe_service/main/zserver_client.h"
 
 namespace ds
@@ -101,121 +102,10 @@ private:
 enum
 {
   DPE_JOB_STATE_PREPARE,
-  DPE_JOB_STATE_PREPROCESSING,
+  DPE_JOB_STATE_COMPILING,
   DPE_JOB_STATE_RUNNING,
   DPE_JOB_STATE_FINISH,                 // The same as prepare, but we have output_data
   DPE_JOB_STATE_FAILED,
-};
-
-class DPEProject : public base::RefCounted<DPEProject>
-{
-public:
-  enum
-  {
-    TASK_STATE_PENDING,
-    TASK_STATE_RUNNING,
-    TASK_STATE_FINISH,
-    TASK_STATE_ERROR,
-  };
-
-  struct DPETask
-  {
-    DPETask() : id_(-1), state_(TASK_STATE_PENDING) {}
-    int64_t id_;
-    int32_t state_;
-    std::string input_;
-    std::string result_;
-  };
-public:
-  DPEProject();
-  ~DPEProject();
-
-  bool  AddInputData(const std::string& input_data);
-
-  bool  MakeTaskQueue(std::queue<std::pair<int64_t, int32_t> >& task_queue);
-  DPETask*  GetTask(int64_t id, int32_t idx = -1);
-  std::vector<DPETask>& TaskData(){return task_data_;}
-
-  bool  LoadSavedState(std::vector<std::pair<int64_t, std::string> >& saved_result);
-
-  bool  SaveProject();
-
-public:
-  static scoped_refptr<DPEProject>  FromFile(const base::FilePath& job_path);
-
-public:
-  std::wstring                    job_name_;
-  base::FilePath                  job_home_path_;
-  base::FilePath                  job_file_path_;
-
-  std::wstring                    compiler_type_;
-  ProgrammeLanguage               language_;
-
-  std::string                     r_source_path_;
-  std::string                     r_worker_path_;
-  std::string                     r_sink_path_;
-
-  base::FilePath                  source_path_;
-  std::string                     source_data_;
-  base::FilePath                  worker_path_;
-  std::string                     worker_data_;
-  base::FilePath                  sink_path_;
-  std::string                     sink_data_;
-
-  std::string                     r_dpe_state_path_;
-  base::FilePath                  dpe_state_path_;
-  std::string                     dpe_state_checksum_;
-
-private:
-  std::map<int64_t, int32_t>      id2idx_;
-  std::vector<DPETask>            task_data_;
-};
-
-class DPEPreprocessor : public base::RefCounted<DPEPreprocessor>, public CompilerCallback, public process::ProcessHost
-{
-  enum
-  {
-    PREPROCESS_STATE_IDLE,
-    PREPROCESS_STATE_COMPILING_SOURCE,
-    PREPROCESS_STATE_COMPILING_WORKER,
-    PREPROCESS_STATE_COMPILING_SINK,
-    PREPROCESS_STATE_GENERATING_INPUT,
-    PREPROCESS_STATE_SUCCESS,
-    PREPROCESS_STATE_EEROR,
-  };
-public:
-  DPEPreprocessor(DPEController* host);
-  ~DPEPreprocessor();
-
-  bool  StartPreprocess(scoped_refptr<DPEProject> dpe_project);
-  std::string& InputData(){return input_data_;}
-  scoped_refptr<process::Process> SinkProcess(){return sink_process_;}
-
-private:
-  scoped_refptr<Compiler> MakeNewCompiler(CompileJob* job);
-  void  OnCompileFinished(CompileJob* job) override;
-
-  void  OnStop(process::Process* p, process::ProcessContext* context) override;
-  void  OnOutput(process::Process* p, bool is_std_out, const std::string& data) override;
-
-  static void  ScheduleNextStep(base::WeakPtr<DPEPreprocessor> ctrl);
-  void  ScheduleNextStepImpl();
-
-private:
-  DPEController*                                host_;
-  int                                           state_;
-  scoped_refptr<DPEProject>                     dpe_project_;
-  base::FilePath                                compile_home_path_;
-
-  scoped_refptr<process::Process>               source_process_;
-  scoped_refptr<process::Process>               sink_process_;
-
-  std::string                                   input_data_;
-
-  scoped_refptr<CompileJob>                     cj_;
-  scoped_refptr<Compiler>                       compiler_;
-
-  base::WeakPtrFactory<DPEPreprocessor>         weakptr_factory_;
 };
 
 class RemoteDPEDeviceManager : public base::RefCounted<RemoteDPEDeviceManager>
@@ -250,6 +140,7 @@ private:
 class DPEScheduler : public base::RefCounted<DPEScheduler>, public process::ProcessHost
 {
   friend class RemoteDPEDeviceManager;
+  friend class DPEController;
 public:
   DPEScheduler(DPEController* host);
   ~DPEScheduler();
@@ -257,7 +148,7 @@ public:
   bool  AddRemoteDPEService(bool is_local, const std::string& server_address);
 
   bool  Run(const std::vector<std::pair<bool, std::string> >& servers,
-            DPEProject* project, DPEPreprocessor* processor);
+            DPEProject* project, DPECompiler* compiler);
   bool  Stop();
 
   void  OnTaskSucceed(RemoteDPEDevice* device);
@@ -268,6 +159,7 @@ public:
   void  OnStop(process::Process* p, process::ProcessContext* context) override;
   void  OnOutput(process::Process* p, bool is_std_out, const std::string& data) override;
 
+  void  SaveState(){if (dpe_project_ && project_state_) dpe_project_->SaveProject(project_state_);}
 private:
   void  WillReduceResult();
   static void ReduceResult(base::WeakPtr<DPEScheduler> self);
@@ -276,10 +168,15 @@ private:
 private:
   DPEController*                                host_;
   scoped_refptr<DPEProject>                     dpe_project_;
+  scoped_refptr<DPEProjectState>                project_state_;
   scoped_refptr<RemoteDPEDeviceManager>         dpe_worker_manager_;
+
+  scoped_refptr<process::Process>               source_process_;
+  std::string                                   input_data_;
 
   std::queue<std::pair<int64_t, int32_t> >      task_queue_;
   std::map<int64_t, int32_t>                    running_queue_;
+
 
   scoped_refptr<process::Process>               sink_process_;
   base::FilePath                                output_file_path_;
@@ -289,9 +186,9 @@ private:
   base::WeakPtrFactory<DPEScheduler>            weakptr_factory_;
 };
 
-class DPEController : public ResourceBase
+class DPEController : public ResourceBase, public DPECompilerHost
 {
-  friend class DPEPreprocessor;
+  friend class DPECompiler;
   friend class DPEScheduler;
 public:
   DPEController(DPEService* dpe);
@@ -305,8 +202,8 @@ public:
   bool  Stop();
 
 private:
-  void  OnPreprocessError();
-  void  OnPreprocessSuccess();
+  void  OnCompileError();
+  void  OnCompileSuccess();
   void  OnRunningFailed();
   void  OnRunningSuccess();
 
@@ -315,7 +212,7 @@ private:
 
   std::vector<std::pair<bool, std::string> >    servers_;
   scoped_refptr<DPEProject>                     dpe_project_;
-  scoped_refptr<DPEPreprocessor>                dpe_preprocessor_;
+  scoped_refptr<DPECompiler>                    dpe_compiler_;
   scoped_refptr<DPEScheduler>                   dpe_scheduler_;
 
   int32_t                                       job_state_;

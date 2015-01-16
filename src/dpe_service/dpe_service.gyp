@@ -66,6 +66,12 @@
           'main/dpe_model/dpe_device_impl.h',
           'main/dpe_model/dpe_device_impl.cc',
           
+          'main/dpe_model/dpe_project.h',
+          'main/dpe_model/dpe_project.cc',
+          
+          'main/dpe_model/dpe_compiler.h',
+          'main/dpe_model/dpe_compiler.cc',
+          
           'main/dpe_model/dpe_controller.h',
           'main/dpe_model/dpe_controller.cc',
         ],
