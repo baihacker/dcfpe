@@ -74,6 +74,11 @@
           
           'main/dpe_model/dpe_controller.h',
           'main/dpe_model/dpe_controller.cc',
+          
+          
+          'main/dpe_model/shell_resource.rc',
+          'main/dpe_model/dpe_shell.h',
+          'main/dpe_model/dpe_shell.cc',
         ],
       'dependencies':[
           '<(DEPTH)/dpe_base/dpe_base.gyp:dpe_base',
@@ -82,7 +87,7 @@
         ],
       'msvs_settings': {
       'VCLinkerTool': {
-        #'SubSystem': 'Windows',
+        'SubSystem': 'Windows',
       },
     },
     },

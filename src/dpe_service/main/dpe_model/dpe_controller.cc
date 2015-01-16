@@ -498,6 +498,7 @@ void  RemoteDPEDeviceManager::AddRemoteDPEDevice(scoped_refptr<RemoteDPEDevice> 
       );
   }
 }
+
 bool  RemoteDPEDeviceManager::AddTask(int64_t task_id, int32_t task_idx, const std::string& task_input)
 {
   for (auto& iter : device_list_)
@@ -739,6 +740,7 @@ void  DPEScheduler::OnTaskFailed(RemoteDPEDevice* device)
     task->state_ = DPEProjectState::TASK_STATE_ERROR;
   }
 
+  dpe_project_->SaveProject(project_state_);
   host_->OnRunningFailed();
 }
 
@@ -802,6 +804,7 @@ void DPEScheduler::OnStop(process::Process* p, process::ProcessContext* context)
     if (!project_state_->MakeTaskQueue(task_queue_))
     {
       LOG(ERROR) << "DPEScheduler : cant not make task queue";
+      dpe_project_->SaveProject(project_state_);
       host_->OnRunningFailed();
       return;
     }
@@ -811,6 +814,7 @@ void DPEScheduler::OnStop(process::Process* p, process::ProcessContext* context)
     if (!sink_process_->Start())
     {
       LOG(ERROR) << "DPEScheduler : can not start sink process";
+      dpe_project_->SaveProject(project_state_);
       host_->OnRunningFailed();
       return;
     }
@@ -842,6 +846,7 @@ void DPEScheduler::OnStop(process::Process* p, process::ProcessContext* context)
       return;
     }
     base::WriteFile(output_file_path_, output_data_.c_str(), output_data_.size());
+    dpe_project_->SaveProject(project_state_);
     host_->OnRunningSuccess();
   }
 }
@@ -1002,7 +1007,6 @@ void  DPEController::OnRunningFailed()
   LOG(INFO) << "OnRunningFailed";
   if (job_state_ == DPE_JOB_STATE_RUNNING)
   {
-    dpe_scheduler_->SaveState();
     Stop();
     job_state_ = DPE_JOB_STATE_FAILED;
   }
@@ -1013,7 +1017,6 @@ void  DPEController::OnRunningSuccess()
   LOG(INFO) << "OnRunningSuccess";
   if (job_state_ == DPE_JOB_STATE_RUNNING)
   {
-    dpe_scheduler_->SaveState();
     Stop();
     job_state_ = DPE_JOB_STATE_FINISH;
   }

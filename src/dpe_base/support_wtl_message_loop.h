@@ -7,21 +7,20 @@
 #include <atlbase.h>
 #include <atlapp.h>
 
-class DPE_BASE_EXPORT CChromiumMessageLoop : base::MessagePumpDispatcher, WTL::CMessageLoop
+class DPE_BASE_EXPORT CChromiumMessageLoop : public base::MessagePumpDispatcher, public WTL::CMessageLoop
 {
 public:
   uint32_t Dispatch(const base::NativeEvent& msg) override
   {
     BOOL bDoIdle = FALSE;
     int nIdleCount = 0;
-    
-    if(!PreTranslateMessage(&m_msg))
+    if (!PreTranslateMessage(const_cast<MSG*>(&msg)))
     {
-      ::TranslateMessage(&m_msg);
-      ::DispatchMessage(&m_msg);
+      ::TranslateMessage(const_cast<MSG*>(&msg));
+      ::DispatchMessage(const_cast<MSG*>(&msg));
     }
 
-    if(IsIdleMessage(&m_msg))
+    if (IsIdleMessage(const_cast<MSG*>(&msg)))
     {
       bDoIdle = TRUE;
       nIdleCount = 0;
@@ -32,7 +31,7 @@ public:
       if(!OnIdle(nIdleCount++))
         bDoIdle = FALSE;
     }
-    
+
     return base::MessagePumpDispatcher::POST_DISPATCH_NONE;
   }
 };

@@ -159,7 +159,6 @@ public:
   void  OnStop(process::Process* p, process::ProcessContext* context) override;
   void  OnOutput(process::Process* p, bool is_std_out, const std::string& data) override;
 
-  void  SaveState(){if (dpe_project_ && project_state_) dpe_project_->SaveProject(project_state_);}
 private:
   void  WillReduceResult();
   static void ReduceResult(base::WeakPtr<DPEScheduler> self);

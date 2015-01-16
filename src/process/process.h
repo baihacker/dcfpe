@@ -54,6 +54,9 @@ struct ProcessOption
   env_var_list_t                  env_var_merge_;
   env_var_list_t                  env_var_replace_;
   
+  // windows
+  bool                            show_window_;
+
   // redirect
   bool                            redirect_std_inout_;
   bool                            treat_err_as_out_;

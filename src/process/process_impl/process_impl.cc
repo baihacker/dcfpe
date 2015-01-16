@@ -13,6 +13,7 @@ static ULONG_PTR kTimeOutKey = 5;
 
 ProcessOption::ProcessOption() :
   inherit_env_var_(true),
+  show_window_(false),
   redirect_std_inout_(false),
   treat_err_as_out_(true),
   create_sub_process_(true),
@@ -177,6 +178,8 @@ bool ProcessContext::InitContext(ProcessOption& option)
     }
   }
   
+  si_.dwFlags |= STARTF_USESHOWWINDOW;
+  si_.wShowWindow = option.show_window_;
   return true;
 }
 

@@ -85,6 +85,7 @@ bool MessageCenter::AddMessageHandler(MessageHandler* handler)
   if (handler)
   {
     handlers_.push_back(handler);
+    LOG(INFO) << handler << " added";
   }
   return true;
 }
@@ -92,11 +93,17 @@ bool MessageCenter::AddMessageHandler(MessageHandler* handler)
 bool MessageCenter::RemoveMessageHandler(MessageHandler* handler)
 {
   DCHECK_CURRENTLY_ON(base::ThreadPool::UI);
-  
-  std::remove_if(handlers_.begin(), handlers_.end(), [=](MessageHandler* x)
+
+  for (auto iter = handlers_.begin(); iter != handlers_.end();)
+  if (*iter == handler)
   {
-    return x == handler;
-  });
+    iter = handlers_.erase(iter);
+  }
+  else
+  {
+    ++iter;
+  }
+
   return true;
 }
 
@@ -184,25 +191,40 @@ bool MessageCenter::RemoveChannel(int32_t channel_id)
 {
   DCHECK_CURRENTLY_ON(base::ThreadPool::UI);
   
-  std::remove_if(publishers_.begin(), publishers_.end(),
-    [=](std::pair<void*, std::string>& x)
-    {
-      return reinterpret_cast<int32_t>(x.first) == channel_id;
-    });
+  for (auto iter = publishers_.begin(); iter != publishers_.end();)
+  if (reinterpret_cast<int32_t>(iter->first) == channel_id)
+  {
+    iter = publishers_.erase(iter);
+  }
+  else
+  {
+    ++iter;
+  }
 
-  subscribers_mutex_.lock(); std::remove_if(subscribers_.begin(), subscribers_.end(),
-    [=](std::pair<void*, std::string>& x)
-    {
-      return reinterpret_cast<int32_t>(x.first) == channel_id;
-    });
+  subscribers_mutex_.lock();
+  
+  for (auto iter = subscribers_.begin(); iter != subscribers_.end();)
+  if (reinterpret_cast<int32_t>(iter->first) == channel_id)
+  {
+    iter = subscribers_.erase(iter);
+  }
+  else
+  {
+    ++iter;
+  }
+
   subscribers_mutex_.unlock();
 
-  std::remove_if(socket_address_.begin(), socket_address_.end(),
-    [=](std::pair<void*, std::string>& x)
-    {
-      return reinterpret_cast<int32_t>(x.first) == channel_id;
-    });
-  
+  for (auto iter = socket_address_.begin(); iter != socket_address_.end();)
+  if (reinterpret_cast<int32_t>(iter->first) == channel_id)
+  {
+    iter = socket_address_.erase(iter);
+  }
+  else
+  {
+    ++iter;
+  }
+
   return true;
 }
 
