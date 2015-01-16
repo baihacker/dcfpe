@@ -23,46 +23,46 @@
 extern CAppModule _Module;
 
 class CDPEShellDlg : public CDialogImpl<CDPEShellDlg>, public CUpdateUI<CDPEShellDlg>,
-		public CMessageFilter, public CIdleHandler
+    public CMessageFilter, public CIdleHandler
 {
 public:
-	enum { IDD = IDD_DPE_SHELL_DLG };
-	CDPEShellDlg()
-	{
-	
-	}
-	~CDPEShellDlg()
-	{
+  enum { IDD = IDD_DPE_SHELL_DLG };
+  CDPEShellDlg()
+  {
 
-	}
-	virtual BOOL PreTranslateMessage(MSG* pMsg)
-	{
-		return CWindow::IsDialogMessage(pMsg);
-	}
+  }
+  ~CDPEShellDlg()
+  {
 
-	virtual BOOL OnIdle()
-	{
-		return FALSE;
-	}
+  }
+  virtual BOOL PreTranslateMessage(MSG* pMsg)
+  {
+    return CWindow::IsDialogMessage(pMsg);
+  }
 
-	BEGIN_UPDATE_UI_MAP(CDPEShellDlg)
-	END_UPDATE_UI_MAP()
+  virtual BOOL OnIdle()
+  {
+    return FALSE;
+  }
 
-	BEGIN_MSG_MAP(CDPEShellDlg)
-		MESSAGE_HANDLER(WM_INITDIALOG, OnInitDialog)
-		MESSAGE_HANDLER(WM_DESTROY, OnDestroy)
-		COMMAND_ID_HANDLER(IDOK, OnOK)
-		COMMAND_ID_HANDLER(IDCANCEL, OnCancel)
-	END_MSG_MAP()
+  BEGIN_UPDATE_UI_MAP(CDPEShellDlg)
+  END_UPDATE_UI_MAP()
 
-	LRESULT OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+  BEGIN_MSG_MAP(CDPEShellDlg)
+    MESSAGE_HANDLER(WM_INITDIALOG, OnInitDialog)
+    MESSAGE_HANDLER(WM_DESTROY, OnDestroy)
+    COMMAND_ID_HANDLER(IDOK, OnOK)
+    COMMAND_ID_HANDLER(IDCANCEL, OnCancel)
+  END_MSG_MAP()
 
-	LRESULT OnDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+  LRESULT OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 
-	LRESULT OnOK(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+  LRESULT OnDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 
-	LRESULT OnCancel(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-	void CloseDialog(int nVal);
+  LRESULT OnOK(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+
+  LRESULT OnCancel(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+  void CloseDialog(int nVal);
 
 private:
 
