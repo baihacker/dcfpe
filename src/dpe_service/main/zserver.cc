@@ -62,8 +62,8 @@ msg protocol:
   "pa" : "",
   "src" : "",
   "dest" : "",
-  "session" : "",
-  "cookie" : "",
+  "session" : "", #optional
+  "cookie" : "",  #optional
   "ts" : "",
   "ots" : "",
 }

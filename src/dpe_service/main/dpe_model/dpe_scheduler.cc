@@ -1,7 +1,4 @@
 #include "dpe_service/main/dpe_model/dpe_scheduler.h"
-
-
-
 namespace ds
 {
 RemoteDPEDeviceCreator::RemoteDPEDeviceCreator(RemoteDPEDeviceManager* host) :

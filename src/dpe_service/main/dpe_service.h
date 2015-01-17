@@ -81,6 +81,11 @@ public:
   void SetLastOpen(const base::FilePath& path);
   void SaveConfig();
 
+private:
+  void StopImpl();
+  void LoadConfig();
+  void LoadCompilers(const base::FilePath& file);
+
 public:
   // resource management
   std::wstring  GetDefaultCompilerType(const ProgrammeLanguage& language);
@@ -96,12 +101,6 @@ public:
           );
 
   void  RemoveDPEDevice(DPEDevice* device);
-private:
-  void StopImpl();
-  
-  void LoadConfig();
-  
-  void LoadCompilers(const base::FilePath& file);
 
 private:
   int32_t handle_message(int32_t handle, const std::string& data) override;

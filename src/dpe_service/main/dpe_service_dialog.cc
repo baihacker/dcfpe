@@ -155,7 +155,7 @@ LRESULT CDPEServiceDlg::OnBnClickedSelectProject(WORD /*wNotifyCode*/, WORD /*wI
       );
     return 0;
   }
-  CFileDialog dlg(TRUE, L".dpe");
+  CFileDialog dlg(TRUE, NULL, NULL, OFN_SHAREAWARE, L"Dpe Files (*.dpe)\0*.dpe\0");
   wchar_t strBuffer[65535] = {0};
   dlg.m_ofn.lpstrFile = strBuffer;
   dlg.m_ofn.nMaxFile = 65535;

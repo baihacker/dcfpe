@@ -20,8 +20,8 @@ bool  ZServerClient::CreateDPEDevice(base::ZMQCallBack callback)
     req.SetString("type", "rsc");
     AddPaAndTs(&req);
     req.SetString("request", "CreateDPEDevice");
-    req.SetString("src", "src");
-    req.SetString("dest", "dest");
+    req.SetString("src", "");
+    req.SetString("dest", server_address_);
     if (!base::JSONWriter::Write(&req, &request))
     {
       LOG(ERROR) << "can not write request json";
@@ -49,8 +49,8 @@ bool  ZServerClient::SayHello(base::ZMQCallBack callback)
     req.SetString("type", "rsc");
     AddPaAndTs(&req);
     req.SetString("request", "Hello");
-    req.SetString("src", "src");
-    req.SetString("dest", "dest");
+    req.SetString("src", "");
+    req.SetString("dest", server_address_);
     if (!base::JSONWriter::Write(&req, &request))
     {
       LOG(ERROR) << "can not write request json";

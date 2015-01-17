@@ -189,6 +189,7 @@ static inline std::string get_iface_address()
 	}
 	return localHost[0];
 }
+
 void DPEService::Start()
 {
   LoadConfig();
@@ -221,18 +222,18 @@ void DPEService::Start()
 
   mc->AddMessageHandler(this);
 
-  
   dlg_->Create(NULL);
   dlg_->ShowWindow(SW_SHOW);
   
   if (!server_address_.empty())
   {
-    if (server_address_ == "0.0.0.0")
+    std::string address = server_address_;
+    if (address == "0.0.0.0")
     {
-      server_address_ = get_iface_address();
+      address = get_iface_address();
     }
     std::vector<std::string> tokens;
-    Tokenize(server_address_, ".", &tokens);
+    Tokenize(address, ".", &tokens);
 
     if (tokens.size() == 4)
     {
@@ -244,14 +245,14 @@ void DPEService::Start()
       ZServer* server = new ZServer(this);
       if (server->Start(ip))
       {
-        LOG(INFO) << "Start server at " << server_address_;
+        LOG(INFO) << "Start server at " << address;
         server_list_.push_back(server);
         node_manager_.AddNode(server->GetServerAddress());
         node_manager_.node_list_.front()->SetIsLocal(true);
       }
       else
       {
-        LOG(INFO) << "Can not start server at " << server_address_;
+        LOG(INFO) << "Can not start server at " << address;
       }
     }
   }
@@ -311,16 +312,14 @@ void DPEService::StopImpl()
   base::quit_main_loop();
 }
 
-int32_t DPEService::handle_message(int32_t handle, const std::string& data)
+void  DPEService::OnServerListUpdated()
 {
-  if (handle != ipc_sub_handle_) return 0;
+  if (dlg_) dlg_->UpdateServerList();
+}
 
-  base::DictionaryValue rep;
-  base::Value* v = base::JSONReader::Read(data.c_str(), base::JSON_ALLOW_TRAILING_COMMAS);
-  rep.SetString("type", "ipc");
-  rep.SetString("error_code", "-1");
-
-  return 1;
+void  DPEService::SetLastOpen(const base::FilePath& path)
+{
+  last_open_ = base::NativeToUTF8(path.value());
 }
 
 void DPEService::LoadConfig()
@@ -384,6 +383,21 @@ void DPEService::LoadConfig()
 
   base::CreateDirectory(home_dir_);
   base::CreateDirectory(temp_dir_);
+}
+
+void  DPEService::SaveConfig()
+{
+  base::DictionaryValue kv;
+  kv.SetString("home_dir", base::NativeToUTF8(home_dir_.value()));
+  kv.SetString("temp_dir", base::NativeToUTF8(temp_dir_.value()));
+  kv.SetString("server_address", server_address_);
+  kv.SetString("last_open", last_open_);
+  
+  std::string ret;
+  if (base::JSONWriter::WriteWithOptions(&kv, base::JSONWriter::OPTIONS_PRETTY_PRINT, &ret))
+  {
+    base::WriteFile(config_path_, ret.c_str(), ret.size());
+  }
 }
 
 static CompilerConfiguration::env_var_list_t
@@ -617,6 +631,20 @@ scoped_refptr<Compiler> DPEService::CreateCompiler(
   return NULL;
 }
 
+scoped_refptr<DPEDevice> DPEService::CreateDPEDevice(
+  ZServer* zserver, base::DictionaryValue* request)
+{
+  scoped_refptr<DPEDevice> device = new DPEDeviceImpl(this);
+  if (!device->OpenDevice(zserver->ip_))
+  {
+    return NULL;
+  }
+  device->SetHomePath(home_dir_);
+  device->AddRef();
+  dpe_device_list_.push_back(device);
+  return device;
+}
+
 void DPEService::RemoveDPEDevice(DPEDevice* device)
 {
   for (auto iter = dpe_device_list_.begin();
@@ -634,42 +662,16 @@ void DPEService::RemoveDPEDevice(DPEDevice* device)
   }
 }
 
-scoped_refptr<DPEDevice> DPEService::CreateDPEDevice(
-  ZServer* zserver, base::DictionaryValue* request)
+int32_t DPEService::handle_message(int32_t handle, const std::string& data)
 {
-  scoped_refptr<DPEDevice> device = new DPEDeviceImpl(this);
-  if (!device->OpenDevice(zserver->ip_))
-  {
-    return NULL;
-  }
-  device->SetHomePath(home_dir_);
-  device->AddRef();
-  dpe_device_list_.push_back(device);
-  return device;
+  if (handle != ipc_sub_handle_) return 0;
+
+  base::DictionaryValue rep;
+  base::Value* v = base::JSONReader::Read(data.c_str(), base::JSON_ALLOW_TRAILING_COMMAS);
+  rep.SetString("type", "ipc");
+  rep.SetString("error_code", "-1");
+
+  return 1;
 }
 
-void  DPEService::OnServerListUpdated()
-{
-  if (dlg_) dlg_->UpdateServerList();
-}
-
-void  DPEService::SetLastOpen(const base::FilePath& path)
-{
-  last_open_ = base::NativeToUTF8(path.value());
-}
-
-void  DPEService::SaveConfig()
-{
-  base::DictionaryValue kv;
-  kv.SetString("home_dir", base::NativeToUTF8(home_dir_.value()));
-  kv.SetString("temp_dir", base::NativeToUTF8(temp_dir_.value()));
-  kv.SetString("server_address", server_address_);
-  kv.SetString("last_open", last_open_);
-  
-  std::string ret;
-  if (base::JSONWriter::Write(&kv, &ret))
-  {
-    base::WriteFile(config_path_, ret.c_str(), ret.size());
-  }
-}
 }
