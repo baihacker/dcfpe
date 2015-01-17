@@ -354,6 +354,7 @@ void  CDPEServiceDlg::OnRunningSuccess()
     m_ProjectInfo.AppendText(L"Error : OnRunningSuccess while the state is not running.\r\n");
     return;
   }
+  job_state_ = DPE_JOB_STATE_FINISH;
   m_ProjectInfo.AppendText(L"Info : Run successful.\r\n");
   dpe_scheduler_ = NULL;
 }
