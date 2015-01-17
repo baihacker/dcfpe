@@ -65,6 +65,11 @@ MessageCenter::MessageCenter() :
 
 MessageCenter::~MessageCenter()
 {
+  DCHECK(handlers_.size() == 0);
+  DCHECK(publishers_.size() == 0);
+  DCHECK(subscribers_.size() == 0);
+  //DCHECK(socket_address_.size() == 0);
+  
   Stop();
   ::CloseHandle(start_event_);
   ::CloseHandle(hello_event_);
@@ -85,7 +90,6 @@ bool MessageCenter::AddMessageHandler(MessageHandler* handler)
   if (handler)
   {
     handlers_.push_back(handler);
-    LOG(INFO) << handler << " added";
   }
   return true;
 }
@@ -194,6 +198,7 @@ bool MessageCenter::RemoveChannel(int32_t channel_id)
   for (auto iter = publishers_.begin(); iter != publishers_.end();)
   if (reinterpret_cast<int32_t>(iter->first) == channel_id)
   {
+    zmq_close(reinterpret_cast<void*>(iter->first));
     iter = publishers_.erase(iter);
   }
   else
@@ -206,6 +211,7 @@ bool MessageCenter::RemoveChannel(int32_t channel_id)
   for (auto iter = subscribers_.begin(); iter != subscribers_.end();)
   if (reinterpret_cast<int32_t>(iter->first) == channel_id)
   {
+    zmq_close(reinterpret_cast<void*>(iter->first));
     iter = subscribers_.erase(iter);
   }
   else
@@ -359,16 +365,16 @@ bool MessageCenter::Start()
 bool   MessageCenter::Stop()
 {
   DCHECK_CURRENTLY_ON(base::ThreadPool::UI);
-  
+
   if (status_ == STATUS_PREPARE) return false;
   if (status_ == STATUS_STOPPED) return true;
-  
+
   // quit_flag_ = 1;
   int32_t cmd = CMD_QUIT;
   SendCtrlMessage((const char*)&cmd, sizeof(cmd));
-  
+
   DWORD result = ::WaitForMultipleObjects(1, &thread_handle_, FALSE, 3000);
-  
+
   if (result == WAIT_TIMEOUT)
   {
     ::TerminateThread(thread_handle_, -1);

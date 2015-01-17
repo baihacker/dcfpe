@@ -48,7 +48,9 @@
         ],
       'sources':[
           'main/dpe_service_resource.rc',
-
+          'main/dpe_service_dialog.h',
+          'main/dpe_service_dialog.cc',
+          
           'main/main.cc',
           'main/dpe_service.h',
           'main/dpe_service.cc',

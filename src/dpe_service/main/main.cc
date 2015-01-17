@@ -1,7 +1,7 @@
 #include "dpe_base/dpe_base.h"
 #include "dpe_base/support_wtl_message_loop.h"
 #include "dpe_service/main/dpe_service.h"
-#include "dpe_service/main/dpe_model/dpe_shell.h"
+//#include "dpe_service/main/dpe_model/dpe_shell.h"
 
 #include <windows.h>
 #include <Objbase.h>
@@ -34,9 +34,9 @@ int CALLBACK wWinMain(
   freopen("CONOUT$","w+t",stderr);
   freopen("CONIN$","r+t",stdin);
   
-  CDPEShellDlg dlg;
-  dlg.Create(NULL);
-  dlg.ShowWindow(SW_SHOW);
+  //CDPEShellDlg dlg;
+  //dlg.Create(NULL);
+  //dlg.ShowWindow(SW_SHOW);
 
   base::dpe_base_main(dpe_service_main, &theLoop);
   _Module.RemoveMessageLoop();

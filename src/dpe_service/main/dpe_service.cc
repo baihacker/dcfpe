@@ -1,5 +1,6 @@
 #include "dpe_service/main/dpe_service.h"
 
+#include "dpe_service/main/dpe_service_dialog.h"
 #include "dpe_service/main/compiler/compiler_impl.h"
 #include "dpe_service/main/dpe_model/dpe_device_impl.h"
 #include "dpe_service/main/dpe_model/dpe_controller.h"
@@ -162,15 +163,16 @@ void  DPENodeManager::HandleResponseImpl(int32_t node_id, scoped_refptr<base::ZM
 */
 DPEService::DPEService() :
   compilers_(NULL),
-  ipc_sub_handle_(base::INVALID_CHANNEL_ID)
+  ipc_sub_handle_(base::INVALID_CHANNEL_ID),
+  dlg_(new CDPEServiceDlg(this))
 {
+  
 }
 
 DPEService::~DPEService()
 {
 }
 
-DPEController* ctrl;
 void DPEService::Start()
 {
   LoadConfig();
@@ -211,7 +213,9 @@ void DPEService::Start()
   node_manager_.AddNode(default_server->GetServerAddress());
   node_manager_.node_list_.front()->SetIsLocal(true);
 
-#if 1
+  dlg_->Create(NULL);
+  dlg_->ShowWindow(SW_SHOW);
+#if 0
   ctrl = new DPEController(this);
   ctrl->AddRemoteDPEService(true, default_server->GetServerAddress());
   ctrl->Start(base::FilePath(L"D:\\projects\\git\\dcfpe\\demo\\square_sum\\test.dpe"));
@@ -220,6 +224,7 @@ void DPEService::Start()
 
 void DPEService::WillStop()
 {
+  LOG(INFO) << "WillStop";
   base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
         base::Bind(&DPEService::StopImpl, base::Unretained(this)
       ));
@@ -227,6 +232,15 @@ void DPEService::WillStop()
 
 void DPEService::StopImpl()
 {
+  LOG(INFO) << "StopImpl";
+  if (dlg_)
+  {
+    if (dlg_->IsWindow())
+    {
+      dlg_->DestroyWindow();
+    }
+    dlg_ = NULL;
+  }
   const int n = server_list_.size();
   for (int i = n - 1; i >= 0; --i)
   {
@@ -237,6 +251,10 @@ void DPEService::StopImpl()
     delete server_list_[i];
   }
   std::vector<ZServer*>().swap(server_list_);
+  
+  auto mc = base::zmq_message_center();
+  mc->RemoveChannel(ipc_sub_handle_);
+  mc->RemoveMessageHandler(this);
   base::quit_main_loop();
 }
 

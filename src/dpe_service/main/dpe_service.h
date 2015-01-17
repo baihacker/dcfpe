@@ -1,9 +1,10 @@
-#ifndef DPE_SERVICE_DPE_SERVICE_H_
-#define DPE_SERVICE_DPE_SERVICE_H_
+#ifndef DPE_SERVICE_MAIN_DPE_SERVICE_H_
+#define DPE_SERVICE_MAIN_DPE_SERVICE_H_
 
 #include "dpe_base/dpe_base.h"
 #include "dpe_service/main/zserver.h"
 #include "dpe_service/main/resource.h"
+#include "dpe_service/main/dpe_service_dialog.h"
 #include "dpe_service/main/compiler/compiler.h"
 #include "dpe_service/main/dpe_model/dpe_device.h"
 #include "dpe_service/main/dpe_model/dpe_controller.h"
@@ -12,6 +13,7 @@ namespace ds
 {
 class DPENodeManager;
 class DPEService;
+class CDPEServiceDlg;
 class DPENode : public base::RefCounted<DPENode>
 {
 friend class DPENodeManager;
@@ -114,6 +116,9 @@ private:
   
   // resource
   std::vector<CompilerConfiguration>  compilers_;
+  
+  // dialog
+  scoped_refptr<CDPEServiceDlg>  dlg_;
 };
 }
 
