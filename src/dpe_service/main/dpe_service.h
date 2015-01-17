@@ -77,7 +77,9 @@ public:
   void Start();
   void WillStop();
   DPENodeManager& GetNodeManager() {return node_manager_;}
-  void  OnServerListUpdated();
+  void OnServerListUpdated();
+  void SetLastOpen(const base::FilePath& path);
+  void SaveConfig();
 
 public:
   // resource management
@@ -94,7 +96,6 @@ public:
           );
 
   void  RemoveDPEDevice(DPEDevice* device);
-
 private:
   void StopImpl();
   
@@ -109,7 +110,9 @@ private:
   std::string                 ipc_sub_address_;
   int32_t                     ipc_sub_handle_;
   
+  base::FilePath              config_path_;
   std::string                 server_address_;
+  std::string                 last_open_;
   
   std::vector<ZServer*>       server_list_;
   std::vector<DPEDevice*>     dpe_device_list_;

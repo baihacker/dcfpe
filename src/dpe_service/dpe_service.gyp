@@ -76,6 +76,9 @@
           'main/dpe_model/dpe_compiler.h',
           'main/dpe_model/dpe_compiler.cc',
           
+          'main/dpe_model/dpe_scheduler.h',
+          'main/dpe_model/dpe_scheduler.cc',
+          
           'main/dpe_model/dpe_controller.h',
           'main/dpe_model/dpe_controller.cc',
           

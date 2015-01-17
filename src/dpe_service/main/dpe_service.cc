@@ -247,6 +247,7 @@ void DPEService::Start()
         LOG(INFO) << "Start server at " << server_address_;
         server_list_.push_back(server);
         node_manager_.AddNode(server->GetServerAddress());
+        node_manager_.node_list_.front()->SetIsLocal(true);
       }
       else
       {
@@ -304,6 +305,9 @@ void DPEService::StopImpl()
   auto mc = base::zmq_message_center();
   mc->RemoveChannel(ipc_sub_handle_);
   mc->RemoveMessageHandler(this);
+
+  SaveConfig();
+
   base::quit_main_loop();
 }
 
@@ -330,10 +334,10 @@ void DPEService::LoadConfig()
   base::Value* root = NULL;
   do
   {
-    base::FilePath path = config_dir_.Append(L"config.json");
+    config_path_ = config_dir_.Append(L"config.json");
     std::string data;
 
-    if (!base::ReadFileToString(path, &data)) break;
+    if (!base::ReadFileToString(config_path_, &data)) break;
     root = base::JSONReader::Read(data.c_str(), base::JSON_ALLOW_TRAILING_COMMAS);
     if (!root) break;
 
@@ -352,6 +356,10 @@ void DPEService::LoadConfig()
     if (dv->GetString("server_address", &val))
     {
       server_address_ = val;
+    }
+    if (dv->GetString("last_open", &val))
+    {
+      last_open_ = val;
     }
     LOG(INFO) << "parse config successful";
   } while (false);
@@ -645,4 +653,23 @@ void  DPEService::OnServerListUpdated()
   if (dlg_) dlg_->UpdateServerList();
 }
 
+void  DPEService::SetLastOpen(const base::FilePath& path)
+{
+  last_open_ = base::NativeToUTF8(path.value());
+}
+
+void  DPEService::SaveConfig()
+{
+  base::DictionaryValue kv;
+  kv.SetString("home_dir", base::NativeToUTF8(home_dir_.value()));
+  kv.SetString("temp_dir", base::NativeToUTF8(temp_dir_.value()));
+  kv.SetString("server_address", server_address_);
+  kv.SetString("last_open", last_open_);
+  
+  std::string ret;
+  if (base::JSONWriter::Write(&kv, &ret))
+  {
+    base::WriteFile(config_path_, ret.c_str(), ret.size());
+  }
+}
 }

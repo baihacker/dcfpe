@@ -24,8 +24,42 @@
   {
     "language" : "cpp",
     "compile_binary" : "$(ROOT_DIR)\\bin\\g++.exe",
-    "compile_args" : ["$(SOURCE_FILES)", "-o", "$(OUTPUT_FILE)", "--std=c++11","$(EXTRA_COMPILE_ARGS)"],
+    "compile_args" : ["$(SOURCE_FILES)", "-o", "$(OUTPUT_FILE)", "$(EXTRA_COMPILE_ARGS)"],
     "default_output_file" : "$(SOURCE_FILE_BASENAME_NO_EXT).exe",
+    "running_binary" : "$(OUTPUT_FILE)",
+    "running_args" : [],
+    "debug_flags" : ["-g -fopenmp"],
+    "release_flags" : ["-O3 -march=native -fopenmp"],
+  },],
+},
+
+{
+"name" : "mingw-pe",
+"type" : "compiler",
+"arch" : "x64",
+"version" : "4.9.2",
+"variables" : {
+"ROOT_DIR": "D:\\DevSoft\\MinGW-w64_4.9.2\\mingw64",
+},
+"env_var_keep" : {},
+"env_var_merge" : {},
+"env_var_replace" : {},
+"language_detail" : [
+  {
+    "language" : "c",
+    "compile_binary" : "$(ROOT_DIR)\\bin\\gcc.exe",
+    "compile_args" : ["$(SOURCE_FILES)", "-o", "$(OUTPUT_FILE)", "$(EXTRA_COMPILE_ARGS)"],
+    "default_output_file" : "a.exe",
+    "running_binary" : "$(OUTPUT_FILE)",
+    "running_args" : [],
+    "debug_flags" : ["-g -fopenmp"],
+    "release_flags" : ["-O3 -march=native -fopenmp"],
+  },
+  {
+    "language" : "cpp",
+    "compile_binary" : "$(ROOT_DIR)\\bin\\g++.exe",
+    "compile_args" : ["$(SOURCE_FILES)", "-o", "$(OUTPUT_FILE)", "--std=c++11", "$(EXTRA_COMPILE_ARGS)"],
+    "default_output_file" : "a.exe",
     "running_binary" : "$(OUTPUT_FILE)",
     "running_args" : [],
     "debug_flags" : ["-g -fopenmp"],

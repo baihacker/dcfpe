@@ -1,6 +1,7 @@
 #ifndef DPE_SERVICE_MAIN_DPE_MODEL_DPE_COMPILER_H_
 #define DPE_SERVICE_MAIN_DPE_MODEL_DPE_COMPILER_H_
 
+#include "dpe_base/dpe_base.h"
 #include "dpe_service/main/dpe_model/dpe_project.h"
 #include "dpe_service/main/compiler/compiler.h"
 

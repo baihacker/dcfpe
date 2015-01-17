@@ -5,6 +5,11 @@
 #include "dpe_service/main/dpe_service.h"
 #include "dpe_service/main/dpe_service_resource.h"
 
+#include "dpe_service/main/dpe_model/dpe_device.h"
+#include "dpe_service/main/dpe_model/dpe_project.h"
+#include "dpe_service/main/dpe_model/dpe_compiler.h"
+#include "dpe_service/main/dpe_model/dpe_scheduler.h"
+
 #ifndef min
 #define ADD_MIN_MAX 1
 #define min(x, y) ((x) < (y)) ? (x) : (y)
@@ -33,11 +38,13 @@ class CDPEServiceDlg :
     public CUpdateUI<CDPEServiceDlg>,
     public CMessageFilter,
     public CIdleHandler,
-    public base::RefCounted<CDPEServiceDlg>
+    public base::RefCounted<CDPEServiceDlg>,
+    public DPECompilerHost,
+    public DPESchedulerHost
 {
 public:
   enum { IDD = IDD_DPE_SERVICE_DLG };
-  CDPEServiceDlg(DPEService* dpe) : dpe_(dpe)
+  CDPEServiceDlg(DPEService* dpe) : dpe_(dpe), job_state_(DPE_JOB_STATE_PREPARE)
   {
 
   }
@@ -63,6 +70,9 @@ public:
     MESSAGE_HANDLER(WM_DESTROY, OnDestroy)
     COMMAND_ID_HANDLER(IDOK, OnOK)
     COMMAND_ID_HANDLER(IDCANCEL, OnCancel)
+    COMMAND_HANDLER(IDC_SELECT_PROJECT, BN_CLICKED, OnBnClickedSelectProject)
+    COMMAND_HANDLER(IDC_COMPILE_PROJECT_BTN, BN_CLICKED, OnBnClickedCompileProject)
+    COMMAND_HANDLER(IDC_RUN_OR_STOP_PROJECT_BTN, BN_CLICKED, OnBnClickedRunOrStopProject)
   END_MSG_MAP()
 
   LRESULT OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
@@ -75,9 +85,27 @@ public:
   void CloseDialog(int nVal);
 
   void  UpdateServerList();
+  
+  LRESULT OnBnClickedSelectProject(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+  LRESULT OnBnClickedCompileProject(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+  LRESULT OnBnClickedRunOrStopProject(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+
+  void  AppendCompilerOutput();
+
+  void  LoadProject(const base::FilePath& path);
+  void  OnCompileError();
+  void  OnCompileSuccess();
+  void  OnRunningError();
+  void  OnRunningSuccess();
 private:
   DPEService*  dpe_;
+  scoped_refptr<DPEProject>                     dpe_project_;
+  scoped_refptr<DPECompiler>                    dpe_compiler_;
+  scoped_refptr<DPEScheduler>                   dpe_scheduler_;
+  int32_t                                       job_state_;
+private:
   CListViewCtrl   m_ServerListCtrl;
+  CEdit           m_ProjectInfo;
 };
 }
 
