@@ -17,6 +17,7 @@ class CDPEServiceDlg;
 class DPENode : public base::RefCounted<DPENode>
 {
 friend class DPENodeManager;
+friend class CDPEServiceDlg;
 public:
   DPENode(int32_t node_id, const std::string& address, bool is_local = false);
   ~DPENode();
@@ -43,7 +44,7 @@ class DPENodeManager
 {
 friend class DPEService;
 public:
-  DPENodeManager();
+  DPENodeManager(DPEService* dpe);
   ~DPENodeManager();
 
   void  AddNode(int32_t ip, int32_t port = kServerPort);
@@ -60,6 +61,7 @@ private:
   void  HandleResponseImpl(int32_t node_id, scoped_refptr<base::ZMQResponse> rep);
 
 private:
+  DPEService*                                   dpe_;
   std::vector<scoped_refptr<DPENode> >          node_list_;
   int32_t                                       next_node_id_;
   base::WeakPtrFactory<DPENodeManager>          weakptr_factory_;
@@ -67,6 +69,7 @@ private:
 
 class DPEService : public base::MessageHandler
 {
+friend class CDPEServiceDlg;
 public:
   DPEService();
   ~DPEService();
@@ -74,6 +77,7 @@ public:
   void Start();
   void WillStop();
   DPENodeManager& GetNodeManager() {return node_manager_;}
+  void  OnServerListUpdated();
 
 public:
   // resource management
@@ -104,6 +108,8 @@ private:
 private:
   std::string                 ipc_sub_address_;
   int32_t                     ipc_sub_handle_;
+  
+  std::string                 server_address_;
   
   std::vector<ZServer*>       server_list_;
   std::vector<DPEDevice*>     dpe_device_list_;

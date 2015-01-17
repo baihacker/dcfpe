@@ -36,7 +36,7 @@ class CDPEServiceDlg :
     public base::RefCounted<CDPEServiceDlg>
 {
 public:
-  enum { IDD = IDD_DPE_SHELL_DLG };
+  enum { IDD = IDD_DPE_SERVICE_DLG };
   CDPEServiceDlg(DPEService* dpe) : dpe_(dpe)
   {
 
@@ -74,8 +74,10 @@ public:
   LRESULT OnCancel(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
   void CloseDialog(int nVal);
 
+  void  UpdateServerList();
 private:
   DPEService*  dpe_;
+  CListViewCtrl   m_ServerListCtrl;
 };
 }
 

@@ -59,7 +59,7 @@ bool  ZServerClient::SayHello(base::ZMQCallBack callback)
   }
   
   auto zc = base::zmq_client();
-  
+
   zc->SendRequest(
       server_address_,
       request.c_str(), request.size(),

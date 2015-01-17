@@ -4,7 +4,9 @@
 //
 #define IDR_MAINFRAME                   128
 #define IDD_DPE_SHELL_DLG               129
-
+#define IDD_DPE_SERVICE_DLG             1024
+#define IDC_DPE_SERVER_LIST             1025
+#define IDC_EDIT_SERVER_PHISICAL_ADDRESS  1026
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED

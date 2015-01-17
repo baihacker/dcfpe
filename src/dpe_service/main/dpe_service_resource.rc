@@ -58,12 +58,14 @@ IDR_MAINFRAME           ICON                    "res\\dpe_service.ico"
 // Dialog
 //
 
-IDD_DPE_SHELL_DLG DIALOGEX 0, 0, 711, 337
+IDD_DPE_SERVICE_DLG DIALOGEX 0, 0, 711, 337
 STYLE DS_SETFONT | DS_3DLOOK | DS_FIXEDSYS | WS_MINIMIZEBOX | WS_CAPTION | WS_SYSMENU
-CAPTION "DPEShell"
+CAPTION "DPEService"
 FONT 8, "MS Shell Dlg", 0, 0, 0x0
 BEGIN
-
+  CONTROL         "",IDC_DPE_SERVER_LIST,"SysListView32",LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_ALIGNLEFT | WS_BORDER,10,10,210,110
+  LTEXT           "pa:",IDC_STATIC,10,125,20,8
+  EDITTEXT        IDC_EDIT_SERVER_PHISICAL_ADDRESS,30,125,190,8,NOT WS_BORDER | NOT WS_TABSTOP
 END
 
 /////////////////////////////////////////////////////////////////////////////
@@ -74,7 +76,7 @@ END
 #ifdef APSTUDIO_INVOKED
 GUIDELINES DESIGNINFO
 BEGIN
-    IDD_DPE_SHELL_DLG, DIALOG
+    IDD_DPE_SERVICE_DLG, DIALOG
     BEGIN
     END
 END
@@ -127,12 +129,12 @@ BEGIN
     BEGIN
         BLOCK "040904B0"
         BEGIN
-            VALUE "FileDescription", "dpe shell Module"
+            VALUE "FileDescription", "DPEService"
             VALUE "FileVersion", "1, 0, 0, 1"
-            VALUE "InternalName", "dpe shell"
+            VALUE "InternalName", "DPEService"
             VALUE "LegalCopyright", "Copyright 2015"
-            VALUE "OriginalFilename", "dpe shell.exe"
-            VALUE "ProductName", "dpe shell Module"
+            VALUE "OriginalFilename", "dpe_service.exe"
+            VALUE "ProductName", "DPEService"
             VALUE "ProductVersion", "1, 0, 0, 1"
         END
     END
@@ -150,7 +152,7 @@ END
 
 STRINGTABLE
 BEGIN
-    IDR_MAINFRAME           "dpe shell"
+    IDR_MAINFRAME           "DPEService"
 END
 
 STRINGTABLE

@@ -24,7 +24,8 @@ DPENode::~DPENode()
 {
 }
 
-DPENodeManager::DPENodeManager() :
+DPENodeManager::DPENodeManager(DPEService* dpe) :
+  dpe_(dpe),
   next_node_id_(0),
   weakptr_factory_(this)
 {
@@ -138,7 +139,7 @@ void  DPENodeManager::HandleResponseImpl(int32_t node_id, scoped_refptr<base::ZM
 
       if (!dv->GetString("reply", &val)) break;
 
-      if (val != "HelloResponse")
+      if (val == "HelloResponse")
       {
         if (!dv->GetString("error_code", &val)) break;
         if (val != "0") break;
@@ -156,12 +157,14 @@ void  DPENodeManager::HandleResponseImpl(int32_t node_id, scoped_refptr<base::ZM
   } while (false);
 
   delete v;
+  dpe_->OnServerListUpdated();
 }
 
 /*
 *******************************************************************************
 */
 DPEService::DPEService() :
+  node_manager_(this),
   compilers_(NULL),
   ipc_sub_handle_(base::INVALID_CHANNEL_ID),
   dlg_(new CDPEServiceDlg(this))
@@ -173,6 +176,19 @@ DPEService::~DPEService()
 {
 }
 
+static inline std::string get_iface_address()
+{
+	char hostname[128];
+	char localHost[128][32]={{0}};
+	struct hostent* temp;
+	gethostname( hostname , 128 );
+	temp = gethostbyname( hostname );
+	for(int i=0 ; temp->h_addr_list[i]!=NULL && i< 1; ++i)
+	{
+		strcpy(localHost[i], inet_ntoa(*(struct in_addr *)temp->h_addr_list[i]));
+	}
+	return localHost[0];
+}
 void DPEService::Start()
 {
   LoadConfig();
@@ -205,16 +221,49 @@ void DPEService::Start()
 
   mc->AddMessageHandler(this);
 
+  
+  dlg_->Create(NULL);
+  dlg_->ShowWindow(SW_SHOW);
+  
+  if (!server_address_.empty())
+  {
+    if (server_address_ == "0.0.0.0")
+    {
+      server_address_ = get_iface_address();
+    }
+    std::vector<std::string> tokens;
+    Tokenize(server_address_, ".", &tokens);
+
+    if (tokens.size() == 4)
+    {
+      uint32_t ip = 0;
+      for (auto item: tokens)
+      {
+        ip = ip << 8 | (uint8_t)atoi(item.c_str());
+      }
+      ZServer* server = new ZServer(this);
+      if (server->Start(ip))
+      {
+        LOG(INFO) << "Start server at " << server_address_;
+        server_list_.push_back(server);
+        node_manager_.AddNode(server->GetServerAddress());
+      }
+      else
+      {
+        LOG(INFO) << "Can not start server at " << server_address_;
+      }
+    }
+  }
   // we always have a default server
+  /*
   ZServer* default_server = new ZServer(this);
   default_server->Start(MAKE_IP(127, 0, 0, 1));
   server_list_.push_back(default_server);
 
   node_manager_.AddNode(default_server->GetServerAddress());
   node_manager_.node_list_.front()->SetIsLocal(true);
-
-  dlg_->Create(NULL);
-  dlg_->ShowWindow(SW_SHOW);
+  */
+  
 #if 0
   ctrl = new DPEController(this);
   ctrl->AddRemoteDPEService(true, default_server->GetServerAddress());
@@ -299,6 +348,10 @@ void DPEService::LoadConfig()
     if (dv->GetString("temp_dir", &val))
     {
       temp_dir_ = base::FilePath(base::UTF8ToNative(val));
+    }
+    if (dv->GetString("server_address", &val))
+    {
+      server_address_ = val;
     }
     LOG(INFO) << "parse config successful";
   } while (false);
@@ -585,6 +638,11 @@ scoped_refptr<DPEDevice> DPEService::CreateDPEDevice(
   device->AddRef();
   dpe_device_list_.push_back(device);
   return device;
+}
+
+void  DPEService::OnServerListUpdated()
+{
+  if (dlg_) dlg_->UpdateServerList();
 }
 
 }

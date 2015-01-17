@@ -22,7 +22,7 @@ public:
   ZServer(DPEService* dpe);
   ~ZServer();
 
-  bool Start(int32_t ip);
+  bool Start(uint32_t ip);
   bool Stop();
   
   std::string GetServerAddress(){return server_address_;}
@@ -40,7 +40,7 @@ private:
 public:
   // remote message handling: bind and receive and send
   int32_t     server_state_;
-  int32_t     ip_;
+  uint32_t    ip_;
   std::string server_address_;
   DPEService* dpe_;
 };

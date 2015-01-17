@@ -21,8 +21,10 @@ bool ZServer::Start(const std::string& address)
 {
   if (server_state_ == ZSERVER_RUNNING) return address == server_address_;
   auto s = base::zmq_server();
-
-  if (!s->StartServer(address, this)) return false;
+  if (!s->StartServer(address, this))
+  {
+    return false;
+  }
 
   server_address_ = address;
   server_state_ = ZSERVER_RUNNING;
@@ -30,7 +32,7 @@ bool ZServer::Start(const std::string& address)
   return true;
 }
 
-bool ZServer::Start(int32_t ip)
+bool ZServer::Start(uint32_t ip)
 {
   ip_ = ip;
   return Start(base::AddressHelper::MakeZMQTCPAddress(ip, kServerPort));

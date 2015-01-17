@@ -10,7 +10,7 @@ namespace base
 {
 int32_t AddressHelper::next_available_port_ = kMinPort;
 
-std::string AddressHelper::MakeZMQTCPAddress(int32_t ip, int32_t port)
+std::string AddressHelper::MakeZMQTCPAddress(uint32_t ip, int32_t port)
 {
   char address[64];
   sprintf(address, "tcp://%d.%d.%d.%d:%d",
