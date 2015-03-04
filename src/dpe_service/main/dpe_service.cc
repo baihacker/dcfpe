@@ -227,13 +227,12 @@ void DPEService::Start()
   
   if (!server_address_.empty())
   {
-    std::string address = server_address_;
-    if (address == "0.0.0.0")
+    if (server_address_ == "0.0.0.0")
     {
-      address = get_iface_address();
+      server_address_ = get_iface_address();
     }
     std::vector<std::string> tokens;
-    Tokenize(address, ".", &tokens);
+    Tokenize(server_address_, ".", &tokens);
 
     if (tokens.size() == 4)
     {
@@ -245,14 +244,14 @@ void DPEService::Start()
       ZServer* server = new ZServer(this);
       if (server->Start(ip))
       {
-        LOG(INFO) << "Start server at " << address;
+        LOG(INFO) << "Start server at " << server_address_;
         server_list_.push_back(server);
         node_manager_.AddNode(server->GetServerAddress());
         node_manager_.node_list_.front()->SetIsLocal(true);
       }
       else
       {
-        LOG(INFO) << "Can not start server at " << address;
+        LOG(INFO) << "Can not start server at " << server_address_;
       }
     }
   }
@@ -354,6 +353,7 @@ void DPEService::LoadConfig()
     }
     if (dv->GetString("server_address", &val))
     {
+      config_server_address_ = val;
       server_address_ = val;
     }
     if (dv->GetString("last_open", &val))
@@ -390,7 +390,7 @@ void  DPEService::SaveConfig()
   base::DictionaryValue kv;
   kv.SetString("home_dir", base::NativeToUTF8(home_dir_.value()));
   kv.SetString("temp_dir", base::NativeToUTF8(temp_dir_.value()));
-  kv.SetString("server_address", server_address_);
+  kv.SetString("server_address", config_server_address_);
   kv.SetString("last_open", last_open_);
   
   std::string ret;

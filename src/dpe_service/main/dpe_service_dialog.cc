@@ -27,14 +27,11 @@ LRESULT CDPEServiceDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*
     DWORD dwStyle = m_ServerListCtrl.GetExtendedListViewStyle() | LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES;
     m_ServerListCtrl.SetExtendedListViewStyle(dwStyle);
     
-    m_ServerListCtrl.InsertColumn(0, L"id");
-    m_ServerListCtrl.SetColumnWidth(0, 20);
+    m_ServerListCtrl.InsertColumn(0, L"Address");
+    m_ServerListCtrl.SetColumnWidth(0, 150);
     
-    m_ServerListCtrl.InsertColumn(1, L"Address");
-    m_ServerListCtrl.SetColumnWidth(1, 140);
-    
-    m_ServerListCtrl.InsertColumn(2, L"Response time");
-    m_ServerListCtrl.SetColumnWidth(2, 140);
+    m_ServerListCtrl.InsertColumn(1, L"Response time");
+    m_ServerListCtrl.SetColumnWidth(1, 100);
     
     UpdateServerList();
   }
@@ -44,7 +41,7 @@ LRESULT CDPEServiceDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*
   
   if (!dpe_->last_open_.empty())
   {
-    LoadProject(base::FilePath(base::UTF8ToNative(dpe_->last_open_)));
+    //LoadProject(base::FilePath(base::UTF8ToNative(dpe_->last_open_)));
   }
   return TRUE;
 }
@@ -102,18 +99,16 @@ void  CDPEServiceDlg::UpdateServerList()
       m_ServerListCtrl.InsertItem(i, L"");
     }
     
-    m_ServerListCtrl.SetItemText(i, 0, base::StringPrintf(L"%d", item->node_id_).c_str());
-    
-    m_ServerListCtrl.SetItemText(i, 1, base::UTF8ToNative(item->server_address_).c_str());
+    m_ServerListCtrl.SetItemText(i, 0, base::UTF8ToNative(item->server_address_).c_str());
     
     if (item->response_count_ == 0)
     {
-      m_ServerListCtrl.SetItemText(i, 2, L"N/A");
+      m_ServerListCtrl.SetItemText(i, 1, L"N/A");
     }
     else
     {
       double tmp = item->response_time_.InSecondsF() / item->response_count_;
-      m_ServerListCtrl.SetItemText(i, 2, base::StringPrintf(L"%.3f", tmp).c_str());
+      m_ServerListCtrl.SetItemText(i, 1, base::StringPrintf(L"%.3f", tmp).c_str());
     }
     
     m_ServerListCtrl.SetItemData(i, (DWORD_PTR)item->node_id_);
@@ -279,34 +274,43 @@ void  CDPEServiceDlg::AppendCompilerOutput()
   if (auto cj = dpe_compiler_->SourceCompileJob())
   {
     m_ProjectInfo.AppendText(L"Compile source output:\r\n");
+    if (cj->compile_process_ && !cj->compile_process_->GetProcessContext()->cmd_line_.empty())
+    {
+      auto text = cj->compile_process_->GetProcessContext()->cmd_line_ + L"\r\n";
+      m_ProjectInfo.AppendText(text.c_str());
+    }
     if (!cj->compiler_output_.empty())
     {
       auto text = cj->compiler_output_ + "\r\n";
-      m_ProjectInfo.AppendText(
-        base::UTF8ToNative(text).c_str()
-      );
+      m_ProjectInfo.AppendText(base::UTF8ToNative(text).c_str());
     }
   }
   if (auto cj = dpe_compiler_->WorkerCompileJob())
   {
     m_ProjectInfo.AppendText(L"Compile worker output:\r\n");
+    if (cj->compile_process_ && !cj->compile_process_->GetProcessContext()->cmd_line_.empty())
+    {
+      auto text = cj->compile_process_->GetProcessContext()->cmd_line_ + L"\r\n";
+      m_ProjectInfo.AppendText(text.c_str());
+    }
     if (!cj->compiler_output_.empty())
     {
       auto text = cj->compiler_output_ + "\r\n";
-      m_ProjectInfo.AppendText(
-        base::UTF8ToNative(text).c_str()
-      );
+      m_ProjectInfo.AppendText(base::UTF8ToNative(text).c_str());
     }
   }
   if (auto cj = dpe_compiler_->SinkCompileJob())
   {
     m_ProjectInfo.AppendText(L"Compile sink output:\r\n");
+    if (cj->compile_process_ && !cj->compile_process_->GetProcessContext()->cmd_line_.empty())
+    {
+      auto text = cj->compile_process_->GetProcessContext()->cmd_line_ + L"\r\n";
+      m_ProjectInfo.AppendText(text.c_str());
+    }
     if (!cj->compiler_output_.empty())
     {
       auto text = cj->compiler_output_ + "\r\n";
-      m_ProjectInfo.AppendText(
-        base::UTF8ToNative(text).c_str()
-      );
+      m_ProjectInfo.AppendText(base::UTF8ToNative(text).c_str());
     }
   }
 }

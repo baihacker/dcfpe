@@ -6,8 +6,14 @@ def copy_file_if_necessary(src, dest):
   if not os.path.isfile(dest): shutil.copyfile(src, dest)
 
 def build_dependencies():
-  #os.environ['GYP_GENERATORS'] = 'ninja'
-  #os.system(r'python third_party\chromium\build_chromium.py')
+  # os.environ['GYP_GENERATORS'] = 'ninja'
+  # There 3 ways to build chromium:
+  # 1. build_chromium_old.py will use ".\build\gyp_chromium" to build it
+  # 2. build_chromium.py will call gyp directly.
+  # 3. build_dcfpe() will call gyp directly, the projects depends on chromium will be built automatically.
+  # methods 1 and 2 will produce binary only.
+  # so, we need not to build chromium here.
+  # os.system(r'python third_party\chromium\build_chromium.py')
   os.system(r'python third_party/zmq/build_zmq.py')
 
 def prepare_path():

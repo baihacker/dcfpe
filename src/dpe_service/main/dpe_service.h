@@ -80,7 +80,7 @@ public:
   void OnServerListUpdated();
   void SetLastOpen(const base::FilePath& path);
   void SaveConfig();
-
+  const std::string& DefaultServerAddress() const {return server_address_;}
 private:
   void StopImpl();
   void LoadConfig();
@@ -110,6 +110,7 @@ private:
   int32_t                     ipc_sub_handle_;
   
   base::FilePath              config_path_;
+  std::string                 config_server_address_;
   std::string                 server_address_;
   std::string                 last_open_;
   
