@@ -18,6 +18,14 @@ std::string AddressHelper::MakeZMQTCPAddress(uint32_t ip, int32_t port)
   return address;
 }
 
+std::string AddressHelper::FormatAddress(uint32_t ip, int32_t port)
+{
+  char address[64];
+  sprintf(address, "%d.%d.%d.%d:%d",
+      ip>>24, (ip>>16)&255, (ip>>8)&255, ip&255, port);
+  return address;
+}
+
 int32_t AddressHelper::GetProcessIP()
 {
   static const int32_t offset = ::GetCurrentProcessId() % 65535 + 1;

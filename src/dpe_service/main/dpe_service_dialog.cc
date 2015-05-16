@@ -33,7 +33,7 @@ LRESULT CDPEServiceDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*
     m_ServerListCtrl.InsertColumn(1, L"Response time");
     m_ServerListCtrl.SetColumnWidth(1, 100);
     
-    UpdateServerList();
+    //UpdateServerList();
   }
 
   m_ProjectInfo.Attach(GetDlgItem(IDC_EDIT_PROJECT_INFO));
@@ -75,7 +75,7 @@ void CDPEServiceDlg::CloseDialog(int nVal)
   dpe_->WillStop();
 }
 
-void  CDPEServiceDlg::UpdateServerList()
+void  CDPEServiceDlg::OnServerListUpdated()
 {
   auto& mgr = dpe_->GetNodeManager();
   auto& nl = mgr.NodeList();
@@ -158,6 +158,7 @@ LRESULT CDPEServiceDlg::OnBnClickedSelectProject(WORD /*wNotifyCode*/, WORD /*wI
   {
     LoadProject(base::FilePath(dlg.m_ofn.lpstrFile));
   }
+  dpe_->test_action();
   return 0;
 }
 

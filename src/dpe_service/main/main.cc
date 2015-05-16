@@ -5,6 +5,8 @@
 
 #include <windows.h>
 #include <Objbase.h>
+#include <winsock2.h>
+#pragma comment(lib, "ws2_32")
 
 CAppModule _Module;
 ds::DPEService service;
@@ -38,9 +40,19 @@ int CALLBACK wWinMain(
   //dlg.Create(NULL);
   //dlg.ShowWindow(SW_SHOW);
 
+  WSADATA wsaData;
+  WORD sockVersion = MAKEWORD(2,2);
+  if (::WSAStartup(sockVersion,&wsaData) != 0)
+  {
+     ;//
+  }
+  
   base::dpe_base_main(dpe_service_main, &theLoop);
   _Module.RemoveMessageLoop();
 
+  LOG(INFO) << "app quit";
+  ::WSACleanup();
+  
   return 0;
 }
 #else

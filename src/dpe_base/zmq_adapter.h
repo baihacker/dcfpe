@@ -24,6 +24,9 @@ public:
   static int32_t     GetNextAvailablePort();
   static int32_t     GetProcessIP();
   static int32_t     GetCtrlIP();
+  static int32_t     GetSSDPIP() {return MAKE_IP(239, 255, 255, 251);}
+  static int32_t     GetSSDPPort(){return 5678;}
+  static std::string FormatAddress(uint32_t ip, int32_t port);
 private:
   static int32_t     next_available_port_;
 };

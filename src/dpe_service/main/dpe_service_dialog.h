@@ -40,7 +40,8 @@ class CDPEServiceDlg :
     public CIdleHandler,
     public base::RefCounted<CDPEServiceDlg>,
     public DPECompilerHost,
-    public DPESchedulerHost
+    public DPESchedulerHost,
+    public DPEGraphObserver
 {
 public:
   enum { IDD = IDD_DPE_SERVICE_DLG };
@@ -84,7 +85,7 @@ public:
   LRESULT OnCancel(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
   void CloseDialog(int nVal);
 
-  void  UpdateServerList();
+  void  OnServerListUpdated();
   
   LRESULT OnBnClickedSelectProject(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
   LRESULT OnBnClickedCompileProject(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);

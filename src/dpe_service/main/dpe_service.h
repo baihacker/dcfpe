@@ -4,10 +4,12 @@
 #include "dpe_base/dpe_base.h"
 #include "dpe_service/main/zserver.h"
 #include "dpe_service/main/resource.h"
-#include "dpe_service/main/dpe_service_dialog.h"
 #include "dpe_service/main/compiler/compiler.h"
 #include "dpe_service/main/dpe_model/dpe_device.h"
 #include "dpe_service/main/dpe_model/dpe_controller.h"
+
+#include <windows.h>
+#include <winsock2.h>
 
 namespace ds
 {
@@ -40,6 +42,13 @@ private:
   base::WeakPtrFactory<DPENode>                 weakptr_factory_;
 };
 
+class DPEGraphObserver
+{
+public:
+  virtual ~DPEGraphObserver(){}
+  virtual void OnServerListUpdated() = 0;
+};
+
 class DPENodeManager
 {
 friend class DPEService;
@@ -47,10 +56,13 @@ public:
   DPENodeManager(DPEService* dpe);
   ~DPENodeManager();
 
+  void  AddObserver(DPEGraphObserver* ob);
+  void  RemoveObserver(DPEGraphObserver* ob);
+  
   void  AddNode(int32_t ip, int32_t port = kServerPort);
   void  AddNode(const std::string& address);
-  void  RemoveNode(int32_t ip, int32_t port = kServerPort);
-  void  RemoveNode(const std::string& address);
+  void  RemoveNode(int32_t ip, int32_t port = kServerPort, bool remove_local = false);
+  void  RemoveNode(const std::string& address, bool remove_local = false);
   const std::vector<scoped_refptr<DPENode> >& NodeList() const {return node_list_;}
   DPENode*  GetNodeById(const int32_t id) const;
   
@@ -64,6 +76,7 @@ private:
   DPEService*                                   dpe_;
   std::vector<scoped_refptr<DPENode> >          node_list_;
   int32_t                                       next_node_id_;
+  std::vector<DPEGraphObserver*>                observer_list_;
   base::WeakPtrFactory<DPENodeManager>          weakptr_factory_;
 };
 
@@ -77,10 +90,10 @@ public:
   void Start();
   void WillStop();
   DPENodeManager& GetNodeManager() {return node_manager_;}
-  void OnServerListUpdated();
   void SetLastOpen(const base::FilePath& path);
   void SaveConfig();
   const std::string& DefaultServerAddress() const {return server_address_;}
+  void test_action();
 private:
   void StopImpl();
   void LoadConfig();
@@ -102,6 +115,8 @@ public:
 
   void  RemoveDPEDevice(DPEDevice* device);
 
+  void  HandleMulticast(uint32_t network, uint32_t ip, int32_t port, const std::string& data);
+  
 private:
   int32_t handle_message(int32_t handle, const std::string& data) override;
 

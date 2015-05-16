@@ -35,6 +35,27 @@ DPENodeManager::~DPENodeManager()
 {
 }
 
+void  DPENodeManager::AddObserver(DPEGraphObserver* ob)
+{
+  if (!ob) return;
+  
+  for (auto node: observer_list_)
+  if (node == ob) return;
+  
+  observer_list_.push_back(ob);
+}
+
+void  DPENodeManager::RemoveObserver(DPEGraphObserver* ob)
+{
+  for (std::vector<DPEGraphObserver*>::iterator iter = observer_list_.begin();
+    iter != observer_list_.end(); ++iter)
+  if (*iter == ob)
+  {
+    observer_list_.erase(iter);
+    break;
+  }
+}
+
 void  DPENodeManager::AddNode(int32_t ip, int32_t port)
 {
   AddNode(base::AddressHelper::MakeZMQTCPAddress(ip, port));
@@ -61,25 +82,37 @@ void  DPENodeManager::AddNode(const std::string& address)
       weakptr_factory_.GetWeakPtr(),
       node->GetNodeId())
     );
+  
+  for (auto ob: observer_list_)
+  ob->OnServerListUpdated();
 }
 
-void  DPENodeManager::RemoveNode(int32_t ip, int32_t port)
+void  DPENodeManager::RemoveNode(int32_t ip, int32_t port, bool remove_local)
 {
   RemoveNode(base::AddressHelper::MakeZMQTCPAddress(ip, port));
 }
 
-void  DPENodeManager::RemoveNode(const std::string& address)
+void  DPENodeManager::RemoveNode(const std::string& address, bool remove_local)
 {
+  int erased_count = 0;
+  
   for (auto iter = node_list_.begin(); iter != node_list_.end();)
   {
-    if ((*iter)->server_address_ == address)
+    if ((*iter)->server_address_ == address && (remove_local || !(*iter)->is_local_))
     {
       iter = node_list_.erase(iter);
+      ++erased_count;
     }
     else
     {
       ++iter;
     }
+  }
+  
+  if (erased_count > 0)
+  {
+    for (auto ob: observer_list_)
+    ob->OnServerListUpdated();
   }
 }
 
@@ -157,7 +190,8 @@ void  DPENodeManager::HandleResponseImpl(int32_t node_id, scoped_refptr<base::ZM
   } while (false);
 
   delete v;
-  dpe_->OnServerListUpdated();
+  for (auto ob: observer_list_)
+  ob->OnServerListUpdated();
 }
 
 /*
@@ -178,16 +212,16 @@ DPEService::~DPEService()
 
 static inline std::string get_iface_address()
 {
-	char hostname[128];
-	char localHost[128][32]={{0}};
-	struct hostent* temp;
-	gethostname( hostname , 128 );
-	temp = gethostbyname( hostname );
-	for(int i=0 ; temp->h_addr_list[i]!=NULL && i< 1; ++i)
-	{
-		strcpy(localHost[i], inet_ntoa(*(struct in_addr *)temp->h_addr_list[i]));
-	}
-	return localHost[0];
+  char hostname[128];
+  char localHost[128][32]={{0}};
+  struct hostent* temp;
+  gethostname( hostname , 128 );
+  temp = gethostbyname( hostname );
+  for(int i=0 ; temp->h_addr_list[i]!=NULL && i< 1; ++i)
+  {
+    strcpy(localHost[i], inet_ntoa(*(struct in_addr *)temp->h_addr_list[i]));
+  }
+  return localHost[0];
 }
 
 void DPEService::Start()
@@ -225,6 +259,8 @@ void DPEService::Start()
   dlg_->Create(NULL);
   dlg_->ShowWindow(SW_SHOW);
   
+  node_manager_.AddObserver(dlg_);
+  
   if (!server_address_.empty())
   {
     if (server_address_ == "0.0.0.0")
@@ -248,10 +284,14 @@ void DPEService::Start()
         server_list_.push_back(server);
         node_manager_.AddNode(server->GetServerAddress());
         node_manager_.node_list_.front()->SetIsLocal(true);
+        server->AddRef();
+        //auto succeed = server->Advertise();
+        //LOG(INFO) << "Advertise result " << succeed;
       }
       else
       {
         LOG(INFO) << "Can not start server at " << server_address_;
+        delete server;
       }
     }
   }
@@ -298,7 +338,8 @@ void DPEService::StopImpl()
   }
   for (int i = n - 1; i >= 0; --i)
   {
-    delete server_list_[i];
+    server_list_[i]->Release();
+    //delete server_list_[i];
   }
   std::vector<ZServer*>().swap(server_list_);
   
@@ -311,9 +352,13 @@ void DPEService::StopImpl()
   base::quit_main_loop();
 }
 
-void  DPEService::OnServerListUpdated()
+void DPEService::test_action()
 {
-  if (dlg_) dlg_->UpdateServerList();
+  const int n = server_list_.size();
+  for (int i = n - 1; i >= 0; --i)
+  {
+    server_list_[i]->Advertise();
+  }
 }
 
 void  DPEService::SetLastOpen(const base::FilePath& path)
@@ -658,6 +703,60 @@ void DPEService::RemoveDPEDevice(DPEDevice* device)
     else
     {
       ++iter;
+    }
+  }
+}
+
+void  DPEService::HandleMulticast(uint32_t network, uint32_t ip, int32_t port, const std::string& data)
+{
+  std::vector<std::string> lines;
+  Tokenize(data, "\r\n", &lines);
+
+  const int n = lines.size();
+
+  std::string action;
+  std::string pa;
+  std::string address;
+  
+  for (int32_t i = 0; i < n; ++i)
+  {
+    std::string& str = lines[i];
+
+    const int len  = str.size();
+    int pos = 0;
+    while (pos < len && str[pos] != ':') ++pos;
+
+    if (pos == len) continue;
+    
+    std::string key = str.substr(0, pos);
+    std::string value = str.substr(pos+1);
+    
+    for (auto& c: key) c = tolower(c);
+    
+    if (key == "action") action = std::move(value);
+    else if (key == "pa") pa = std::move(value);
+    else if (key == "address") address = std::move(value);
+  }
+  
+  if (action == "advertise")
+  {
+    if (!address.empty())
+    {
+      node_manager_.AddNode(address);
+    }
+  }
+  else if (action == "bye")
+  {
+    if (!address.empty())
+    {
+      node_manager_.RemoveNode(address);
+    }
+  }
+  else if (action == "search")
+  {
+    for (auto server: server_list_)
+    {
+      server->Advertise();
     }
   }
 }

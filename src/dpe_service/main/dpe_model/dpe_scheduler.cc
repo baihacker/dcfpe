@@ -549,19 +549,11 @@ void  RemoteDPEDeviceManager::OnInitJobFinish(RemoteDPEDevice* device)
 void  RemoteDPEDeviceManager::OnTaskSucceed(RemoteDPEDevice* device)
 {
   host_->OnTaskSucceed(device);
-  if (device->device_state_ == RemoteDPEDevice::STATE_RUNNING_IDLE)
-  {
-    host_->OnDeviceAvailable();
-  }
 }
 
 void  RemoteDPEDeviceManager::OnTaskFailed(RemoteDPEDevice* device)
 {
   host_->OnTaskFailed(device);
-  if (device->device_state_ == RemoteDPEDevice::STATE_RUNNING_IDLE)
-  {
-    host_->OnDeviceAvailable();
-  }
 }
 
 void  RemoteDPEDeviceManager::OnDeviceLose(RemoteDPEDevice* device, int32_t state)
@@ -721,6 +713,10 @@ void  DPEScheduler::OnTaskSucceed(RemoteDPEDevice* device)
   {
     WillReduceResult();
   }
+  else  if (device->device_state_ == RemoteDPEDevice::STATE_RUNNING_IDLE)
+  {
+    OnDeviceAvailable();
+  }
 }
 
 void  DPEScheduler::OnTaskFailed(RemoteDPEDevice* device)
@@ -741,6 +737,7 @@ void  DPEScheduler::OnTaskFailed(RemoteDPEDevice* device)
   host_->OnRunningError();
 }
 
+// state : old state before losing connection
 void  DPEScheduler::OnDeviceLose(RemoteDPEDevice* device, int32_t state)
 {
   if (state == RemoteDPEDevice::STATE_RUNNING)
