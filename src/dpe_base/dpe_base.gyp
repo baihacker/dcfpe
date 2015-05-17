@@ -58,6 +58,9 @@
         'utility_interface.h',
         'utility/utility_impl.cc',
         
+        'utility/repeated_action.h',
+        'utility/repeated_action.cc',
+        
         # thread pool
         'thread_pool.h',
         'thread_pool/thread_pool_impl.h',
