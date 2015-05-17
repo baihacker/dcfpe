@@ -56,7 +56,8 @@ private:
 
 class RemoteDPEDevice :
   public base::RefCounted<RemoteDPEDevice>,
-  public base::MessageHandler
+  public base::MessageHandler,
+  public base::RepeatedActionHost
 {
   friend class RemoteDPEDeviceManager;
   friend class DPEScheduler;
@@ -79,6 +80,12 @@ public:
   bool        Stop();
   bool        InitJob(const std::string& job_name, const ProgrammeLanguage& language,
                 const base::FilePath& source, const std::string& compiler_type);
+  static void TrySendInitJobMessage(base::WeakPtr<RemoteDPEDevice> self,
+                const std::string& job_name, const ProgrammeLanguage& language,
+                const std::string& worker_name, const std::string& source_data, const std::string& compiler_type);
+  void        TrySendInitJobMessageImpl(const std::string& job_name, const ProgrammeLanguage& language,
+                const std::string& worker_name, const std::string& source_data, const std::string& compiler_type);
+  void        OnRepeatedActionFinish(base::RepeatedAction* ra);
   bool        DoTask(int64_t task_id, int32_t task_idx, const std::string& data);
 
 private:
@@ -109,6 +116,8 @@ private:
   bool                                    has_reply_;
   base::Time                              send_time_;
 
+  scoped_refptr<base::RepeatedAction>     do_init_job_;
+  
   base::WeakPtrFactory<RemoteDPEDevice>   weakptr_factory_;
 };
 

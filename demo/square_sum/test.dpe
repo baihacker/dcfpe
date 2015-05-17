@@ -1,6 +1,6 @@
 {
    "dpe_state": "dpe_state.txt",
-   "dpe_state_checksum": "d566c0896b4d04425ccb0b7d605ae5ee",
+   "dpe_state_checksum": "8f527c10928069aea37d0141112258b4",
    "name": "square_sum",
    "sink": "sink.cpp",
    "source": "source.py",

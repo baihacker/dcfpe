@@ -250,7 +250,7 @@ LRESULT CDPEServiceDlg::OnBnClickedRunOrStopProject(WORD /*wNotifyCode*/, WORD /
     std::vector<std::pair<bool, std::string> >    servers;
     auto& mgr = dpe_->GetNodeManager();
     auto& nl = mgr.NodeList();
-    for (auto iter: nl)
+    for (auto iter: nl)// if (!iter->is_local_)
     {
       servers.emplace_back(iter->is_local_, iter->server_address_);
     }

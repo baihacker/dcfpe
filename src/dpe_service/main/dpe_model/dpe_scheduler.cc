@@ -221,6 +221,11 @@ bool RemoteDPEDevice::InitJob(
                 const std::string& compiler_type)
 {
   LOG(INFO) << "RemoteDPEDevice::InitJob";
+  /*
+  LOG(INFO) << session_;
+  LOG(INFO) << send_address_;
+  LOG(INFO) << receive_address_;
+  */
   if (device_state_ != STATE_READY)
   {
     LOG(ERROR) << "RemoteDPEDevice::InitJob invalid state";
@@ -234,6 +239,28 @@ bool RemoteDPEDevice::InitJob(
     return false;
   }
 
+  device_state_ = STATE_INITIALIZING;
+  do_init_job_ = new base::RepeatedAction(this);
+  do_init_job_->Start(base::Bind(&RemoteDPEDevice::TrySendInitJobMessage,
+    weakptr_factory_.GetWeakPtr(), job_name, language,
+    base::SysWideToUTF8(source.BaseName().value()), data, compiler_type),
+    base::TimeDelta::FromSeconds(0), base::TimeDelta::FromSeconds(5), 15);
+  return true;
+}
+
+void RemoteDPEDevice::TrySendInitJobMessage(base::WeakPtr<RemoteDPEDevice> self,
+              const std::string& job_name, const ProgrammeLanguage& language,
+              const std::string& worker_name, const std::string& source_data, const std::string& compiler_type)
+{
+  if (auto* pThis = self.get())
+    pThis->TrySendInitJobMessageImpl(job_name, language, worker_name, source_data, compiler_type);
+}
+
+void RemoteDPEDevice::TrySendInitJobMessageImpl(const std::string& job_name, const ProgrammeLanguage& language,
+              const std::string& worker_name, const std::string& source_data, const std::string& compiler_type)
+{
+  if (device_state_ != STATE_INITIALIZING) return;
+  
   std::string msg;
   {
     base::DictionaryValue req;
@@ -243,9 +270,9 @@ bool RemoteDPEDevice::InitJob(
     req.SetString("job_name", job_name);
     req.SetString("language", language.ToUTF8());
     req.SetString("compiler_type", compiler_type);
-    req.SetString("worker_name", base::SysWideToUTF8(source.BaseName().value()));
+    req.SetString("worker_name", worker_name);
 
-    req.SetString("data", data);
+    req.SetString("data", source_data);
 
     req.SetString("dest", send_address_);
     req.SetString("session", session_);
@@ -253,15 +280,21 @@ bool RemoteDPEDevice::InitJob(
     if (!base::JSONWriter::Write(&req, &msg))
     {
       LOG(ERROR) << "can not write InitJob message";
-      return false;
+      //return false;
     }
   }
 
   auto mc = base::zmq_message_center();
-  mc->SendMessage(send_channel_, msg.c_str(), msg.size());
-  device_state_ = STATE_INITIALIZING;
+  auto ret = mc->SendMessage(send_channel_, msg.c_str(), msg.size());
+}
 
-  return true;
+void  RemoteDPEDevice::OnRepeatedActionFinish(base::RepeatedAction* ra)
+{
+  if (ra == do_init_job_)
+  {
+    // todo: can not init job, notify manager
+    do_init_job_ = NULL;
+  }
 }
 
 bool RemoteDPEDevice::DoTask(int64_t task_id, int32_t task_idx, const std::string& data)
@@ -414,6 +447,7 @@ int32_t RemoteDPEDevice::handle_message(int32_t handle, const std::string& data)
           break;
         }
         device_state_ = STATE_RUNNING_IDLE;
+        do_init_job_ = NULL;
         host_->OnInitJobFinish(this);
       }
       else if (val == "DoTask")

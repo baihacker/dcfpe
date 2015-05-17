@@ -12,6 +12,7 @@
 #include "dpe_base/zmq_adapter.h"
 #include "dpe_base/io_handler.h"
 #include "dpe_base/pipe.h"
+#include "dpe_base/utility/repeated_action.h"
 
 namespace base
 {
