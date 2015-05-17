@@ -63,6 +63,7 @@ bool ZServer::Start(const std::string& address)
     return false;
   }
   Advertise();
+  Search();
   return true;
 }
 
@@ -151,6 +152,11 @@ bool ZServer::Multicast(const std::string& text)
 bool ZServer::Advertise()
 {
   return Multicast(base::StringPrintf("action:advertise\r\naddress:%s\n", server_address_.c_str()));
+}
+
+bool ZServer::Search()
+{
+  return Multicast(base::StringPrintf("action:search\r\naddress:%s\n", server_address_.c_str()));
 }
 
 bool ZServer::GoodBye()

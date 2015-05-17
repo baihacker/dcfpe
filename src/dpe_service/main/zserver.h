@@ -30,7 +30,7 @@ public:
   bool Multicast(const std::string& text);
   
   bool Advertise();
-  
+  bool Search();
   bool GoodBye();
   
 private:
