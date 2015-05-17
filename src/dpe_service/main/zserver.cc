@@ -79,7 +79,7 @@ bool ZServer::Stop()
   // set the event first.
   // after advertising, the server thread will receive the message and check the event
   ::SetEvent(stop_event_);
-  Advertise();
+  GoodBye();
   
   auto s = base::zmq_server();
 

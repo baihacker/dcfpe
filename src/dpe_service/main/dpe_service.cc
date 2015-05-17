@@ -291,7 +291,8 @@ void DPEService::Start()
       else
       {
         LOG(INFO) << "Can not start server at " << server_address_;
-        delete server;
+        server->AddRef();
+        server->Release();
       }
     }
   }
