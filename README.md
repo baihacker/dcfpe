@@ -79,3 +79,4 @@ Updated:
 ========
 * 2014.09.22 Upload gyp (basic project management tool) and chromium/base (basic code, especially the thread model).
 * 2014.10.21 23:43:16 Compute the square of [1..10] by dpe model. 8225 lines, 213248 Bytes.
+* 2015.05.18 17:17:24 Compute the square of [1..100] by dpe model on two computers. 5011+5465+927=11403 lines, 131459+147496+25257=304212 Bytes.
