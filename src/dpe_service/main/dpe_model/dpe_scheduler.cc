@@ -244,7 +244,7 @@ bool RemoteDPEDevice::InitJob(
   do_init_job_->Start(base::Bind(&RemoteDPEDevice::TrySendInitJobMessage,
     weakptr_factory_.GetWeakPtr(), job_name, language,
     base::SysWideToUTF8(source.BaseName().value()), data, compiler_type),
-    base::TimeDelta::FromSeconds(0), base::TimeDelta::FromSeconds(5), 15);
+    base::TimeDelta::FromSeconds(0), base::TimeDelta::FromMilliseconds(100), 15);
   return true;
 }
 
@@ -292,8 +292,15 @@ void  RemoteDPEDevice::OnRepeatedActionFinish(base::RepeatedAction* ra)
 {
   if (ra == do_init_job_)
   {
-    // todo: can not init job, notify manager
-    do_init_job_ = NULL;
+    if (do_init_job_->Interval() < base::TimeDelta::FromSeconds(1))
+    {
+      do_init_job_->Restart(base::TimeDelta::FromSeconds(0), base::TimeDelta::FromSeconds(10), 6);
+    }
+    else
+    {
+      // todo: can not init job, notify manager
+      do_init_job_ = NULL;
+    }
   }
 }
 

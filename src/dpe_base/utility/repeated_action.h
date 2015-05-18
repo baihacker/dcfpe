@@ -20,13 +20,16 @@ class RepeatedAction : public base::RefCounted<RepeatedAction>
 public:
   RepeatedAction(RepeatedActionHost* host);
   ~RepeatedAction();
+  
   bool Start(const base::Closure& action, base::TimeDelta time_delay, base::TimeDelta time_interval, int32_t repeated_time);
   bool Stop();
-
+  bool Restart(base::TimeDelta time_delay, base::TimeDelta time_interval, int32_t repeated_time);
+  
   static void DoAction(base::WeakPtr<RepeatedAction> self, int32_t cookie);
   void DoActionImpl(int32_t cookie);
 
   bool IsRunning() const {return is_running_;}
+  base::TimeDelta Interval() const {return interval_;}
 
 private:
   RepeatedActionHost*                                   host_;

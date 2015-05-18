@@ -44,6 +44,29 @@ bool RepeatedAction::Stop()
   return true;
 }
 
+bool RepeatedAction::Restart(base::TimeDelta time_delay, base::TimeDelta time_interval, int32_t repeated_time)
+{
+  if (time_delay.ToInternalValue() < 0) time_delay = base::TimeDelta::FromMicroseconds(0);
+  if (!is_running_) return false;
+  ++current_cookie_;
+  repeated_time_ = repeated_time;
+  interval_ = time_interval;
+  if (time_delay.ToInternalValue() == 0)
+  {
+    base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
+      base::Bind(&RepeatedAction::DoAction, weakptr_factory_.GetWeakPtr(), current_cookie_)
+        );
+  }
+  else
+  {
+    base::ThreadPool::PostDelayedTask(base::ThreadPool::UI, FROM_HERE,
+      base::Bind(&RepeatedAction::DoAction, weakptr_factory_.GetWeakPtr(), current_cookie_),
+      time_delay
+        );
+  }
+  return true;
+}
+
 void RepeatedAction::DoAction(base::WeakPtr<RepeatedAction> self, int32_t cookie)
 {
   if (auto* pThis = self.get()) pThis->DoActionImpl(cookie);
