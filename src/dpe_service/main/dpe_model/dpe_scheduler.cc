@@ -101,7 +101,7 @@ void  RemoteDPEDeviceCreator::HandleResponseImpl(scoped_refptr<base::ZMQResponse
         break;
       }
       LOG(INFO) << "Create RemoteDPEDevice success";
-      host_->AddRemoteDPEDevice(d);
+      host_->OnCreateRemoteDPEDeviceSucceed(this, d);
       device_list_.push_back(d);
     }
   } while (false);
@@ -515,7 +515,8 @@ bool  RemoteDPEDeviceManager::AddRemoteDPEService(bool is_local, const std::stri
   return true;
 }
 
-void  RemoteDPEDeviceManager::AddRemoteDPEDevice(scoped_refptr<RemoteDPEDevice> device)
+void  RemoteDPEDeviceManager::OnCreateRemoteDPEDeviceSucceed(
+    RemoteDPEDeviceCreator* creator, scoped_refptr<RemoteDPEDevice> device)
 {
   if (!device) return;
   device_list_.push_back(device);
@@ -528,6 +529,10 @@ void  RemoteDPEDeviceManager::AddRemoteDPEDevice(scoped_refptr<RemoteDPEDevice> 
         base::SysWideToUTF8(host_->dpe_project_->compiler_type_)
       );
   }
+}
+
+void  RemoteDPEDeviceManager::OnCreateRemoteDPEDeviceFailed(RemoteDPEDeviceCreator* creator)
+{
 }
 
 bool  RemoteDPEDeviceManager::AddTask(int64_t task_id, int32_t task_idx, const std::string& task_input)

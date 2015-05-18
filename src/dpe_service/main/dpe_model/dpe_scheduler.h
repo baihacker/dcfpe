@@ -43,10 +43,10 @@ private:
   void  HandleResponseImpl(scoped_refptr<base::ZMQResponse> rep);
 
 private:
-  RemoteDPEDeviceManager*  host_;
-  bool            is_local_;
-  std::string     server_address_;
-  bool            creating_;
+  RemoteDPEDeviceManager*                       host_;
+  bool                                          is_local_;
+  std::string                                   server_address_;
+  bool                                          creating_;
 
   scoped_refptr<ZServerClient>                  zclient_;
   std::vector<scoped_refptr<RemoteDPEDevice> >  device_list_;
@@ -129,7 +129,8 @@ public:
   ~RemoteDPEDeviceManager();
 
   bool  AddRemoteDPEService(bool is_local, const std::string& server_address);
-  void  AddRemoteDPEDevice(scoped_refptr<RemoteDPEDevice> device);
+  void  OnCreateRemoteDPEDeviceSucceed(RemoteDPEDeviceCreator* creator, scoped_refptr<RemoteDPEDevice> device);
+  void  OnCreateRemoteDPEDeviceFailed(RemoteDPEDeviceCreator* creator);
 
   bool  AddTask(int64_t task_id, int32_t task_idx, const std::string& task_input);
   int32_t AvailableWorkerCount();
