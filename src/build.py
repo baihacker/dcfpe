@@ -56,15 +56,28 @@ def build_dcfpe():
   dest_dir = os.path.join(ENV_SOLUTION_DIRECTORY, os.environ.get('ENV_BUILD_DIR'))
   
   for sfx in ["", "_x64"]:
-    src_dir = os.path.join(ENV_SOLUTION_DIRECTORY, 'third_party/zmq/bin' + sfx)
     debug_dir = os.path.join(dest_dir, 'Debug' + sfx)
     release_dir = os.path.join(dest_dir, 'Release' + sfx)
     if not os.path.exists(debug_dir): os.makedirs(debug_dir)
     if not os.path.exists(release_dir): os.makedirs(release_dir)
+    
+    # copy zmq lib
+    src_dir = os.path.join(ENV_SOLUTION_DIRECTORY, 'third_party/zmq/bin' + sfx)
     copy_file_if_necessary(os.path.join(src_dir, 'libzmq-v120-mt-gd-4_0_4.dll'),
                            os.path.join(debug_dir, 'libzmq-v120-mt-gd-4_0_4.dll'))
     copy_file_if_necessary(os.path.join(src_dir, 'libzmq-v120-mt-4_0_4.dll'),
                            os.path.join(release_dir, 'libzmq-v120-mt-4_0_4.dll'))
+    
+    # copy crt
+    src_dir = os.path.join(ENV_SOLUTION_DIRECTORY, 'third_party/vc/crt' + sfx)
+    copy_file_if_necessary(os.path.join(src_dir, 'msvcr120d.dll'),
+                           os.path.join(debug_dir, 'msvcr120d.dll'))
+    copy_file_if_necessary(os.path.join(src_dir, 'msvcp120d.dll'),
+                           os.path.join(debug_dir, 'msvcp120d.dll'))
+    copy_file_if_necessary(os.path.join(src_dir, 'msvcr120.dll'),
+                           os.path.join(release_dir, 'msvcr120.dll'))
+    copy_file_if_necessary(os.path.join(src_dir, 'msvcp120.dll'),
+                           os.path.join(release_dir, 'msvcp120.dll'))
   return ret
   
 if __name__ == '__main__':
