@@ -1,4 +1,5 @@
 #include "dpe/dpe.h"
+#include "dpe_base/dpe_base.h"
 #include "dpe/zserver.h"
 #include "dpe/remote_node_impl.h"
 #include "dpe/dpe_master_node.h"
@@ -142,6 +143,7 @@ void start_dpe(int argc, char* argv[])
   myIP = get_iface_address();
   serverIP = myIP;
 
+  int loggingLevel = 1;
   for (int i = 1; i < argc;)
   {
     const std::string str = removePrefix(argv[i], '-');
@@ -151,8 +153,13 @@ void start_dpe(int argc, char* argv[])
       type = argv[i+1];
       i += 2;
     }
-    else if (str == "s") {
+    else if (str == "s")
+    {
       serverIP = argv[i+1];
+      i += 2;
+    }
+    else if (str == "l") {
+      loggingLevel = atoi(argv[i+1]);
       i += 2;
     }
     else
@@ -161,7 +168,7 @@ void start_dpe(int argc, char* argv[])
     }
   }
 
-  base::dpe_base_main(run);
+  base::dpe_base_main(run, NULL, loggingLevel);
   
   stopNetwork();
 }

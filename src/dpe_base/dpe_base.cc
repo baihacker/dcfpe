@@ -26,9 +26,12 @@ static MessageCenter* msg_center_impl = NULL;
 static ZMQServer* zmq_server_impl = NULL;
 static ZMQClient* zmq_client_impl = NULL;
 
-int32_t dpe_base_main(void (*logic_main)(), base::MessagePumpDispatcher* dispatcher)
+int32_t dpe_base_main(void (*logic_main)(),
+  base::MessagePumpDispatcher* dispatcher,
+  int loggingLevel)
 {
   {
+    logging::SetMinLogLevel(loggingLevel);
     auto x = logging::LoggingSettings();
     x.logging_dest = logging::LOG_TO_SYSTEM_DEBUG_LOG;
     logging::BaseInitLoggingImpl(x);

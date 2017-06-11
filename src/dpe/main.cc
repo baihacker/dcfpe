@@ -111,7 +111,7 @@ public:
     {
       int ans = 0;
       for (auto& t : taskData) ans += t.result;
-      std::cerr << "ans = " << ans << std::endl;
+      std::cerr << std::endl << "ans = " << ans << std::endl << std::endl;
     }
   }
 
