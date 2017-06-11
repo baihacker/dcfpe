@@ -21,6 +21,7 @@ class DPE_BASE_EXPORT AddressHelper
 public:
   // address management
   static std::string MakeZMQTCPAddress(uint32_t ip, int32_t port);
+  static std::string MakeZMQTCPAddress(const std::string& ip, int32_t port);
   static int32_t     GetNextAvailablePort();
   static int32_t     GetProcessIP();
   static int32_t     GetCtrlIP();

@@ -32,6 +32,7 @@ static const char* g_browser_thread_names[ThreadPool::ID_COUNT] = {
   "DPE_ProcessLauncherThread",  // PROCESS_LAUNCHER
   "DPE_CacheThread",  // CACHE
   "DPE_IOThread",  // IO
+  "DPE_ComputeThread",  // COMPUTE
 };
 
 // An implementation of MessageLoopProxy to be used in conjunction
@@ -219,6 +220,12 @@ NOINLINE void ThreadPoolImpl::IOThreadRun(base::MessageLoop* message_loop) {
   CHECK_GT(line_number, 0);
 }
 
+NOINLINE void ThreadPoolImpl::ComputeThreadRun(base::MessageLoop* message_loop) {
+  volatile int line_number = __LINE__;
+  Thread::Run(message_loop);
+  CHECK_GT(line_number, 0);
+}
+
 MSVC_POP_WARNING()
 MSVC_ENABLE_OPTIMIZE();
 
@@ -251,6 +258,8 @@ void ThreadPoolImpl::Run(base::MessageLoop* message_loop) {
       return CacheThreadRun(message_loop);
     case ThreadPool::IO:
       return IOThreadRun(message_loop);
+    case ThreadPool::COMPUTE:
+      return ComputeThreadRun(message_loop);
     case ThreadPool::ID_COUNT:
       CHECK(false);  // This shouldn't actually be reached!
       break;
@@ -558,6 +567,7 @@ static scoped_ptr<ThreadPoolImpl> file_thread_;
 static scoped_ptr<ThreadPoolImpl> process_launcher_thread_;
 static scoped_ptr<ThreadPoolImpl> cache_thread_;
 static scoped_ptr<ThreadPoolImpl> io_thread_;
+static scoped_ptr<ThreadPoolImpl> compute_thread_;
 
 void ThreadPool::InitializeThreadPool()
 {
@@ -602,6 +612,10 @@ void ThreadPool::InitializeThreadPool()
       case ThreadPool::IO:
         thread_to_start = &io_thread_;
         options = &io_message_loop_options;
+        break;
+      case ThreadPool::COMPUTE:
+        thread_to_start = &compute_thread_;
+        options = &ui_message_loop_options;
         break;
       case ThreadPool::UI:
       case ThreadPool::ID_COUNT:
@@ -657,6 +671,10 @@ void ThreadPool::DeinitializeThreadPool()
         break;
       case ThreadPool::IO: {
           io_thread_.reset();
+        }
+        break;
+      case ThreadPool::COMPUTE: {
+          compute_thread_.reset();
         }
         break;
       case ThreadPool::UI:

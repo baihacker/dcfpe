@@ -45,6 +45,7 @@ class DPE_BASE_EXPORT ThreadPool {
     PROCESS_LAUNCHER,
     CACHE,
     IO,
+    COMPUTE,
     ID_COUNT
   };
 

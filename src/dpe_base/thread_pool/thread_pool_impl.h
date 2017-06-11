@@ -46,6 +46,7 @@ class ThreadPoolImpl : public ThreadPool,
   void ProcessLauncherThreadRun(base::MessageLoop* message_loop);
   void CacheThreadRun(base::MessageLoop* message_loop);
   void IOThreadRun(base::MessageLoop* message_loop);
+  void ComputeThreadRun(base::MessageLoop* message_loop);
 
   static bool PostTaskHelper(
       ThreadPool::ID identifier,

@@ -18,6 +18,13 @@ std::string AddressHelper::MakeZMQTCPAddress(uint32_t ip, int32_t port)
   return address;
 }
 
+std::string AddressHelper::MakeZMQTCPAddress(const std::string& ip, int32_t port)
+{
+  char address[64];
+  sprintf(address, "tcp://%s:%d", ip.c_str(), port);
+  return address;
+}
+
 std::string AddressHelper::FormatAddress(uint32_t ip, int32_t port)
 {
   char address[64];

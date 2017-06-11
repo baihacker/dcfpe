@@ -1,0 +1,1 @@
+ninja -C output\Release

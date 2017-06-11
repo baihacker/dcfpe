@@ -9,12 +9,15 @@ namespace base
 
 static void will_quit()
 {
+  LOG(INFO) << "will_quit";
   DCHECK_CURRENTLY_ON(base::ThreadPool::UI);
+  LOG(INFO) << base::MessageLoop::current();
   base::MessageLoop::current()->Quit();
 }
 
 void quit_main_loop()
 {
+  LOG(INFO) << "quit_main_loop";
   base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
     base::Bind(will_quit));
 }
@@ -29,7 +32,7 @@ int32_t dpe_base_main(void (*logic_main)(), base::MessagePumpDispatcher* dispatc
     auto x = logging::LoggingSettings();
     x.logging_dest = logging::LOG_TO_SYSTEM_DEBUG_LOG;
     logging::BaseInitLoggingImpl(x);
-    LOG(INFO) << "dpe base main running";
+    LOG(INFO) << "Dpe base main";
   }
   LOG(INFO) << "InitializeThreadPool";
   base::ThreadPool::InitializeThreadPool();

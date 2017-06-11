@@ -3,6 +3,6 @@
    "dpe_state_checksum": "8f527c10928069aea37d0141112258b4",
    "name": "square_sum",
    "sink": "sink.cpp",
-   "source": "source.py",
+   "source": "source.cpp",
    "worker": "worker.cpp"
 }
