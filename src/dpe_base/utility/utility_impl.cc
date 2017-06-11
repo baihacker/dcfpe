@@ -258,7 +258,7 @@ struct StrictDictionaryImpl : public DPESingleInterfaceObjectRoot<IStrictDiction
     {
       return 0;
     }
-    return map_impl_.count(key);
+    return static_cast<int>(map_impl_.count(key));
   }
 private:
   std::unordered_map<std::wstring, std::wstring>  map_impl_;
@@ -302,7 +302,7 @@ struct NonStrictDictionaryImpl : public DPESingleInterfaceObjectRoot<IDictionary
     {
       return 0;
     }
-    return map_impl_.count(transform(key));
+    return static_cast<int>(map_impl_.count(transform(key)));
   }
 private:
   std::wstring transform(const wchar_t* key)

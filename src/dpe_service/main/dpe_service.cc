@@ -332,7 +332,7 @@ void DPEService::StopImpl()
     }
     dlg_ = NULL;
   }
-  const int n = server_list_.size();
+  const int n = static_cast<int>(server_list_.size());
   for (int i = n - 1; i >= 0; --i)
   {
     server_list_[i]->Stop();
@@ -355,7 +355,7 @@ void DPEService::StopImpl()
 
 void DPEService::test_action()
 {
-  const int n = server_list_.size();
+  const int n = static_cast<int>(server_list_.size());
   for (int i = n - 1; i >= 0; --i)
   {
     server_list_[i]->Advertise();
@@ -442,7 +442,7 @@ void  DPEService::SaveConfig()
   std::string ret;
   if (base::JSONWriter::WriteWithOptions(&kv, base::JSONWriter::OPTIONS_PRETTY_PRINT, &ret))
   {
-    base::WriteFile(config_path_, ret.c_str(), ret.size());
+    base::WriteFile(config_path_, ret.c_str(), static_cast<int>(ret.size()));
   }
 }
 
@@ -471,7 +471,7 @@ ParseStringList(base::ListValue* val)
 {
   std::vector<std::string> ret;
 
-  const int n = val->GetSize();
+  const int n = static_cast<int>(val->GetSize());
 
   for (int i = 0; i < n; ++i)
   {
@@ -509,7 +509,7 @@ static std::vector<LanguageDetail>
 ParseLanguageDetail(base::ListValue* val)
 {
   std::vector<LanguageDetail> ret;
-  const int n = val->GetSize();
+  const int n = static_cast<int>(val->GetSize());
   for (int i = 0; i < n; ++i)
   {
     base::DictionaryValue* dv = NULL;
@@ -561,7 +561,7 @@ void DPEService::LoadCompilers(const base::FilePath& file)
   base::ListValue* lv = NULL;
   if (!root->GetAsList(&lv)) return;
 
-  const int n = lv->GetSize();
+  const int n = static_cast<int>(lv->GetSize());
   for (int i = 0; i < n; ++i)
   {
     base::DictionaryValue* dv = NULL;
@@ -713,7 +713,7 @@ void  DPEService::HandleMulticast(uint32_t network, uint32_t ip, int32_t port, c
   std::vector<std::string> lines;
   Tokenize(data, "\r\n", &lines);
 
-  const int n = lines.size();
+  const int n = static_cast<int>(lines.size());
 
   std::string action;
   std::string pa;
@@ -723,7 +723,7 @@ void  DPEService::HandleMulticast(uint32_t network, uint32_t ip, int32_t port, c
   {
     std::string& str = lines[i];
 
-    const int len  = str.size();
+    const int len  = static_cast<int>(str.size());
     int pos = 0;
     while (pos < len && str[pos] != ':') ++pos;
 

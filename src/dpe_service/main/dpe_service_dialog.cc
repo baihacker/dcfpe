@@ -80,7 +80,7 @@ void  CDPEServiceDlg::OnServerListUpdated()
   auto& mgr = dpe_->GetNodeManager();
   auto& nl = mgr.NodeList();
   
-  const int n = nl.size();
+  const int n = static_cast<int>(nl.size());
   const int old_cnt = m_ServerListCtrl.GetItemCount();
   
   int selected_server_id = -1;

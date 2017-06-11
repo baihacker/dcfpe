@@ -33,7 +33,7 @@ void RemoteNodeImpl::connectTo(const std::string& remoteAddress)
   zmqClient->SendRequest(
     remoteAddress,
     val.c_str(),
-    val.size(),
+    static_cast<int>(val.size()),
     base::Bind(&RemoteNodeImpl::handleConnect, weakptr_factory_.GetWeakPtr()),
     0);
 }
@@ -81,7 +81,7 @@ void RemoteNodeImpl::disconnect()
   zmqClient->SendRequest(
     remoteAddress,
     val.c_str(),
-    val.size(),
+    static_cast<int>(val.size()),
     base::Bind(&RemoteNodeImpl::handleDisconnect, weakptr_factory_.GetWeakPtr()),
     0);
 }
@@ -104,7 +104,7 @@ int RemoteNodeImpl::sendRequest(base::DictionaryValue* req, base::ZMQCallBack ca
   zmqClient->SendRequest(
     remoteAddress,
     val.c_str(),
-    val.size(),
+    static_cast<int>(val.size()),
     base::Bind(&RemoteNodeImpl::handleResponse, weakptr_factory_.GetWeakPtr(), callback),
     0);
   

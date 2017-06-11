@@ -33,7 +33,7 @@ bool  ZServerClient::CreateDPEDevice(base::ZMQCallBack callback)
   
   zc->SendRequest(
       server_address_,
-      request.c_str(), request.size(),
+      request.c_str(), static_cast<int>(request.size()),
       callback,
       20*1000
     );
@@ -62,7 +62,7 @@ bool  ZServerClient::SayHello(base::ZMQCallBack callback)
 
   zc->SendRequest(
       server_address_,
-      request.c_str(), request.size(),
+      request.c_str(), static_cast<int>(request.size()),
       callback,
       20*1000
     );

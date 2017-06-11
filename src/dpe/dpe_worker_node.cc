@@ -8,6 +8,7 @@ TaskExecuter::TaskExecuter() : weakptr_factory_(this)
 
 void TaskExecuter::start()
 {
+  worker->start();
 }
 
 void TaskExecuter::setWorker(Worker* worker)

@@ -143,7 +143,7 @@ bool ZServer::Multicast(const std::string& text)
   destAddr4->sin_addr.S_un.S_addr = htonl(base::AddressHelper::GetSSDPIP());
   destAddr4->sin_port = htons(base::AddressHelper::GetSSDPPort());
   
-  sendto(advertise_socket, text.c_str(), text.length(), 0, (struct sockaddr *)destAddr4, sizeof(struct sockaddr_in));
+  sendto(advertise_socket, text.c_str(), static_cast<int>(text.length()), 0, (struct sockaddr *)destAddr4, sizeof(struct sockaddr_in));
   
   shutdown(advertise_socket, SD_BOTH);
   return true;

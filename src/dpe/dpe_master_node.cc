@@ -38,7 +38,7 @@ int DPEMasterNode::handleConnectRequest(const std::string& address)
 
 int DPEMasterNode::handleDisconnectRequest(const std::string& address)
 {
-  const int size = remoteNodes.size();
+  const int size = static_cast<int>(remoteNodes.size());
   int idx = -1;
   for (int i = 0; i < size; ++i)
   {
@@ -96,7 +96,7 @@ int DPEMasterNode::handleRequest(base::DictionaryValue* req, base::DictionaryVal
   
 void DPEMasterNode::removeNode(int id)
 {
-  const int size = remoteNodes.size();
+  const int size = static_cast<int>(remoteNodes.size());
   int idx = -1;
   for (int i = 0; i < size; ++i)
   {

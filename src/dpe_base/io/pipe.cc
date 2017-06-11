@@ -155,7 +155,7 @@ bool PipeServer::Read()
   BOOL fSuccess = ReadFile(
                pipe_handle_,
                (char*)read_buffer_.c_str(),
-               read_buffer_.size(),
+               static_cast<int>(read_buffer_.size()),
                (DWORD*)&read_size_,
                &overlap_);
 

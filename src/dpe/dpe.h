@@ -1,7 +1,7 @@
 #ifndef DPE_DEP_H_
 #define DPE_DEP_H_
 
-#include "dpe_base/dpe_base.h"
+#include <string>
 
 namespace dpe
 {
@@ -49,8 +49,7 @@ Master* getMaster();
 Worker* getWorker();
 
 // Implemented by lib
-void start_dpe(const std::string& type, const std::string& myAddress,
-  const std::string& serverAddress);
+void start_dpe(int argc, char* argv[]);
 }
 
 #endif

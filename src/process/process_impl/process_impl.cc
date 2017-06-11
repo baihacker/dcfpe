@@ -272,7 +272,7 @@ Process::CurrentEnvironmentVariable() const
   
   for (wchar_t* i = v; *i; ++i)
   {
-    int32_t len = wcslen(i);
+    int32_t len = static_cast<int>(wcslen(i));
     int eq = 0;
     while (eq < len && i[eq] != '=') ++eq;
     if (eq < len)
@@ -425,7 +425,7 @@ unsigned  Process::Run()
       else
       {
         auto& s = pio->ReadBuffer();
-        int32_t len = pio->ReadSize();
+        int32_t len = static_cast<int>(pio->ReadSize());
         
         if (CompKey == kStdOutCompleteKey)
         {

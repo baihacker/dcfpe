@@ -15,14 +15,14 @@ bool  DPEProjectState::AddInputData(const std::string& input_data)
   std::vector<std::string> input_lines;
   Tokenize(input_data, "\r\n", &input_lines);
 
-  const int n = input_lines.size();
+  const int n = static_cast<int>(input_lines.size());
   std::vector<DPETask>(n).swap(task_data_);
 
   for (int32_t i = 0; i < n; ++i)
   {
     std::string& str = input_lines[i];
 
-    const int len  = str.size();
+    const int len  = static_cast<int>(str.size());
     int pos = 0;
     while (pos < len && str[pos] != ':') ++pos;
 
@@ -45,7 +45,7 @@ bool  DPEProjectState::MakeTaskQueue(std::queue<std::pair<int64_t, int32_t> >& t
 {
   std::queue<std::pair<int64_t, int32_t> >().swap(task_queue);
 
-  const int n = task_data_.size();
+  const int n = static_cast<int>(task_data_.size());
   for (int32_t i = 0; i < n; ++i)
   {
     if (task_data_[i].state_ == TASK_STATE_PENDING)
@@ -58,7 +58,7 @@ bool  DPEProjectState::MakeTaskQueue(std::queue<std::pair<int64_t, int32_t> >& t
 
 DPEProjectState::DPETask*  DPEProjectState::GetTask(int64_t id, int32_t idx)
 {
-  const int n = task_data_.size();
+  const int n = static_cast<int>(task_data_.size());
   if (idx < 0 || idx >= n)
   {
     auto where = id2idx_.find(id);
@@ -106,13 +106,13 @@ bool  DPEProject::LoadSavedState(DPEProjectState* state)
   std::vector<std::string> lines;
   Tokenize(data, "\r\n", &lines);
 
-  const int n = lines.size();
+  const int n = static_cast<int>(lines.size());
 
   for (int32_t i = 0; i < n; ++i)
   {
     std::string& str = lines[i];
 
-    const int len  = str.size();
+    const int len  = static_cast<int>(str.size());
     int pos = 0;
     while (pos < len && str[pos] != ':') ++pos;
 
@@ -170,8 +170,8 @@ bool  DPEProject::SaveProject(DPEProjectState* state)
   base::ReplaceFile(job_file_path_, project_backup_path, &err);
   base::ReplaceFile(dpe_state_path_, project_state_backup_path, &err);
 
-  base::WriteFile(job_file_path_, project_data.c_str(), project_data.size());
-  base::WriteFile(dpe_state_path_, state_data.c_str(), state_data.size());
+  base::WriteFile(job_file_path_, project_data.c_str(), static_cast<int>(project_data.size()));
+  base::WriteFile(dpe_state_path_, state_data.c_str(), static_cast<int>(state_data.size()));
 
   return true;
 }

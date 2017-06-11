@@ -234,7 +234,7 @@ bool ZMQServer::StopServer(RequestHandler* handler)
   if (handler == NULL) return false;
   {
     std::lock_guard<std::mutex> lock(context_mutex_);
-    const int n = context_.size();
+    const int n = static_cast<int>(context_.size());
     for (auto iter = context_.begin(); iter != context_.end();)
     {
       if (iter->handler_ == handler)

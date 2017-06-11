@@ -2,6 +2,7 @@
 #define DPE_REMOTE_NODE_IMPL_H_
 
 #include "dpe/dpe.h"
+#include "dpe_base/dpe_base.h"
 
 namespace dpe
 {

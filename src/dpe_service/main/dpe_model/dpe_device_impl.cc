@@ -240,7 +240,7 @@ void DPEDeviceImpl::HandleHeartBeatMessage(const std::string& smsg, base::Dictio
     rep.SetString("error_code", "0");
     base::JSONWriter::Write(&rep, &msg);
     auto mc = base::zmq_message_center();
-    mc->SendMessage(send_channel_, msg.c_str(), msg.size());
+    mc->SendMessage(send_channel_, msg.c_str(), static_cast<int>(msg.size()));
   }
 }
 
@@ -256,7 +256,7 @@ void DPEDeviceImpl::HandleInitJobMessage(const std::string& smsg, base::Dictiona
     rep.SetString("error_code", "-1");
     base::JSONWriter::Write(&rep, &msg);
     auto mc = base::zmq_message_center();
-    mc->SendMessage(send_channel_, msg.c_str(), msg.size());
+    mc->SendMessage(send_channel_, msg.c_str(), static_cast<int>(msg.size()));
     device_state_ = state;
   };
 
@@ -294,7 +294,7 @@ void DPEDeviceImpl::HandleInitJobMessage(const std::string& smsg, base::Dictiona
   worker_path_ = job_home_path_.Append(base::SysUTF8ToWide(worker_name));
 
   base::CreateDirectory(job_home_path_);
-  base::WriteFile(worker_path_, data.c_str(), data.size());
+  base::WriteFile(worker_path_, data.c_str(), static_cast<int>(data.size()));
 
   language_ = ProgrammeLanguage::FromUTF8(language);
   compiler_type_ = base::SysUTF8ToWide(compiler_type);
@@ -338,7 +338,7 @@ void DPEDeviceImpl::HandleInitJobMessage(const std::string& smsg, base::Dictiona
     device_state_ = DPE_DEVICE_RUNNING_IDLE;
     base::JSONWriter::Write(&rep, &msg);
     auto mc = base::zmq_message_center();
-    mc->SendMessage(send_channel_, msg.c_str(), msg.size());
+    mc->SendMessage(send_channel_, msg.c_str(), static_cast<int>(msg.size()));
     return;
   }
 
@@ -349,7 +349,7 @@ void DPEDeviceImpl::HandleInitJobMessage(const std::string& smsg, base::Dictiona
     return;
   }
 
-  base::WriteFile(job_desc_path, smsg.c_str(), smsg.size());
+  base::WriteFile(job_desc_path, smsg.c_str(), static_cast<int>(smsg.size()));
 
   device_state_ = DPE_DEVICE_INITIALIZING;
 }
@@ -367,7 +367,7 @@ void DPEDeviceImpl::HandleDoTaskMessage(const std::string& smsg, base::Dictionar
     rep.SetString("error_code", "-1");
     base::JSONWriter::Write(&rep, &msg);
     auto mc = base::zmq_message_center();
-    mc->SendMessage(send_channel_, msg.c_str(), msg.size());
+    mc->SendMessage(send_channel_, msg.c_str(), static_cast<int>(msg.size()));
     device_state_ = state;
   };
 
@@ -402,7 +402,7 @@ void DPEDeviceImpl::HandleDoTaskMessage(const std::string& smsg, base::Dictionar
 
   auto context = worker_process_->GetProcessContext();
 
-  context->std_in_write_->Write(data.c_str(), data.size());
+  context->std_in_write_->Write(data.c_str(), static_cast<int>(data.size()));
 
   task_id_ = task_id;
   device_state_ = DPE_DEVICE_RUNNING;
@@ -451,7 +451,7 @@ void  DPEDeviceImpl::OnCompileFinished(CompileJob* job)
 
   base::JSONWriter::Write(&rep, &msg);
   auto mc = base::zmq_message_center();
-  mc->SendMessage(send_channel_, msg.c_str(), msg.size());
+  mc->SendMessage(send_channel_, msg.c_str(), static_cast<int>(msg.size()));
 }
 
 void DPEDeviceImpl::OnStop(process::Process* p, process::ProcessContext* context)
@@ -479,7 +479,7 @@ void DPEDeviceImpl::OnStop(process::Process* p, process::ProcessContext* context
 
   base::JSONWriter::Write(&rep, &msg);
   auto mc = base::zmq_message_center();
-  mc->SendMessage(send_channel_, msg.c_str(), msg.size());
+  mc->SendMessage(send_channel_, msg.c_str(), static_cast<int>(msg.size()));
 }
 
 void DPEDeviceImpl::OnOutput(process::Process* p, bool is_std_out, const std::string& data)

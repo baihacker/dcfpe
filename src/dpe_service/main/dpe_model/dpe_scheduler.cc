@@ -196,7 +196,7 @@ bool  RemoteDPEDevice::Stop()
 
     base::JSONWriter::Write(&req, &msg);
     auto mc = base::zmq_message_center();
-    mc->SendMessage(send_channel_, msg.c_str(), msg.size());
+    mc->SendMessage(send_channel_, msg.c_str(), static_cast<int>(msg.size()));
   }
 
   auto mc = base::zmq_message_center();
@@ -285,7 +285,7 @@ void RemoteDPEDevice::TrySendInitJobMessageImpl(const std::string& job_name, con
   }
 
   auto mc = base::zmq_message_center();
-  auto ret = mc->SendMessage(send_channel_, msg.c_str(), msg.size());
+  auto ret = mc->SendMessage(send_channel_, msg.c_str(), static_cast<int>(msg.size()));
 }
 
 void  RemoteDPEDevice::OnRepeatedActionFinish(base::RepeatedAction* ra)
@@ -327,7 +327,7 @@ bool RemoteDPEDevice::DoTask(int64_t task_id, int32_t task_idx, const std::strin
   }
 
   auto mc = base::zmq_message_center();
-  mc->SendMessage(send_channel_, msg.c_str(), msg.size());
+  mc->SendMessage(send_channel_, msg.c_str(), static_cast<int>(msg.size()));
 
   curr_task_id_ = base::StringPrintf("%I64d", task_id);
   curr_task_idx_ = task_idx;
@@ -390,7 +390,7 @@ void RemoteDPEDevice::CheckHeartBeatImpl()
     has_reply_ = false;
 
     auto mc = base::zmq_message_center();
-    mc->SendMessage(send_channel_, msg.c_str(), msg.size());
+    mc->SendMessage(send_channel_, msg.c_str(), static_cast<int>(msg.size()));
 
     ScheduleCheckHeartBeat(10*1000);
   }
@@ -862,9 +862,9 @@ void DPEScheduler::OnStop(process::Process* p, process::ProcessContext* context)
     base::WriteFile(output_temp_file_path_, "", 0);
     std::string().swap(output_data_);
     {
-      std::string data = base::StringPrintf("%d\n", project_state_->TaskData().size());
+      std::string data = base::StringPrintf("%d\n", static_cast<int>(project_state_->TaskData().size()));
       auto po = sink_process_->GetProcessContext();
-      po->std_in_write_->Write(data.c_str(), data.size());
+      po->std_in_write_->Write(data.c_str(), static_cast<int>(data.size()));
       po->std_in_write_->WaitForPendingIO(-1);
       LOG(INFO) << "DPEScheduler : sink process ready";
     }
@@ -885,7 +885,7 @@ void DPEScheduler::OnStop(process::Process* p, process::ProcessContext* context)
       host_->OnRunningError();
       return;
     }
-    base::WriteFile(output_file_path_, output_data_.c_str(), output_data_.size());
+    base::WriteFile(output_file_path_, output_data_.c_str(), static_cast<int>(output_data_.size()));
     dpe_project_->SaveProject(project_state_);
     host_->OnRunningSuccess();
   }
@@ -901,7 +901,7 @@ void DPEScheduler::OnOutput(process::Process* p, bool is_std_out, const std::str
   else if (p == sink_process_)
   {
     output_data_.append(data.begin(), data.end());
-    base::AppendToFile(output_temp_file_path_, data.c_str(), data.size());
+    base::AppendToFile(output_temp_file_path_, data.c_str(), static_cast<int>(data.size()));
   }
 }
 
@@ -932,7 +932,7 @@ void DPEScheduler::ReduceResultImpl()
   for (auto& it : project_state_->TaskData())
   {
     auto data = it.result_ + "\n";
-    context->std_in_write_->Write(data.c_str(), data.size());
+    context->std_in_write_->Write(data.c_str(), static_cast<int>(data.size()));
     context->std_in_write_->WaitForPendingIO(-1);
   }
   LOG(INFO) << "Finish reduce result";

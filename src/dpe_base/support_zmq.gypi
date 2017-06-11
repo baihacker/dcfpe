@@ -10,15 +10,16 @@
           'include_dirs': [
             '<(DEPTH)\\third_party\\zmq\\include',
           ],
-          'msvs_settings': {
-            'VCLinkerTool': {
-              'AdditionalLibraryDirectories': [
-                '<(DEPTH)\\third_party\\zmq\\lib'
-                ],
-            },
-          },
           'configurations': {
-            
+            'Debug_Base': {
+              'msvs_settings': {
+                'VCLinkerTool': {
+                  'AdditionalDependencies': [
+                    '<(zmq_debug_lib)',
+                  ],
+                },
+              },
+            },
             'Release_Base': {
               'msvs_settings': {
                 'VCLinkerTool': {
@@ -28,12 +29,20 @@
                 },
               },
             },
-            
-            'Debug_Base': {
+            'x86_Base': {
               'msvs_settings': {
                 'VCLinkerTool': {
-                  'AdditionalDependencies': [
-                    '<(zmq_debug_lib)',
+                'AdditionalLibraryDirectories': [
+                  '<(DEPTH)\\third_party\\zmq\\lib'
+                  ],
+                },
+              },
+            },
+            'x64_Base': {
+              'msvs_settings': {
+                'VCLinkerTool': {
+                'AdditionalLibraryDirectories': [
+                  '<(DEPTH)\\third_party\\zmq\\lib_x64'
                   ],
                 },
               },

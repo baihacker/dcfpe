@@ -2,13 +2,9 @@
 
 #include <iostream>
 
-#include <windows.h>
-#include <winsock2.h>
-#include <Shlobj.h>
-#pragma comment(lib, "ws2_32")
-
 namespace dpe
 {
+typedef long long int64;
 struct TaskData
 {
   enum TaskStatus
@@ -61,7 +57,7 @@ public:
   void onNodeUnavailable(int id)
   {
     int idx = -1;
-    const int size = nodes.size();
+    const int size = static_cast<int>(nodes.size());
     for (int i = 0; i < size; ++i)
     {
       if (nodes[i].node->getId() == id)
@@ -115,8 +111,7 @@ public:
     {
       int ans = 0;
       for (auto& t : taskData) ans += t.result;
-      LOG(INFO) << "ans = " << ans;
-      base::quit_main_loop();
+      std::cerr << "ans = " << ans << std::endl;
     }
   }
 
@@ -202,84 +197,8 @@ Worker* getWorker()
 }
 }
 
-static inline std::string get_iface_address()
-{
-  char hostname[128];
-  char localHost[128][32]={{0}};
-  struct hostent* temp;
-  gethostname(hostname, 128);
-  temp = gethostbyname( hostname );
-  for(int i=0 ; temp->h_addr_list[i] != NULL && i < 1; ++i)
-  {
-    strcpy(localHost[i], inet_ntoa(*(struct in_addr *)temp->h_addr_list[i]));
-  }
-  return localHost[0];
-}
-
-void startNetwork()
-{
-  WSADATA wsaData;
-  WORD sockVersion = MAKEWORD(2, 2);
-  if (::WSAStartup(sockVersion, &wsaData) != 0)
-  {
-     std::cerr << "Cannot initialize wsa" << std::endl;
-     exit(-1);
-  }
-}
-
-void stopNetwork()
-{
-  ::WSACleanup();
-}
-
-std::string removePrefix(const std::string& s, char c)
-{
-  const int l = s.length();
-  int i = 0;
-  while (i < l && s[i] == c) ++i;
-  return s.substr(i);
-}
-
-std::string type = "server";
-std::string myAddress;
-std::string serverAddress;
-
-void run()
-{
-  LOG(INFO) << "running";
-  LOG(INFO) << "type = " << type;
-  LOG(INFO) << "myAddress = " << myAddress;
-  LOG(INFO) << "serverAddress = " << serverAddress;
-  
-  dpe::start_dpe(type, myAddress, serverAddress);
-}
-
 int main(int argc, char* argv[])
 {
-  startNetwork();
-  myAddress = get_iface_address();
-  serverAddress = get_iface_address();
-  for (int i = 1; i < argc;)
-  {
-    const std::string str = removePrefix(argv[i], '-');
-
-    if (str == "t")
-    {
-      type = argv[i+1];
-      i += 2;
-    }
-    else if (str == "s") {
-      serverAddress = argv[i+1];
-      i += 2;
-    }
-    else
-    {
-      ++i;
-    }
-  }
-  
-  base::dpe_base_main(run);
-
-  stopNetwork();
+  dpe::start_dpe(argc, argv);
   return 0;
 }

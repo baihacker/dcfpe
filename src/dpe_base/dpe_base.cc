@@ -91,8 +91,8 @@ namespace base
 {
 bool StringEqualCaseInsensitive(const std::wstring& x, const std::wstring& y)
 {
-  const int n = x.size();
-  const int m = y.size();
+  const int n = static_cast<int>(x.size());
+  const int m = static_cast<int>(y.size());
   if (n != m) return false;
   for (int i = 0; i < n; ++i)
   if (tolower(x[i]) != tolower(y[i]))
@@ -101,8 +101,8 @@ bool StringEqualCaseInsensitive(const std::wstring& x, const std::wstring& y)
 }
 bool StringEqualCaseInsensitive(const std::string& x, const std::string& y)
 {
-  const int n = x.size();
-  const int m = y.size();
+  const int n = static_cast<int>(x.size());
+  const int m = static_cast<int>(y.size());
   if (n != m) return false;
   for (int i = 0; i < n; ++i)
   if (tolower(x[i]) != tolower(y[i]))
@@ -226,6 +226,7 @@ static std::string HardDriverIDImpl(int32_t driver_id)
 
 static std::string GetCPUID()
 {
+#if 0
   std::string CPUID;
   unsigned long s1,s2;
   unsigned char vendor_id[]="------------";
@@ -274,6 +275,8 @@ static std::string GetCPUID()
       break;
   }
   return CPUID1+CPUID2;
+#endif
+  return "";
 }
 
 std::string PhysicalAddress()
