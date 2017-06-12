@@ -5,37 +5,23 @@ Distributed Computation Framework for Project Euler
 
 It is a tool to make computer compute together.
 
+Jun 12, 2017
 
-Brief Component List:
+Overview:
 ====================
 
-Host:
-* Discover workers from LAN.
-* Discover workers from server. 
-* Add workers manual.
-* Comunnicate with Worker
-* Maintain the H process and R process.
-* Maintain the worker list. (View Workers, Network Quality, Worker ability(memory limit, process count limitation), Worker status(Memory usage, CPU usage, process count))
-* Distribute task effectively, and manage them. Reliable.
-* Receive tasks from H process and distribute them to W process. (H process -> Host -> Worker -> W process)
-* Receive result from W process and send them to R process. (W process -> Worker -> Host -> R process)
+MasterNode:
+* Receives connection from workers. (duplex communication connection).
+* Uses a MasterTaskScheduler to maintain a task queue, schedule task to workers, handle request/connection error. SimpleMasterTaskScheduler uses a very simple strategy to schedule tasks.
+* MasterTaskScheduler uses a Solver to initialize the tasks (just holds the id of task), and tell the solver when a task is finished or all the tasks are completed.
 
-Worker:
-* Announce it is joining or leaving the LAN.
-* Register it on the server.
-* Communicate with Host.
-* Maintain the W process.
-* Receive tasks from Worker and pass them to W process.
-* Receive result from W process and send them to Host.
+WorkerNode:
+* Connects to MasterNode.
+* Uses WorkerTaskExecuter to execute task. WorkerTaskExecuter will dispatch task to correct thread anc call the corresponding compute method provide by Solver.
 
-H process:
-* Generate tasks and send to Host
-
-W process:
-* Compute and send result to Worker
-
-R process:
-* Receive results from Host and combine them.
+How to use:
+* Provides a lib, dll, .h and the client code can link to it.
+* Support x86 and x64. (Seems it doesn't work for x64 in Release mode but it works in x64 Debug).
 
 Other:
 ======
@@ -44,12 +30,11 @@ Other:
 * Basic network libary: ZMQ
 * Worker will protect the W process. (sandbox)
 * Trust mechanism between Host and Worker. (It is possible that the worker will receive a virus from Host).
-* I do not when to release the first version because I am very lazy.
 
 Development Environment:
 ========================
 ## windows
-* win7 64
+* win7 64 or above
 * python 2.7
 * vs2013 or above (or win_toolchain 2013e in chromium)
 * [win_toolchain_2013e download] (http://yun.baidu.com/share/link?shareid=2799405881&uk=2684621311)
@@ -80,3 +65,4 @@ Updated:
 * 2014.09.22 Upload gyp (basic project management tool) and chromium/base (basic code, especially the thread model).
 * 2014.10.21 23:43:16 Compute the square of [1..10] by dpe model. 8225 lines, 213248 Bytes.
 * 2015.05.18 17:17:24 Compute the square of [1..100] by dpe model on two computers. 5011+5465+927=11403 lines, 131459+147496+25257=304212 Bytes.
+* 2017.06.11 A new compute framework called dpe. 1633 lines code. Compute 0^2 + 1^2 + 2^2 + ... + 9^2 = 285 in distributed environment.
