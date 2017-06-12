@@ -15,7 +15,7 @@ public:
   virtual ~RepeatedActionHost(){}
 };
 
-class RepeatedAction : public base::RefCounted<RepeatedAction>
+class DPE_BASE_EXPORT RepeatedAction : public base::RefCounted<RepeatedAction>
 {
 public:
   RepeatedAction(RepeatedActionHost* host);

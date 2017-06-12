@@ -3,6 +3,31 @@
 
 #include <string>
 #include <deque>
+#if defined(COMPONENT_BUILD)
+#if defined(WIN32)
+
+#if defined(DPE_IMPLEMENTATION)
+#define DPE_EXPORT __declspec(dllexport)
+#define DPE_EXPORT_PRIVATE __declspec(dllexport)
+#else
+#define DPE_EXPORT __declspec(dllimport)
+#define DPE_EXPORT_PRIVATE __declspec(dllimport)
+#endif  // defined(BASE_IMPLEMENTATION)
+
+#else  // defined(WIN32)
+#if defined(DPE_IMPLEMENTATION)
+#define DPE_EXPORT __attribute__((visibility("default")))
+#define DPE_EXPORT_PRIVATE __attribute__((visibility("default")))
+#else
+#define DPE_EXPORT
+#define DPE_EXPORT_PRIVATE
+#endif  // defined(BASE_IMPLEMENTATION)
+#endif
+
+#else  // defined(COMPONENT_BUILD)
+#define DPE_EXPORT
+#define DPE_EXPORT_PRIVATE
+#endif
 
 namespace dpe
 {
@@ -16,11 +41,10 @@ public:
   virtual void finish() = 0;
 };
 
-// Impleted by client
-Solver* getSolver();
-
-// Implemented by lib
-void start_dpe(int argc, char* argv[]);
 }
 
+// Implemented by lib
+//extern "C" {
+DPE_EXPORT void start_dpe(dpe::Solver* solver, int argc, char* argv[]);
+//}
 #endif

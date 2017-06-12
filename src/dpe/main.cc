@@ -1,6 +1,8 @@
-#include "dpe/dpe.h"
+#include "dpe.h"
 
 #include <iostream>
+#include <vector>
+
 #include <windows.h>
 
 namespace dpe
@@ -77,17 +79,12 @@ public:
 private:
   std::vector<TaskData> taskData;
 };
-
-SolverImpl impl;
-Solver* getSolver()
-{
-  return &impl;
 }
 
-}
+dpe::SolverImpl impl;
 
 int main(int argc, char* argv[])
 {
-  dpe::start_dpe(argc, argv);
+  start_dpe(&impl, argc, argv);
   return 0;
 }

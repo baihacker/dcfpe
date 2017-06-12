@@ -56,6 +56,7 @@ std::string type = "server";
 std::string myIP;
 std::string serverIP;
 int port = 0;
+Solver* solver;
 
 void run()
 {
@@ -80,9 +81,13 @@ void run()
     base::quit_main_loop();
   }
 }
-
-void start_dpe(int argc, char* argv[])
+Solver* getSolver()
 {
+  return solver;
+}
+void start_dpe_impl(Solver* solver, int argc, char* argv[])
+{
+  dpe::solver = solver;
   startNetwork();
 
   type = "server";
@@ -123,3 +128,10 @@ void start_dpe(int argc, char* argv[])
   stopNetwork();
 }
 }
+
+//extern "C" {
+DPE_EXPORT void start_dpe(dpe::Solver* solver, int argc, char* argv[])
+{
+  dpe::start_dpe_impl(solver, argc, argv);
+}
+//}

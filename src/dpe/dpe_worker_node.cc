@@ -4,6 +4,8 @@
 
 namespace dpe
 {
+Solver* getSolver();
+
 WorkerTaskExecuter::WorkerTaskExecuter() : weakptr_factory_(this)
 {
 }

@@ -40,12 +40,15 @@ int32_t dpe_base_main(void (*logic_main)(),
   LOG(INFO) << "InitializeThreadPool";
   base::ThreadPool::InitializeThreadPool();
   
+  LOG(INFO) << "MessageCenter";
   msg_center_impl = new MessageCenter();
   msg_center_impl->Start();
   
+  LOG(INFO) << "ZMQServer";
   zmq_server_impl = new ZMQServer();
   zmq_server_impl->Start();
   
+  LOG(INFO) << "ZMQClient";
   zmq_client_impl = new ZMQClient();
   zmq_client_impl->Start();
   

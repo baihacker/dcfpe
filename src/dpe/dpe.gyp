@@ -39,6 +39,37 @@
   'targets':[
     {
       'target_name': 'dpe',
+      'type': 'shared_library',
+      'variables': {
+        'use_zmq': 1,
+      },
+      'defines': [
+          'DPE_IMPLEMENTATION',
+        ],
+      'sources':[
+          'dpe.h',
+          'lib.cc',
+          'zserver.h',
+          'zserver.cc',
+          'remote_node_impl.h',
+          'remote_node_impl.cc',
+          'dpe_node_base.h',
+          'dpe_master_node.h',
+          'dpe_master_node.cc',
+          'dpe_worker_node.h',
+          'dpe_worker_node.cc',
+          'compute_model.h',
+          'compute_model.cc',
+          'dpe_export.def',
+        ],
+      'dependencies':[
+          '<(DEPTH)/dpe_base/dpe_base.gyp:dpe_base',
+          '<(DEPTH)/third_party/chromium/base/base.gyp:base',
+          '<(DEPTH)/process/process.gyp:process',
+        ],
+    },
+    {
+      'target_name': 'dpec',
       'type': '<(component)',
       'variables': {
         'use_zmq': 1,
@@ -60,6 +91,7 @@
           'dpe_worker_node.cc',
           'compute_model.h',
           'compute_model.cc',
+          'dpe_export.def',
         ],
       'dependencies':[
           '<(DEPTH)/dpe_base/dpe_base.gyp:dpe_base',
@@ -79,8 +111,8 @@
         ],
       'dependencies':[
           '<(DEPTH)/dpe_base/dpe_base.gyp:dpe_base',
-          '<(DEPTH)/third_party/chromium/base/base.gyp:base',
           '<(DEPTH)/dpe/dpe.gyp:dpe',
+          '<(DEPTH)/third_party/chromium/base/base.gyp:base',
         ],
     },
   ]

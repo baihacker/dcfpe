@@ -4,6 +4,7 @@
 
 namespace dpe
 {
+extern Solver* getSolver();
 class RepeatedActionrapperImpl : public RepeatedActionWrapper,
   public base::RepeatedActionHost
 {

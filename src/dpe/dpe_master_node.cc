@@ -9,6 +9,14 @@ DPEMasterNode::DPEMasterNode(
   {
     
   }
+DPEMasterNode::~DPEMasterNode()
+{
+  if (scheduler)
+  {
+    delete scheduler;
+    scheduler = NULL;
+  }
+}
 
 bool DPEMasterNode::Start(int port)
 {

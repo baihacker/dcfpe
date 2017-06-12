@@ -13,6 +13,7 @@ class DPEMasterNode :
 public:
   DPEMasterNode(
     const std::string& myIP, const std::string& serverIP);
+  ~DPEMasterNode();
 
   bool Start(int port);
   

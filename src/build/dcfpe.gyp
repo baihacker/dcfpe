@@ -15,7 +15,7 @@
         #'<(DEPTH)\\dpe_service\\dpe_service.gyp:base_test',
         #'<(DEPTH)\\dpe_service\\dpe_service.gyp:publisher',
         #'<(DEPTH)\\dpe_service\\dpe_service.gyp:subscriber',
-        '<(DEPTH)\\dpe\\dpe.gyp:dpe',
+        #'<(DEPTH)\\dpe\\dpe.gyp:dpe',
         '<(DEPTH)\\dpe\\dpe.gyp:main',
         ],
     }
