@@ -5,6 +5,7 @@
 #include "dpe/zserver.h"
 #include "dpe/remote_node_impl.h"
 #include "dpe/dpe_node_base.h"
+#include "dpe/compute_model.h"
 
 namespace dpe
 {
@@ -16,7 +17,7 @@ public:
   DPEMasterNode(
     const std::string& myIP, const std::string& serverIP);
 
-  bool Start();
+  bool Start(int port);
   
   int handleConnectRequest(const std::string& address);
 
@@ -28,7 +29,8 @@ public:
   
   void removeNode(int id);
 private:
-  Master* master;
+  MasterTaskScheduler* scheduler;
+  int port;
   std::vector<RemoteNodeImpl*> remoteNodes;
     base::WeakPtrFactory<DPEMasterNode>                 weakptr_factory_;
 };

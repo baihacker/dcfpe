@@ -30,7 +30,7 @@ public:
     }
   }
 
-  virtual bool Start() = 0;
+  virtual bool Start(int port) = 0;
   virtual int handleConnectRequest(const std::string& address) = 0;
   virtual int handleDisconnectRequest(const std::string& address) = 0;
   virtual int onConnectionFinished(RemoteNodeImpl* node, bool ok) = 0;

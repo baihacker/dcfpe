@@ -6,6 +6,16 @@
 
 namespace dpe
 {
+class RemoteNodeController
+{
+public:
+  virtual void addRef() = 0;
+  virtual void release() = 0;
+  virtual void removeNode() = 0;
+  virtual int getId() const = 0;
+  virtual int addTask(int taskId, const std::string& data, std::function<void (int, bool, const std::string&)> callback) = 0;
+  virtual int finishTask(int taskId, const std::string& result) = 0;
+};
 class RemoteNodeImpl;
 struct RemoteNodeHandler
 {

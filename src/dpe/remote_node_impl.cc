@@ -95,8 +95,9 @@ void  RemoteNodeImpl::handleDisconnect(base::WeakPtr<RemoteNodeImpl> self,
 int RemoteNodeImpl::sendRequest(base::DictionaryValue* req, base::ZMQCallBack callback)
 {
   int requestId = ++nextRequestId;
-  req->SetString("connection_id", base::StringPrintf("%d", connectionId));
+  req->SetString("connection_id", base::StringPrintf("%d", remoteConnectionId));
   req->SetString("request_id", base::StringPrintf("%d", requestId));
+  req->SetString("request_time", base::StringPrintf("%lld", base::Time::Now().ToInternalValue()));
   
   std::string val;
   base::JSONWriter::Write(req, &val);

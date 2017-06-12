@@ -23,6 +23,7 @@ public:
   {
     ++refCount;
   }
+
   void release()
   {
     if (--refCount == 0)
@@ -30,6 +31,7 @@ public:
       delete this;
     }
   }
+
   void start(std::function<void ()> action, int delay, int period)
   {
     repeatedAction = new base::RepeatedAction(this);
@@ -37,13 +39,12 @@ public:
       base::Bind(&RepeatedActionrapperImpl::doAction, action),
       base::TimeDelta::FromSeconds(delay),
       base::TimeDelta::FromSeconds(period),
-      -1
-      );
+      -1);
   }
 
   static void doAction(std::function<void ()> action)
   {
-    //action();
+    action();
   }
   void OnRepeatedActionFinish(base::RepeatedAction* ra)
   {
@@ -54,6 +55,7 @@ public:
     if (repeatedAction)
     {
       repeatedAction->Stop();
+      repeatedAction = NULL;
     }
   }
 private:
@@ -110,6 +112,7 @@ scoped_refptr<DPEWorkerNode> dpeWorkerNode;
 std::string type = "server";
 std::string myIP;
 std::string serverIP;
+int port = 0;
 
 void run()
 {
@@ -121,12 +124,12 @@ void run()
   if (type == "server")
   {
     dpeMasterNode = new DPEMasterNode(myIP, serverIP);
-    dpeMasterNode->Start();
+    dpeMasterNode->Start(port == 0 ? kServerPort : port);
   }
   else if (type == "worker")
   {
     dpeWorkerNode = new DPEWorkerNode(myIP, serverIP);
-    dpeWorkerNode->Start();
+    dpeWorkerNode->Start(port == 0 ? kWorkerPort : port);
   }
   else
   {
@@ -160,6 +163,10 @@ void start_dpe(int argc, char* argv[])
     }
     else if (str == "l") {
       loggingLevel = atoi(argv[i+1]);
+      i += 2;
+    }
+    else if (str == "p") {
+      port = atoi(argv[i+1]);
       i += 2;
     }
     else

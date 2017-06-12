@@ -58,6 +58,8 @@
           'dpe_master_node.cc',
           'dpe_worker_node.h',
           'dpe_worker_node.cc',
+          'compute_model.h',
+          'compute_model.cc',
         ],
       'dependencies':[
           '<(DEPTH)/dpe_base/dpe_base.gyp:dpe_base',

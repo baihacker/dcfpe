@@ -8,23 +8,21 @@
 
 namespace dpe
 {
-class TaskExecuter
+class WorkerTaskExecuter
 {
 public:
-  TaskExecuter();
+  WorkerTaskExecuter();
 
   void start();
-  void setWorker(Worker* worker);
   void setMasterNode(RemoteNodeController* node);
   void handleCompute(base::DictionaryValue* req);
   
-  static void doCompute(base::WeakPtr<TaskExecuter> self, Worker* worker, int taskId);
-  static void finishCompute(base::WeakPtr<TaskExecuter> self, int taskId, const std::string& result);
+  static void doCompute(base::WeakPtr<WorkerTaskExecuter> self, int taskId);
+  static void finishCompute(base::WeakPtr<WorkerTaskExecuter> self, int taskId, const std::string& result);
   void finishComputeImpl(int taskId, const std::string& result);
 private:
-  Worker* worker;
   RemoteNodeController* node;
-  base::WeakPtrFactory<TaskExecuter> weakptr_factory_;
+  base::WeakPtrFactory<WorkerTaskExecuter> weakptr_factory_;
 };
 
 class DPEWorkerNode:
@@ -34,7 +32,7 @@ class DPEWorkerNode:
 public:
   DPEWorkerNode(const std::string& myIP, const std::string& serverIP);
 
-  bool Start();
+  bool Start(int port);
   
   int handleConnectRequest(const std::string& address);
 
@@ -46,8 +44,9 @@ public:
   
   void removeNode(int id);
 private:
-  TaskExecuter taskExecuter;
+  WorkerTaskExecuter taskExecuter;
   RemoteNodeImpl* remoteNode;
+  int port;
   base::WeakPtrFactory<DPEWorkerNode>                 weakptr_factory_;
 };
 }

@@ -2,24 +2,21 @@
 
 namespace dpe
 {
-TaskExecuter::TaskExecuter() : weakptr_factory_(this)
+WorkerTaskExecuter::WorkerTaskExecuter() : weakptr_factory_(this)
 {
 }
 
-void TaskExecuter::start()
+void WorkerTaskExecuter::start()
 {
-  worker->start();
+  getSolver()->initAsWorker();
 }
 
-void TaskExecuter::setWorker(Worker* worker)
-{
-  this->worker = worker;
-}
-void TaskExecuter::setMasterNode(RemoteNodeController* node)
+void WorkerTaskExecuter::setMasterNode(RemoteNodeController* node)
 {
   this->node = node;
 }
-void TaskExecuter::handleCompute(base::DictionaryValue* req)
+
+void WorkerTaskExecuter::handleCompute(base::DictionaryValue* req)
 {
   std::string val;
   req->GetString("task_id", &val);
@@ -27,18 +24,18 @@ void TaskExecuter::handleCompute(base::DictionaryValue* req)
 
   base::ThreadPool::PostTask(base::ThreadPool::COMPUTE,
       FROM_HERE,
-      base::Bind(&TaskExecuter::doCompute, weakptr_factory_.GetWeakPtr(), worker, taskId));
-}
-  
-void TaskExecuter::doCompute(base::WeakPtr<TaskExecuter> self, Worker* worker, int taskId)
-{
-  std::string result = worker->compute(taskId);
-  base::ThreadPool::PostTask(base::ThreadPool::UI,
-      FROM_HERE,
-      base::Bind(&TaskExecuter::finishCompute, self, taskId, result));
+      base::Bind(&WorkerTaskExecuter::doCompute, weakptr_factory_.GetWeakPtr(), taskId));
 }
 
-void TaskExecuter::finishCompute(base::WeakPtr<TaskExecuter> self, int taskId, const std::string& result)
+void WorkerTaskExecuter::doCompute(base::WeakPtr<WorkerTaskExecuter> self, int taskId)
+{
+  std::string result = getSolver()->compute(taskId);
+  base::ThreadPool::PostTask(base::ThreadPool::UI,
+      FROM_HERE,
+      base::Bind(&WorkerTaskExecuter::finishCompute, self, taskId, result));
+}
+
+void WorkerTaskExecuter::finishCompute(base::WeakPtr<WorkerTaskExecuter> self, int taskId, const std::string& result)
 {
   if (auto* pThis = self.get())
   {
@@ -46,26 +43,33 @@ void TaskExecuter::finishCompute(base::WeakPtr<TaskExecuter> self, int taskId, c
   }
 }
 
-void TaskExecuter::finishComputeImpl(int taskId, const std::string& result)
+void WorkerTaskExecuter::finishComputeImpl(int taskId, const std::string& result)
 {
   node->finishTask(taskId, result);
 }
 
 DPEWorkerNode::DPEWorkerNode(const std::string& myIP, const std::string& serverIP): 
-  DPENodeBase(myIP, serverIP), weakptr_factory_(this)
+  DPENodeBase(myIP, serverIP), port(kWorkerPort), weakptr_factory_(this)
 {
   
 }
 
-bool DPEWorkerNode::Start()
+bool DPEWorkerNode::Start(int port)
 {
+  this->port = port;
   zserver = new ZServer(this);
-  if (!zserver->Start(myIP, kWorkerPort))
+  if (!zserver->Start(myIP, port))
   {
     zserver = NULL;
+    LOG(WARNING) << "Cannot start worker node.";
+    LOG(WARNING) << "ip = " << myIP;
+    LOG(WARNING) << "port = " << port;
     return false;
   }
-  taskExecuter.setWorker(getWorker());
+  else
+  {
+    LOG(INFO) << "Zserver starts at: " << zserver->GetServerAddress();
+  }
   taskExecuter.start();
   remoteNode = new RemoteNodeImpl(
     this,
@@ -130,4 +134,5 @@ int DPEWorkerNode::handleRequest(base::DictionaryValue* req, base::DictionaryVal
 void DPEWorkerNode::removeNode(int id)
 {
 }
+
 }

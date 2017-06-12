@@ -71,9 +71,9 @@ std::string ZServer::handle_request(base::ServerContext& context)
   
   base::DictionaryValue rep;
   rep.SetString("type", "reply");
-  rep.SetString("action", "reply");
+  rep.SetString("action", "unknown");
   rep.SetString("error_code", "-1");
-  base::AddPaAndTs(&rep);
+  rep.SetString("reply_time", base::StringPrintf("%lld", base::Time::Now().ToInternalValue()));
 
   base::Value* v = base::JSONReader::Read(
           context.data_.c_str(), base::JSON_ALLOW_TRAILING_COMMAS);
@@ -104,6 +104,11 @@ std::string ZServer::handle_request(base::ServerContext& context)
     if (dv->GetString("request_id", &val))
     {
       rep.SetString("request_id", val);
+    }
+
+    if (dv->GetString("request_time", &val))
+    {
+      rep.SetString("request_time", val);
     }
 
     if (!dv->GetString("action", &val)) break;
