@@ -5,10 +5,11 @@ Distributed Computation Framework for Project Euler
 
 It is a tool to make computer compute together.
 
-Jun 12, 2017
 
 Overview:
 ====================
+
+Updated Jun 12, 2017, [history version](https://github.com/baihacker/dcfpe/blob/master/docs/design_diary.txt).
 
 MasterNode:
 * Receives connection from workers. (duplex communication connection).
