@@ -63,11 +63,11 @@ public:
     taskData[taskId].result = atoi(result.c_str());
   }
 
-  std::string compute(int taskId)
+  void compute(int taskId, std::string& result)
   {
     char buff[256];
     sprintf(buff, "%d", taskId*taskId);
-    return buff;
+    result = buff;
   }
   
   void finish()

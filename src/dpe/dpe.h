@@ -37,7 +37,7 @@ public:
   virtual void initAsMaster(std::deque<int>& taskQueue) = 0;
   virtual void initAsWorker() = 0;
   virtual void setResult(int taskId, const std::string& result) = 0;
-  virtual std::string compute(int taskId) = 0;
+  virtual void compute(int taskId, std::string& result) = 0;
   virtual void finish() = 0;
 };
 
