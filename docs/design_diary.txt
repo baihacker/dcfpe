@@ -1,4 +1,34 @@
 *******************************************************************************
+Jun 12, 2017
+
+
+Overview:
+====================
+
+Updated Jun 12, 2017, [history version](https://github.com/baihacker/dcfpe/blob/master/docs/design_diary.txt).
+
+MasterNode:
+* Receives connection from workers. (duplex communication connection).
+* Uses a MasterTaskScheduler to maintain a task queue, schedule task to workers, handle request/connection error. SimpleMasterTaskScheduler uses a very simple strategy to schedule tasks.
+* MasterTaskScheduler uses a Solver to initialize the tasks (just holds the id of task), and tell the solver when a task is finished or all the tasks are completed.
+
+WorkerNode:
+* Connects to MasterNode.
+* Uses WorkerTaskExecuter to execute task. WorkerTaskExecuter will dispatch task to correct thread anc call the corresponding compute method provide by Solver.
+
+How to use:
+* Provides a lib, dll, .h and the client code can link to it.
+* Support x86 and x64. (Seems it doesn't work for x64 in Release mode but it works in x64 Debug).
+
+Other:
+======
+
+* Main language is C++11. It is possible to use python, lua, php, javascript.
+* Basic network libary: ZMQ
+* Worker will protect the W process. (sandbox)
+* Trust mechanism between Host and Worker. (It is possible that the worker will receive a virus from Host).
+
+*******************************************************************************
 Oct 16, 2014
 
 Changes and new ideas:
