@@ -1,9 +1,4 @@
 #include "dpe/dpe.h"
-#include "dpe_base/dpe_base.h"
-#include "dpe/zserver.h"
-#include "dpe/remote_node_impl.h"
-#include "dpe/dpe_master_node.h"
-#include "dpe/dpe_worker_node.h"
 
 #include <iostream>
 
@@ -12,63 +7,11 @@
 #include <Shlobj.h>
 #pragma comment(lib, "ws2_32")
 
+#include "dpe/dpe_master_node.h"
+#include "dpe/dpe_worker_node.h"
+
 namespace dpe
 {
-class RepeatedActionrapperImpl : public RepeatedActionWrapper,
-  public base::RepeatedActionHost
-{
-public:
-  RepeatedActionrapperImpl() : refCount(0), weakptr_factory_(this) {}
-  void addRef()
-  {
-    ++refCount;
-  }
-
-  void release()
-  {
-    if (--refCount == 0)
-    {
-      delete this;
-    }
-  }
-
-  void start(std::function<void ()> action, int delay, int period)
-  {
-    repeatedAction = new base::RepeatedAction(this);
-    repeatedAction->Start(
-      base::Bind(&RepeatedActionrapperImpl::doAction, action),
-      base::TimeDelta::FromSeconds(delay),
-      base::TimeDelta::FromSeconds(period),
-      -1);
-  }
-
-  static void doAction(std::function<void ()> action)
-  {
-    action();
-  }
-  void OnRepeatedActionFinish(base::RepeatedAction* ra)
-  {
-    
-  }
-  void stop()
-  {
-    if (repeatedAction)
-    {
-      repeatedAction->Stop();
-      repeatedAction = NULL;
-    }
-  }
-private:
-  int refCount;
-  scoped_refptr<base::RepeatedAction> repeatedAction;
-  base::WeakPtrFactory<RepeatedActionrapperImpl> weakptr_factory_;
-};
-
-RepeatedActionWrapper* createRepeatedActionWrapper()
-{
-  return new RepeatedActionrapperImpl();
-}
-
 static inline std::string get_iface_address()
 {
   char hostname[128];
@@ -176,7 +119,7 @@ void start_dpe(int argc, char* argv[])
   }
 
   base::dpe_base_main(run, NULL, loggingLevel);
-  
+
   stopNetwork();
 }
 }

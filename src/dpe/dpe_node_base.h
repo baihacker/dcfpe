@@ -1,9 +1,9 @@
 #ifndef DPE_DPE_NODE_BASE_H_
 #define DPE_DPE_NODE_BASE_H_
 
-#include "dpe/dpe.h"
 #include "dpe_base/dpe_base.h"
 #include "dpe/zserver.h"
+#include "dpe/remote_node_impl.h"
 
 namespace dpe
 {

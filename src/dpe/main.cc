@@ -77,11 +77,13 @@ public:
 private:
   std::vector<TaskData> taskData;
 };
+
 SolverImpl impl;
 Solver* getSolver()
 {
   return &impl;
 }
+
 }
 
 int main(int argc, char* argv[])

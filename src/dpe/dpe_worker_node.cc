@@ -1,5 +1,7 @@
 #include "dpe/dpe_worker_node.h"
 
+#include "dpe/dpe.h"
+
 namespace dpe
 {
 WorkerTaskExecuter::WorkerTaskExecuter() : weakptr_factory_(this)

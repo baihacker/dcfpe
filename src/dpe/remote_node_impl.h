@@ -1,22 +1,13 @@
 #ifndef DPE_REMOTE_NODE_IMPL_H_
 #define DPE_REMOTE_NODE_IMPL_H_
 
-#include "dpe/dpe.h"
 #include "dpe_base/dpe_base.h"
 
 namespace dpe
 {
-class RemoteNodeController
-{
-public:
-  virtual void addRef() = 0;
-  virtual void release() = 0;
-  virtual void removeNode() = 0;
-  virtual int getId() const = 0;
-  virtual int addTask(int taskId, const std::string& data, std::function<void (int, bool, const std::string&)> callback) = 0;
-  virtual int finishTask(int taskId, const std::string& result) = 0;
-};
 class RemoteNodeImpl;
+class DPENodeBase;
+
 struct RemoteNodeHandler
 {
   virtual int onConnectionFinished(RemoteNodeImpl* node, bool ok) = 0;
@@ -65,7 +56,17 @@ private:
   base::WeakPtrFactory<RemoteNodeImpl>                 weakptr_factory_;
 };
 
-class DPENodeBase;
+class RemoteNodeController
+{
+public:
+  virtual void addRef() = 0;
+  virtual void release() = 0;
+  virtual void removeNode() = 0;
+  virtual int getId() const = 0;
+  virtual int addTask(int taskId, const std::string& data, std::function<void (int, bool, const std::string&)> callback) = 0;
+  virtual int finishTask(int taskId, const std::string& result) = 0;
+};
+
 class RemoteNodeControllerImpl : public RemoteNodeController
 {
 public:

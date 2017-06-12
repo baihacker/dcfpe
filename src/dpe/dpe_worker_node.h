@@ -1,9 +1,6 @@
 #ifndef DPE_WORKER_NODE_H_
 #define DPE_WORKER_NODE_H_
 
-#include "dpe/dpe.h"
-#include "dpe/zserver.h"
-#include "dpe/remote_node_impl.h"
 #include "dpe/dpe_node_base.h"
 
 namespace dpe

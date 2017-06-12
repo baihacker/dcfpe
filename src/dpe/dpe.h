@@ -1,7 +1,8 @@
-#ifndef DPE_DEP_H_
-#define DPE_DEP_H_
+#ifndef DPE_DPE_H_
+#define DPE_DPE_H_
 
 #include <string>
+#include <deque>
 
 namespace dpe
 {
@@ -15,7 +16,9 @@ public:
   virtual void finish() = 0;
 };
 
+// Impleted by client
 Solver* getSolver();
+
 // Implemented by lib
 void start_dpe(int argc, char* argv[]);
 }

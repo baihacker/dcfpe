@@ -1,15 +1,10 @@
 #ifndef DPE_COMPUTE_MODEL_H_
 #define DPE_COMPUTE_MODEL_H_
 
-#include "dpe/dpe.h"
 #include "dpe/remote_node_impl.h"
-
-#include <iostream>
-#include <windows.h>
 
 namespace dpe
 {
-
 class RepeatedActionWrapper
 {
 public:
@@ -18,8 +13,6 @@ public:
   virtual void start(std::function<void ()> action, int delay, int period) = 0;
   virtual void stop() = 0;
 };
-
-RepeatedActionWrapper* createRepeatedActionWrapper();
 
 class MasterTaskScheduler
 {
