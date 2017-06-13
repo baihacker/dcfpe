@@ -68,9 +68,25 @@ SimpleMasterTaskScheduler::~SimpleMasterTaskScheduler()
   }
 }
 
+class TaskAppenderImpl : public TaskAppender
+{
+public:
+  TaskAppenderImpl(std::deque<int>& taskQueue): taskQueue(taskQueue)
+  {
+  }
+
+  void addTask(int taskId)
+  {
+    taskQueue.push_back(taskId);
+  }
+private:
+  std::deque<int>& taskQueue;
+};
+
 void SimpleMasterTaskScheduler::start()
 {
-  getSolver()->initAsMaster(taskQueue);
+  TaskAppenderImpl appender(taskQueue);
+  getSolver()->initAsMaster(&appender);
   raw = new RepeatedActionrapperImpl();
   raw->addRef();
   raw->start([=](){refreshStatusImpl();}, 0, 10);
@@ -182,7 +198,7 @@ void SimpleMasterTaskScheduler::handleFinishCompute(int taskId, bool ok, const s
   {
     if (ctx.status == NodeContext::COMPUTING_TASK && ctx.taskId == taskId)
     {
-      getSolver()->setResult(taskId, result);
+      getSolver()->setResult(taskId, result.c_str());
       ctx.status = NodeContext::READY;
       ctx.taskId = -1;
     }

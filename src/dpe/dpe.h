@@ -1,8 +1,6 @@
 #ifndef DPE_DPE_H_
 #define DPE_DPE_H_
 
-#include <string>
-#include <deque>
 #if defined(COMPONENT_BUILD)
 #if defined(WIN32)
 
@@ -29,22 +27,23 @@
 #define DPE_EXPORT_PRIVATE
 #endif
 
-namespace dpe
+class TaskAppender
 {
+public:
+  virtual void addTask(int taskId) = 0;
+};
+
 class Solver
 {
 public:
-  virtual void initAsMaster(std::deque<int>& taskQueue) = 0;
+  virtual void initAsMaster(TaskAppender* taskAppender) = 0;
   virtual void initAsWorker() = 0;
-  virtual void setResult(int taskId, const std::string& result) = 0;
-  virtual void compute(int taskId, std::string& result) = 0;
+  virtual void setResult(int taskId, const char* result) = 0;
+  // The result buffer is always 1024 bytes.
+  virtual void compute(int taskId, char* result) = 0;
   virtual void finish() = 0;
 };
 
-}
+DPE_EXPORT void start_dpe(Solver* solver, int argc, char* argv[]);
 
-// Implemented by lib
-//extern "C" {
-DPE_EXPORT void start_dpe(dpe::Solver* solver, int argc, char* argv[]);
-//}
 #endif

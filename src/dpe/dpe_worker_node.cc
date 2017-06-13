@@ -33,8 +33,10 @@ void WorkerTaskExecuter::handleCompute(base::DictionaryValue* req)
 
 void WorkerTaskExecuter::doCompute(base::WeakPtr<WorkerTaskExecuter> self, int taskId)
 {
-  std::string result;
-  getSolver()->compute(taskId, result);
+  char buff[1024];
+  getSolver()->compute(taskId, buff);
+  std::string result = buff;
+
   base::ThreadPool::PostTask(base::ThreadPool::UI,
       FROM_HERE,
       base::Bind(&WorkerTaskExecuter::finishCompute, self, taskId, result));

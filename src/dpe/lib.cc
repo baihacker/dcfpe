@@ -26,7 +26,7 @@ static inline std::string get_iface_address()
   return localHost[0];
 }
 
-void startNetwork()
+static inline void startNetwork()
 {
   WSADATA wsaData;
   WORD sockVersion = MAKEWORD(2, 2);
@@ -37,12 +37,12 @@ void startNetwork()
   }
 }
 
-void stopNetwork()
+static inline void stopNetwork()
 {
   ::WSACleanup();
 }
 
-std::string removePrefix(const std::string& s, char c)
+static inline std::string removePrefix(const std::string& s, char c)
 {
   const int l = static_cast<int>(s.length());
   int i = 0;
@@ -58,7 +58,7 @@ std::string serverIP;
 int port = 0;
 Solver* solver;
 
-void run()
+static inline void run()
 {
   LOG(INFO) << "running";
   LOG(INFO) << "type = " << type;
@@ -68,12 +68,12 @@ void run()
   if (type == "server")
   {
     dpeMasterNode = new DPEMasterNode(myIP, serverIP);
-    dpeMasterNode->Start(port == 0 ? kServerPort : port);
+    dpeMasterNode->Start(port == 0 ? dpe::kServerPort : port);
   }
   else if (type == "worker")
   {
     dpeWorkerNode = new DPEWorkerNode(myIP, serverIP);
-    dpeWorkerNode->Start(port == 0 ? kWorkerPort : port);
+    dpeWorkerNode->Start(port == 0 ? dpe::kWorkerPort : port);
   }
   else
   {
@@ -81,13 +81,18 @@ void run()
     base::quit_main_loop();
   }
 }
+
 Solver* getSolver()
 {
   return solver;
 }
-void start_dpe_impl(Solver* solver, int argc, char* argv[])
+}
+
+using namespace dpe;
+
+DPE_EXPORT void start_dpe(Solver* solver, int argc, char* argv[])
 {
-  dpe::solver = solver;
+  ::solver = solver;
   startNetwork();
 
   type = "server";
@@ -127,11 +132,3 @@ void start_dpe_impl(Solver* solver, int argc, char* argv[])
 
   stopNetwork();
 }
-}
-
-//extern "C" {
-DPE_EXPORT void start_dpe(dpe::Solver* solver, int argc, char* argv[])
-{
-  dpe::start_dpe_impl(solver, argc, argv);
-}
-//}

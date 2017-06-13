@@ -5,8 +5,14 @@
 
 #include <windows.h>
 
-namespace dpe
+typedef void (*DPEStartEntryType)(Solver* solver, int argc, char* argv[]);
+
+DPEStartEntryType getEntry()
 {
+  HINSTANCE hDLL = LoadLibraryA("dpe.dll");
+  return (DPEStartEntryType)GetProcAddress(hDLL, "start_dpe");
+}
+
 typedef long long int64;
 struct TaskData
 {
@@ -33,7 +39,7 @@ public:
   {
   }
 
-  void initAsMaster(std::deque<int>& taskQueue)
+  void initAsMaster(TaskAppender* taskAppender)
   {
     for (int i = 0; i < 10; ++i)
     {
@@ -42,7 +48,7 @@ public:
       item.id = i;
       item.result = 0;
       taskData.push_back(item);
-      taskQueue.push_back(i);
+      taskAppender->addTask(i);
     }
   }
 
@@ -58,16 +64,14 @@ public:
     }
   }
 
-  void setResult(int taskId, const std::string& result)
+  void setResult(int taskId, const char* result)
   {
-    taskData[taskId].result = atoi(result.c_str());
+    taskData[taskId].result = atoi(result);
   }
 
-  void compute(int taskId, std::string& result)
+  void compute(int taskId, char* result)
   {
-    char buff[256];
-    sprintf(buff, "%d", taskId*taskId);
-    result = buff;
+    sprintf(result, "%d", taskId*taskId);
   }
   
   void finish()
@@ -79,12 +83,13 @@ public:
 private:
   std::vector<TaskData> taskData;
 };
-}
 
-dpe::SolverImpl impl;
+static SolverImpl impl;
 
 int main(int argc, char* argv[])
 {
-  start_dpe(&impl, argc, argv);
+  //Sleep(5000);
+  //start_dpe(&impl, argc, argv);
+  getEntry()(&impl, argc, argv);
   return 0;
 }
