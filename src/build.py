@@ -14,7 +14,8 @@ def build_dependencies():
   # methods 1 and 2 will produce binary only.
   # so, we need not to build chromium here.
   # os.system(r'python third_party\chromium\build_chromium.py')
-  os.system(r'python third_party/zmq/build_zmq.py')
+  # os.system(r'python third_party/zmq/build_zmq.py')
+  pass
 
 def prepare_path():
   if os.environ['GYP_GENERATORS'] == 'ninja':

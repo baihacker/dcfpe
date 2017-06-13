@@ -8,7 +8,7 @@
 using namespace std;
 struct MessageHandler : public base::MessageHandler
 {
-virtual int32_t handle_message(int32_t handle, const std::string& data)
+virtual int32_t handle_message(void* handle, const std::string& data)
 {
   cerr << "time" << clock() << endl;
   cerr << "begin message" << endl;
@@ -88,8 +88,8 @@ void HelloUI()
         base::Bind(HelloFile));
 
   base::MessageCenter* center = base::zmq_message_center();
-  int32_t p = center->RegisterChannel(base::CHANNEL_TYPE_PUB, "tcp://127.1.1.1:1234", true);
-  int32_t q = center->RegisterChannel(base::CHANNEL_TYPE_SUB, "tcp://127.1.1.1:1234", false);
+  void* p = center->RegisterChannel(base::CHANNEL_TYPE_PUB, "tcp://127.1.1.1:1234", true);
+  void* q = center->RegisterChannel(base::CHANNEL_TYPE_SUB, "tcp://127.1.1.1:1234", false);
 
   Sleep(30);
   for (int i = 0; i < 3; ++i)

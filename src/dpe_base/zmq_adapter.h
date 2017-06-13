@@ -49,13 +49,10 @@ class MessageHandler
 {
 public:
 virtual ~MessageHandler(){};
-virtual int32_t handle_message(int32_t handle, const std::string& data) = 0;
+virtual int32_t handle_message(void* handle, const std::string& data) = 0;
 };
 
-enum
-{
-  INVALID_CHANNEL_ID = -1
-};
+static void*  INVALID_CHANNEL_ID = (void*)-1;
 
 enum
 {
@@ -72,12 +69,12 @@ public:
   bool          AddMessageHandler(MessageHandler* handler);
   bool          RemoveMessageHandler(MessageHandler* handler);
   
-  int32_t       RegisterChannel(int32_t channel_type, const std::string& address, bool is_bind);
-  bool          RemoveChannel(int32_t channel_id);
-  const char*   GetAddressByHandle(int32_t channel_id);
+  void*         RegisterChannel(int32_t channel_type, const std::string& address, bool is_bind);
+  bool          RemoveChannel(void* channel);
+  const char*   GetAddressByHandle(void* channel);
   
   void          SayHello(int32_t times = 3);
-  int32_t       SendMessage(int32_t channel_id, const char* msg, int32_t length);
+  int32_t       SendMessage(void* channel, const char* msg, int32_t length);
   int32_t       WorkerHandle() {return reinterpret_cast<int32_t>(thread_handle_);}
   
   bool          Start();
@@ -93,8 +90,8 @@ private:
   unsigned      Run();
   void          ProcessCtrlMessage();
   void          ProcessEvent(const std::vector<void*>& signal_sockets);
-  static  void  HandleMessage(base::WeakPtr<MessageCenter> center, int32_t socket, const std::string& data);
-  void          HandleMessageImpl(int32_t socket, const std::string& data);
+  static  void  HandleMessage(base::WeakPtr<MessageCenter> center, void* socket, const std::string& data);
+  void          HandleMessageImpl(void* socket, const std::string& data);
 
 private:
   std::vector<MessageHandler*>  handlers_;
@@ -162,7 +159,7 @@ public:
 
 private:
   int32_t       SendCtrlMessage(const char* msg, int32_t length);
-  int32_t       SendMessage(int32_t channel_id, const char* msg, int32_t length);
+  int32_t       SendMessage(void* channel, const char* msg, int32_t length);
 
 private:
   static unsigned __stdcall ThreadMain(void * arg);
@@ -234,7 +231,7 @@ public:
 
 private:
   int32_t       SendCtrlMessage(const char* msg, int32_t length);
-  int32_t       SendMessage(int32_t channel_id, const char* msg, int32_t length);
+  int32_t       SendMessage(void* channel, const char* msg, int32_t length);
 
 private:
   static unsigned __stdcall ThreadMain(void * arg);

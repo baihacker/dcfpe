@@ -110,7 +110,7 @@ bool MessageCenter::RemoveMessageHandler(MessageHandler* handler)
   return true;
 }
 
-int32_t MessageCenter::RegisterChannel(int32_t channel_type, const std::string& address, bool is_bind)
+void* MessageCenter::RegisterChannel(int32_t channel_type, const std::string& address, bool is_bind)
 {
   DCHECK_CURRENTLY_ON(base::ThreadPool::UI);
   
@@ -118,7 +118,7 @@ int32_t MessageCenter::RegisterChannel(int32_t channel_type, const std::string& 
   {
     for (auto& it: publishers_) if (it.second == address)
     {
-      return reinterpret_cast<int32_t>(it.first);
+      return it.first;
     }
     void* publisher = zmq_socket(zmq_context_, ZMQ_PUB);
     if (!publisher) return INVALID_CHANNEL_ID;
@@ -140,7 +140,7 @@ int32_t MessageCenter::RegisterChannel(int32_t channel_type, const std::string& 
     }
     publishers_.push_back({publisher, address});
     socket_address_.push_back({publisher, address});
-    return reinterpret_cast<int32_t>(publisher);
+    return publisher;
   }
   else
   {
@@ -149,7 +149,7 @@ int32_t MessageCenter::RegisterChannel(int32_t channel_type, const std::string& 
       std::lock_guard<std::mutex> lock(subscribers_mutex_);
       for (auto& it: subscribers_) if (it.second == address)
       {
-        return reinterpret_cast<int32_t>(it.first);
+        return it.first;
       }
       
       subscriber = zmq_socket(zmq_context_, ZMQ_SUB);
@@ -186,16 +186,16 @@ int32_t MessageCenter::RegisterChannel(int32_t channel_type, const std::string& 
       int32_t cmd = CMD_HELLO;
       SendCtrlMessage((const char*)&cmd, sizeof(cmd));
     }
-    return reinterpret_cast<int32_t>(subscriber);
+    return subscriber;
   }
 }
 
-bool MessageCenter::RemoveChannel(int32_t channel_id)
+bool MessageCenter::RemoveChannel(void* channel)
 {
   DCHECK_CURRENTLY_ON(base::ThreadPool::UI);
   
   for (auto iter = publishers_.begin(); iter != publishers_.end();)
-  if (reinterpret_cast<int32_t>(iter->first) == channel_id)
+  if (iter->first == channel)
   {
     zmq_close(reinterpret_cast<void*>(iter->first));
     iter = publishers_.erase(iter);
@@ -205,12 +205,13 @@ bool MessageCenter::RemoveChannel(int32_t channel_id)
     ++iter;
   }
 
+  std::vector<void*> willClose;
   subscribers_mutex_.lock();
   
   for (auto iter = subscribers_.begin(); iter != subscribers_.end();)
-  if (reinterpret_cast<int32_t>(iter->first) == channel_id)
+  if (iter->first == channel)
   {
-    zmq_close(reinterpret_cast<void*>(iter->first));
+    willClose.push_back(iter->first);
     iter = subscribers_.erase(iter);
   }
   else
@@ -220,8 +221,15 @@ bool MessageCenter::RemoveChannel(int32_t channel_id)
 
   subscribers_mutex_.unlock();
 
+  SayHello(1);
+  
+  for (auto iter: willClose)
+  {
+    zmq_close(iter);
+  }
+  
   for (auto iter = socket_address_.begin(); iter != socket_address_.end();)
-  if (reinterpret_cast<int32_t>(iter->first) == channel_id)
+  if (iter->first == channel)
   {
     iter = socket_address_.erase(iter);
   }
@@ -233,11 +241,9 @@ bool MessageCenter::RemoveChannel(int32_t channel_id)
   return true;
 }
 
-const char* MessageCenter::GetAddressByHandle(int32_t channel_id)
+const char* MessageCenter::GetAddressByHandle(void* channel)
 {
   DCHECK_CURRENTLY_ON(base::ThreadPool::UI);
-  
-  void* channel = reinterpret_cast<void*>(channel_id);
   
   if (channel == zmq_ctrl_pub_ || channel == zmq_ctrl_pub_)
   {
@@ -267,17 +273,17 @@ void MessageCenter::SayHello(int32_t times)
 
 int32_t MessageCenter::SendCtrlMessage(const char* msg, int32_t length)
 {
-  return SendMessage(reinterpret_cast<int32_t>(zmq_ctrl_pub_), msg, length);
+  return SendMessage(zmq_ctrl_pub_, msg, length);
 }
 
-int32_t MessageCenter::SendMessage(int32_t channel_id, const char* msg, int32_t length)
+int32_t MessageCenter::SendMessage(void* channel, const char* msg, int32_t length)
 {
   DCHECK_CURRENTLY_ON(base::ThreadPool::UI);
   if (status_ != STATUS_RUNNING) return -1;
   
   if (!msg || length <= 0) return -1;
   
-  void* sender = reinterpret_cast<void*>(channel_id);
+  void* sender = channel;
   
   if (sender == zmq_ctrl_pub_)
   {
@@ -507,14 +513,14 @@ void MessageCenter::ProcessEvent(const std::vector<void*>& signal_sockets)
 
       base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
           base::Bind(&MessageCenter::HandleMessage, weakptr_factory_.GetWeakPtr(),
-          reinterpret_cast<int32_t>(it), data));
+          it, data));
     } while (false);
 
     zmq_msg_close(&msg);
   }
 }
 
-void  MessageCenter::HandleMessage(base::WeakPtr<MessageCenter> center, int32_t socket, const std::string& data)
+void  MessageCenter::HandleMessage(base::WeakPtr<MessageCenter> center, void* socket, const std::string& data)
 {
   DCHECK_CURRENTLY_ON(base::ThreadPool::UI);
   
@@ -524,7 +530,7 @@ void  MessageCenter::HandleMessage(base::WeakPtr<MessageCenter> center, int32_t 
   }
 }
 
-void  MessageCenter::HandleMessageImpl(int32_t socket, const std::string& data)
+void  MessageCenter::HandleMessageImpl(void* socket, const std::string& data)
 {
   bool handled = false;
   for (auto it: handlers_)

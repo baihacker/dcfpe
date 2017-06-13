@@ -118,11 +118,11 @@ public:
   void  HandleMulticast(uint32_t network, uint32_t ip, int32_t port, const std::string& data);
   
 private:
-  int32_t handle_message(int32_t handle, const std::string& data) override;
+  int32_t handle_message(void* handle, const std::string& data) override;
 
 private:
   std::string                 ipc_sub_address_;
-  int32_t                     ipc_sub_handle_;
+  void*                       ipc_sub_handle_;
   
   base::FilePath              config_path_;
   std::string                 config_server_address_;

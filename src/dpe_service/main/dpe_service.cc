@@ -762,7 +762,7 @@ void  DPEService::HandleMulticast(uint32_t network, uint32_t ip, int32_t port, c
   }
 }
 
-int32_t DPEService::handle_message(int32_t handle, const std::string& data)
+int32_t DPEService::handle_message(void* handle, const std::string& data)
 {
   if (handle != ipc_sub_handle_) return 0;
 

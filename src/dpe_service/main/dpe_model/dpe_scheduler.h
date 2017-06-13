@@ -93,7 +93,7 @@ private:
   static void CheckHeartBeat(base::WeakPtr<RemoteDPEDevice> dev);
   void        CheckHeartBeatImpl();
 
-  int32_t     handle_message(int32_t handle, const std::string& data) override;
+  int32_t     handle_message(void* handle, const std::string& data) override;
 
 private:
   RemoteDPEDeviceManager*                 host_;
@@ -103,8 +103,8 @@ private:
   std::string                             send_address_;
   std::string                             receive_address_;
 
-  int32_t                                 send_channel_;
-  int32_t                                 receive_channel_;
+  void*                                   send_channel_;
+  void*                                   receive_channel_;
 
   std::string                             curr_task_id_;
   int32_t                                 curr_task_idx_;

@@ -10,6 +10,14 @@
           ],
           'dependencies':[
             ],
+          'defines': [
+            'CRT_SECURE_NO_WARNINGS',
+            '_WINSOCK_DEPRECATED_NO_WARNINGS',
+            'FD_SETSIZE=16384',
+            'WIN32_LEAN_AND_MEAN',
+            'ZMQ_USE_SELECT',
+            'DLL_EXPORT',
+            ],
           'configurations': {
             'Debug_Base': {
               'msvs_settings': {

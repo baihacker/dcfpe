@@ -1,5 +1,5 @@
-#include "third_party/zmq/include/zmq.h"
-#include "third_party/zmq/include/zmq_utils.h"
+#include <zmq.h>
+
 int main()
 {
 	void* context = zmq_ctx_new();

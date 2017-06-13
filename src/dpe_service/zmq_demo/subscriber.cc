@@ -1,5 +1,5 @@
-#include "third_party/zmq/include/zmq.h"
-#include "third_party/zmq/include/zmq_utils.h"
+#include <zmq.h>
+
 #include "dpe_base/chromium_base.h"
 
 int main()
@@ -10,8 +10,8 @@ int main()
 	zmq_setsockopt (recver, ZMQ_SUBSCRIBE, "", 0);
 	for (;;)
 	{
-		char buff[64];
-		int len = zmq_recv(recver, buff, 64, 0);
+		char buff[1024];
+		int len = zmq_recv(recver, buff, 1024, 0);
 		if (len > 0)
 		{
 			puts(buff);

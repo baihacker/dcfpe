@@ -138,17 +138,17 @@ bool ZMQClient::Start()
 
 int32_t ZMQClient::SendCtrlMessage(const char* msg, int32_t length)
 {
-  return SendMessage(reinterpret_cast<int32_t>(zmq_ctrl_pub_), msg, length);
+  return SendMessage(zmq_ctrl_pub_, msg, length);
 }
 
-int32_t ZMQClient::SendMessage(int32_t channel_id, const char* msg, int32_t length)
+int32_t ZMQClient::SendMessage(void* channel, const char* msg, int32_t length)
 {
   DCHECK_CURRENTLY_ON(base::ThreadPool::UI);
   if (status_ != STATUS_RUNNING) return -1;
   
   if (!msg || length <= 0) return -1;
   
-  void* sender = reinterpret_cast<void*>(channel_id);
+  void* sender = channel;
   
   if (sender == zmq_ctrl_pub_)
   {

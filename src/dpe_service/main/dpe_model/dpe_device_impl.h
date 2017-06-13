@@ -38,7 +38,7 @@ private:
   static void   CheckHeartBeat(base::WeakPtr<DPEDeviceImpl> device);
   void          CheckHeartBeatImpl();
   
-  int32_t       handle_message(int32_t handle, const std::string& data) override;
+  int32_t       handle_message(void* handle, const std::string& data) override;
   
   void          HandleHeartBeatMessage(const std::string& smsg, base::DictionaryValue* message);
   void          HandleInitJobMessage(const std::string& smsg, base::DictionaryValue* message);
@@ -54,8 +54,8 @@ private:
 private:
   DPEService*   dpe_;
   int32_t       device_state_;
-  int32_t       receive_channel_;
-  int32_t       send_channel_;
+  void*         receive_channel_;
+  void*         send_channel_;
   std::string   receive_address_;
   std::string   send_address_;
   std::string   session_;

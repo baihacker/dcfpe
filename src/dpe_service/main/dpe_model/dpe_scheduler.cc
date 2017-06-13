@@ -411,7 +411,7 @@ void RemoteDPEDevice::CheckHeartBeatImpl()
   }
 }
 
-int32_t RemoteDPEDevice::handle_message(int32_t handle, const std::string& data)
+int32_t RemoteDPEDevice::handle_message(void* handle, const std::string& data)
 {
   if (handle != receive_channel_) return 0;
 
