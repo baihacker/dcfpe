@@ -2,20 +2,19 @@
   'target_defaults': {
     'variables':{
       'use_zmq' : 0,
-      'zmq_debug_lib%':'libzmq-v120-mt-gd-4_0_4.lib',
-      'zmq_release_lib%':'libzmq-v120-mt-4_0_4.lib',
     },
     'target_conditions': [
       ['use_zmq==1', {
           'include_dirs': [
-            '<(DEPTH)\\third_party\\zmq\\include',
+            '<(DEPTH)/third_party/zeromq_4.2.1/include',
           ],
+          'dependencies':[
+            ],
           'configurations': {
             'Debug_Base': {
               'msvs_settings': {
                 'VCLinkerTool': {
                   'AdditionalDependencies': [
-                    '<(zmq_debug_lib)',
                   ],
                 },
               },
@@ -24,7 +23,6 @@
               'msvs_settings': {
                 'VCLinkerTool': {
                   'AdditionalDependencies': [
-                    '<(zmq_release_lib)',
                   ],
                 },
               },
@@ -33,7 +31,6 @@
               'msvs_settings': {
                 'VCLinkerTool': {
                 'AdditionalLibraryDirectories': [
-                  '<(DEPTH)\\third_party\\zmq\\lib'
                   ],
                 },
               },
@@ -42,7 +39,6 @@
               'msvs_settings': {
                 'VCLinkerTool': {
                 'AdditionalLibraryDirectories': [
-                  '<(DEPTH)\\third_party\\zmq\\lib_x64'
                   ],
                 },
               },
