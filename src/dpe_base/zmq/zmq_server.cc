@@ -4,8 +4,7 @@
 #include <process.h>
 #include "dpe_base/thread_pool.h"
 
-#include "third_party/zmq/include/zmq.h"
-#include "third_party/zmq/include/zmq_utils.h"
+#include <zmq.h>
 
 namespace base
 {
