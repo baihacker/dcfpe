@@ -1,11 +1,10 @@
 #include "dpe/dpe_worker_node.h"
 
 #include "dpe/dpe.h"
+#include "dpe/dpe_internal.h"
 
 namespace dpe
 {
-Solver* getSolver();
-
 WorkerTaskExecuter::WorkerTaskExecuter() : weakptr_factory_(this)
 {
 }
@@ -103,7 +102,7 @@ int DPEWorkerNode::handleDisconnectRequest(const std::string& address)
   {
     delete remoteNode;
     remoteNode = NULL;
-    base::quit_main_loop();
+    willExitDpe();
   }
   return 0;
 }
@@ -114,7 +113,7 @@ int DPEWorkerNode::onConnectionFinished(RemoteNodeImpl* node, bool ok)
   {
     delete remoteNode;
     remoteNode = NULL;
-    base::quit_main_loop();
+    willExitDpe();
   }
   else
   {

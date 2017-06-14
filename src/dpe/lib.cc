@@ -78,8 +78,23 @@ static inline void run()
   else
   {
     LOG(ERROR) << "Unknown type";
-    base::quit_main_loop();
+    base::will_quit_main_loop();
   }
+}
+
+static void exitDpeImpl()
+{
+  LOG(INFO) << "exitDpeImpl";
+  dpeMasterNode = NULL;
+  dpeWorkerNode = NULL;
+  base::will_quit_main_loop();
+}
+
+void willExitDpe()
+{
+  LOG(INFO) << "willExitDpe";
+  base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
+    base::Bind(exitDpeImpl));
 }
 
 Solver* getSolver()

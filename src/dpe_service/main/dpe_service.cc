@@ -350,7 +350,7 @@ void DPEService::StopImpl()
 
   SaveConfig();
 
-  base::quit_main_loop();
+  base::will_quit_main_loop();
 }
 
 void DPEService::test_action()

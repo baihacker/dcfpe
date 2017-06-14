@@ -1,10 +1,10 @@
 #include "dpe/compute_model.h"
 
 #include "dpe/dpe.h"
+#include "dpe/dpe_internal.h"
 
 namespace dpe
 {
-extern Solver* getSolver();
 class RepeatedActionrapperImpl : public RepeatedActionWrapper,
   public base::RepeatedActionHost
 {
@@ -180,6 +180,7 @@ void SimpleMasterTaskScheduler::refreshStatusImpl()
     {
       raw->stop();
     }
+    willExitDpe();
   }
 }
 

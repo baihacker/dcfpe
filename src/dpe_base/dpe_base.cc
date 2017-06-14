@@ -6,20 +6,18 @@
 
 namespace base
 {
-
-static void will_quit()
+static void quit_main_lop()
 {
-  LOG(INFO) << "will_quit";
+  LOG(INFO) << "quit_main_lop";
   DCHECK_CURRENTLY_ON(base::ThreadPool::UI);
-  LOG(INFO) << base::MessageLoop::current();
   base::MessageLoop::current()->Quit();
 }
 
-void quit_main_loop()
+void will_quit_main_loop()
 {
-  LOG(INFO) << "quit_main_loop";
+  LOG(INFO) << "will_quit_main_loop";
   base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
-    base::Bind(will_quit));
+    base::Bind(quit_main_lop));
 }
 
 static MessageCenter* msg_center_impl = NULL;

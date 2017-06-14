@@ -48,6 +48,7 @@
         ],
       'sources':[
           'dpe.h',
+          'dpe_internal.h',
           'lib.cc',
           'zserver.h',
           'zserver.cc',
