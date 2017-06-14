@@ -21,8 +21,8 @@ WorkerNode:
 * Uses WorkerTaskExecuter to execute task. WorkerTaskExecuter will dispatch task to correct thread anc call the corresponding compute method provide by Solver.
 
 How to use:
-* Provides a lib, dll, .h and the client code can link to it.
-* Support x86 and x64. (Seems it doesn't work for x64 in Release mode but it works in x64 Debug).
+* Provides a .dll, .h and the client code can use it.
+* Support x86 and x64.
 
 Other:
 ======
@@ -67,3 +67,4 @@ Updated:
 * 2014.10.21 23:43:16 Compute the square of [1..10] by dpe model. 8225 lines, 213248 Bytes.
 * 2015.05.18 17:17:24 Compute the square of [1..100] by dpe model on two computers. 5011+5465+927=11403 lines, 131459+147496+25257=304212 Bytes.
 * 2017.06.11 A new compute framework called dpe. 1633 lines code. Compute 0^2 + 1^2 + 2^2 + ... + 9^2 = 285 in distributed environment.
+* 2017.06.12 Succeeded in generating .dll .h for x86, x64.
