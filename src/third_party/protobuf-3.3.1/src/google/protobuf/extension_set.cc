@@ -249,14 +249,14 @@ void ExtensionSet::ClearExtension(int number) {
 namespace {
 
 enum Cardinality {
-  REPEATED,
-  OPTIONAL
+  Cardinality_REPEATED,
+  Cardinality_OPTIONAL
 };
 
 }  // namespace
 
 #define GOOGLE_DCHECK_TYPE(EXTENSION, LABEL, CPPTYPE)                             \
-  GOOGLE_DCHECK_EQ((EXTENSION).is_repeated ? REPEATED : OPTIONAL, LABEL);         \
+  GOOGLE_DCHECK_EQ((EXTENSION).is_repeated ? Cardinality_REPEATED : Cardinality_OPTIONAL, LABEL);         \
   GOOGLE_DCHECK_EQ(cpp_type((EXTENSION).type), WireFormatLite::CPPTYPE_##CPPTYPE)
 
 // -------------------------------------------------------------------
@@ -270,7 +270,7 @@ LOWERCASE ExtensionSet::Get##CAMELCASE(int number,                             \
   if (iter == extensions_.end() || iter->second.is_cleared) {                  \
     return default_value;                                                      \
   } else {                                                                     \
-    GOOGLE_DCHECK_TYPE(iter->second, OPTIONAL, UPPERCASE);                            \
+    GOOGLE_DCHECK_TYPE(iter->second, Cardinality_OPTIONAL, UPPERCASE);                            \
     return iter->second.LOWERCASE##_value;                                     \
   }                                                                            \
 }                                                                              \
@@ -284,7 +284,7 @@ void ExtensionSet::Set##CAMELCASE(int number, FieldType type,                  \
     GOOGLE_DCHECK_EQ(cpp_type(extension->type), WireFormatLite::CPPTYPE_##UPPERCASE); \
     extension->is_repeated = false;                                            \
   } else {                                                                     \
-    GOOGLE_DCHECK_TYPE(*extension, OPTIONAL, UPPERCASE);                              \
+    GOOGLE_DCHECK_TYPE(*extension, Cardinality_OPTIONAL, UPPERCASE);                              \
   }                                                                            \
   extension->is_cleared = false;                                               \
   extension->LOWERCASE##_value = value;                                        \
@@ -293,7 +293,7 @@ void ExtensionSet::Set##CAMELCASE(int number, FieldType type,                  \
 LOWERCASE ExtensionSet::GetRepeated##CAMELCASE(int number, int index) const {  \
   ExtensionMap::const_iterator iter = extensions_.find(number);                \
   GOOGLE_CHECK(iter != extensions_.end()) << "Index out-of-bounds (field is empty)."; \
-  GOOGLE_DCHECK_TYPE(iter->second, REPEATED, UPPERCASE);                              \
+  GOOGLE_DCHECK_TYPE(iter->second, Cardinality_REPEATED, UPPERCASE);                              \
   return iter->second.repeated_##LOWERCASE##_value->Get(index);                \
 }                                                                              \
                                                                                \
@@ -301,7 +301,7 @@ void ExtensionSet::SetRepeated##CAMELCASE(                                     \
     int number, int index, LOWERCASE value) {                                  \
   ExtensionMap::iterator iter = extensions_.find(number);                      \
   GOOGLE_CHECK(iter != extensions_.end()) << "Index out-of-bounds (field is empty)."; \
-  GOOGLE_DCHECK_TYPE(iter->second, REPEATED, UPPERCASE);                              \
+  GOOGLE_DCHECK_TYPE(iter->second, Cardinality_REPEATED, UPPERCASE);                              \
   iter->second.repeated_##LOWERCASE##_value->Set(index, value);                \
 }                                                                              \
                                                                                \
@@ -317,7 +317,7 @@ void ExtensionSet::Add##CAMELCASE(int number, FieldType type,                  \
     extension->repeated_##LOWERCASE##_value =                                  \
       Arena::CreateMessage<RepeatedField<LOWERCASE> >(arena_);                 \
   } else {                                                                     \
-    GOOGLE_DCHECK_TYPE(*extension, REPEATED, UPPERCASE);                              \
+    GOOGLE_DCHECK_TYPE(*extension, Cardinality_REPEATED, UPPERCASE);                              \
     GOOGLE_DCHECK_EQ(extension->is_packed, packed);                                   \
   }                                                                            \
   extension->repeated_##LOWERCASE##_value->Add(value);                         \
@@ -426,7 +426,7 @@ int ExtensionSet::GetEnum(int number, int default_value) const {
     // Not present.  Return the default value.
     return default_value;
   } else {
-    GOOGLE_DCHECK_TYPE(iter->second, OPTIONAL, ENUM);
+    GOOGLE_DCHECK_TYPE(iter->second, Cardinality_OPTIONAL, ENUM);
     return iter->second.enum_value;
   }
 }
@@ -439,7 +439,7 @@ void ExtensionSet::SetEnum(int number, FieldType type, int value,
     GOOGLE_DCHECK_EQ(cpp_type(extension->type), WireFormatLite::CPPTYPE_ENUM);
     extension->is_repeated = false;
   } else {
-    GOOGLE_DCHECK_TYPE(*extension, OPTIONAL, ENUM);
+    GOOGLE_DCHECK_TYPE(*extension, Cardinality_OPTIONAL, ENUM);
   }
   extension->is_cleared = false;
   extension->enum_value = value;
@@ -448,14 +448,14 @@ void ExtensionSet::SetEnum(int number, FieldType type, int value,
 int ExtensionSet::GetRepeatedEnum(int number, int index) const {
   ExtensionMap::const_iterator iter = extensions_.find(number);
   GOOGLE_CHECK(iter != extensions_.end()) << "Index out-of-bounds (field is empty).";
-  GOOGLE_DCHECK_TYPE(iter->second, REPEATED, ENUM);
+  GOOGLE_DCHECK_TYPE(iter->second, Cardinality_REPEATED, ENUM);
   return iter->second.repeated_enum_value->Get(index);
 }
 
 void ExtensionSet::SetRepeatedEnum(int number, int index, int value) {
   ExtensionMap::iterator iter = extensions_.find(number);
   GOOGLE_CHECK(iter != extensions_.end()) << "Index out-of-bounds (field is empty).";
-  GOOGLE_DCHECK_TYPE(iter->second, REPEATED, ENUM);
+  GOOGLE_DCHECK_TYPE(iter->second, Cardinality_REPEATED, ENUM);
   iter->second.repeated_enum_value->Set(index, value);
 }
 
@@ -471,7 +471,7 @@ void ExtensionSet::AddEnum(int number, FieldType type,
     extension->repeated_enum_value =
         Arena::CreateMessage<RepeatedField<int> >(arena_);
   } else {
-    GOOGLE_DCHECK_TYPE(*extension, REPEATED, ENUM);
+    GOOGLE_DCHECK_TYPE(*extension, Cardinality_REPEATED, ENUM);
     GOOGLE_DCHECK_EQ(extension->is_packed, packed);
   }
   extension->repeated_enum_value->Add(value);
@@ -487,7 +487,7 @@ const string& ExtensionSet::GetString(int number,
     // Not present.  Return the default value.
     return default_value;
   } else {
-    GOOGLE_DCHECK_TYPE(iter->second, OPTIONAL, STRING);
+    GOOGLE_DCHECK_TYPE(iter->second, Cardinality_OPTIONAL, STRING);
     return *iter->second.string_value;
   }
 }
@@ -501,7 +501,7 @@ string* ExtensionSet::MutableString(int number, FieldType type,
     extension->is_repeated = false;
     extension->string_value = Arena::Create<string>(arena_);
   } else {
-    GOOGLE_DCHECK_TYPE(*extension, OPTIONAL, STRING);
+    GOOGLE_DCHECK_TYPE(*extension, Cardinality_OPTIONAL, STRING);
   }
   extension->is_cleared = false;
   return extension->string_value;
@@ -510,14 +510,14 @@ string* ExtensionSet::MutableString(int number, FieldType type,
 const string& ExtensionSet::GetRepeatedString(int number, int index) const {
   ExtensionMap::const_iterator iter = extensions_.find(number);
   GOOGLE_CHECK(iter != extensions_.end()) << "Index out-of-bounds (field is empty).";
-  GOOGLE_DCHECK_TYPE(iter->second, REPEATED, STRING);
+  GOOGLE_DCHECK_TYPE(iter->second, Cardinality_REPEATED, STRING);
   return iter->second.repeated_string_value->Get(index);
 }
 
 string* ExtensionSet::MutableRepeatedString(int number, int index) {
   ExtensionMap::iterator iter = extensions_.find(number);
   GOOGLE_CHECK(iter != extensions_.end()) << "Index out-of-bounds (field is empty).";
-  GOOGLE_DCHECK_TYPE(iter->second, REPEATED, STRING);
+  GOOGLE_DCHECK_TYPE(iter->second, Cardinality_REPEATED, STRING);
   return iter->second.repeated_string_value->Mutable(index);
 }
 
@@ -532,7 +532,7 @@ string* ExtensionSet::AddString(int number, FieldType type,
     extension->repeated_string_value =
         Arena::CreateMessage<RepeatedPtrField<string> >(arena_);
   } else {
-    GOOGLE_DCHECK_TYPE(*extension, REPEATED, STRING);
+    GOOGLE_DCHECK_TYPE(*extension, Cardinality_REPEATED, STRING);
   }
   return extension->repeated_string_value->Add();
 }
@@ -547,7 +547,7 @@ const MessageLite& ExtensionSet::GetMessage(
     // Not present.  Return the default value.
     return default_value;
   } else {
-    GOOGLE_DCHECK_TYPE(iter->second, OPTIONAL, MESSAGE);
+    GOOGLE_DCHECK_TYPE(iter->second, Cardinality_OPTIONAL, MESSAGE);
     if (iter->second.is_lazy) {
       return iter->second.lazymessage_value->GetMessage(default_value);
     } else {
@@ -574,7 +574,7 @@ MessageLite* ExtensionSet::MutableMessage(int number, FieldType type,
     extension->is_cleared = false;
     return extension->message_value;
   } else {
-    GOOGLE_DCHECK_TYPE(*extension, OPTIONAL, MESSAGE);
+    GOOGLE_DCHECK_TYPE(*extension, Cardinality_OPTIONAL, MESSAGE);
     extension->is_cleared = false;
     if (extension->is_lazy) {
       return extension->lazymessage_value->MutableMessage(prototype);
@@ -613,7 +613,7 @@ void ExtensionSet::SetAllocatedMessage(int number, FieldType type,
       extension->message_value->CheckTypeAndMergeFrom(*message);
     }
   } else {
-    GOOGLE_DCHECK_TYPE(*extension, OPTIONAL, MESSAGE);
+    GOOGLE_DCHECK_TYPE(*extension, Cardinality_OPTIONAL, MESSAGE);
     if (extension->is_lazy) {
       extension->lazymessage_value->SetAllocatedMessage(message);
     } else {
@@ -649,7 +649,7 @@ void ExtensionSet::UnsafeArenaSetAllocatedMessage(
     extension->is_lazy = false;
     extension->message_value = message;
   } else {
-    GOOGLE_DCHECK_TYPE(*extension, OPTIONAL, MESSAGE);
+    GOOGLE_DCHECK_TYPE(*extension, Cardinality_OPTIONAL, MESSAGE);
     if (extension->is_lazy) {
       extension->lazymessage_value->UnsafeArenaSetAllocatedMessage(message);
     } else {
@@ -670,7 +670,7 @@ MessageLite* ExtensionSet::ReleaseMessage(int number,
     // Not present.  Return NULL.
     return NULL;
   } else {
-    GOOGLE_DCHECK_TYPE(iter->second, OPTIONAL, MESSAGE);
+    GOOGLE_DCHECK_TYPE(iter->second, Cardinality_OPTIONAL, MESSAGE);
     MessageLite* ret = NULL;
     if (iter->second.is_lazy) {
       ret = iter->second.lazymessage_value->ReleaseMessage(prototype);
@@ -699,7 +699,7 @@ MessageLite* ExtensionSet::UnsafeArenaReleaseMessage(
     // Not present.  Return NULL.
     return NULL;
   } else {
-    GOOGLE_DCHECK_TYPE(iter->second, OPTIONAL, MESSAGE);
+    GOOGLE_DCHECK_TYPE(iter->second, Cardinality_OPTIONAL, MESSAGE);
     MessageLite* ret = NULL;
     if (iter->second.is_lazy) {
       ret =
@@ -723,14 +723,14 @@ const MessageLite& ExtensionSet::GetRepeatedMessage(
     int number, int index) const {
   ExtensionMap::const_iterator iter = extensions_.find(number);
   GOOGLE_CHECK(iter != extensions_.end()) << "Index out-of-bounds (field is empty).";
-  GOOGLE_DCHECK_TYPE(iter->second, REPEATED, MESSAGE);
+  GOOGLE_DCHECK_TYPE(iter->second, Cardinality_REPEATED, MESSAGE);
   return iter->second.repeated_message_value->Get(index);
 }
 
 MessageLite* ExtensionSet::MutableRepeatedMessage(int number, int index) {
   ExtensionMap::iterator iter = extensions_.find(number);
   GOOGLE_CHECK(iter != extensions_.end()) << "Index out-of-bounds (field is empty).";
-  GOOGLE_DCHECK_TYPE(iter->second, REPEATED, MESSAGE);
+  GOOGLE_DCHECK_TYPE(iter->second, Cardinality_REPEATED, MESSAGE);
   return iter->second.repeated_message_value->Mutable(index);
 }
 
@@ -745,7 +745,7 @@ MessageLite* ExtensionSet::AddMessage(int number, FieldType type,
     extension->repeated_message_value =
         Arena::CreateMessage<RepeatedPtrField<MessageLite> >(arena_);
   } else {
-    GOOGLE_DCHECK_TYPE(*extension, REPEATED, MESSAGE);
+    GOOGLE_DCHECK_TYPE(*extension, Cardinality_REPEATED, MESSAGE);
   }
 
   // RepeatedPtrField<MessageLite> does not know how to Add() since it cannot

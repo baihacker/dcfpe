@@ -15,7 +15,9 @@ def build_dependencies():
   # so, we need not to build chromium here.
   # os.system(r'python third_party\chromium\build_chromium.py')
   # os.system(r'python third_party/zmq/build_zmq.py')
-  pass
+  
+  # Build proto here
+  os.system(r'tools\protoc-3.3.0-win32\bin\protoc.exe dpe\proto\dpe.proto --cpp_out=.')
 
 def prepare_path():
   if os.environ['GYP_GENERATORS'] == 'ninja':

@@ -1,0 +1,4 @@
+syntax = "proto2";
+package dpe;
+message Result {
+}

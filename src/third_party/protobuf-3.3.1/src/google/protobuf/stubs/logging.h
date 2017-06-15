@@ -49,6 +49,7 @@ enum LogLevel {
                      // message that is near the message size limit.
   LOGLEVEL_ERROR,    // An error occurred which should never happen during
                      // normal use.
+  LOGLEVEL_0 = LOGLEVEL_ERROR,
   LOGLEVEL_FATAL,    // An error occurred from which the library cannot
                      // recover.  This usually indicates a programming error
                      // in the code which calls the library, especially when

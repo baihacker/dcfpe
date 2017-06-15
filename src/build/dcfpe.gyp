@@ -19,6 +19,7 @@
         #'<(DEPTH)/dpe/dpe.gyp:dpe',
         '<(DEPTH)/dpe/dpe.gyp:main',
         #'<(DEPTH)/third_party/zeromq_4.2.1/builds/msvc/vs2015/libzmq/zmq.gyp:zmq',
+        #'<(DEPTH)/third_party/protobuf-3.3.1/gyp/protobuf.gyp:protobuf',
         ],
     }
     ]
