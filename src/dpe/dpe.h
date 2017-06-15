@@ -10,7 +10,7 @@
 #else
 #define DPE_EXPORT __declspec(dllimport)
 #define DPE_EXPORT_PRIVATE __declspec(dllimport)
-#endif  // defined(BASE_IMPLEMENTATION)
+#endif  // defined(DPE_IMPLEMENTATION)
 
 #else  // defined(WIN32)
 #if defined(DPE_IMPLEMENTATION)
@@ -19,7 +19,7 @@
 #else
 #define DPE_EXPORT
 #define DPE_EXPORT_PRIVATE
-#endif  // defined(BASE_IMPLEMENTATION)
+#endif  // defined(DPE_IMPLEMENTATION)
 #endif
 
 #else  // defined(COMPONENT_BUILD)

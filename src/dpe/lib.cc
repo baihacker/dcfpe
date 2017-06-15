@@ -58,30 +58,6 @@ std::string serverIP;
 int port = 0;
 Solver* solver;
 
-static inline void run()
-{
-  LOG(INFO) << "running";
-  LOG(INFO) << "type = " << type;
-  LOG(INFO) << "myIP = " << myIP;
-  LOG(INFO) << "serverIP = " << serverIP;
-
-  if (type == "server")
-  {
-    dpeMasterNode = new DPEMasterNode(myIP, serverIP);
-    dpeMasterNode->Start(port == 0 ? dpe::kServerPort : port);
-  }
-  else if (type == "worker")
-  {
-    dpeWorkerNode = new DPEWorkerNode(myIP, serverIP);
-    dpeWorkerNode->Start(port == 0 ? dpe::kWorkerPort : port);
-  }
-  else
-  {
-    LOG(ERROR) << "Unknown type";
-    base::will_quit_main_loop();
-  }
-}
-
 static void exitDpeImpl()
 {
   LOG(INFO) << "exitDpeImpl";
@@ -100,6 +76,38 @@ void willExitDpe()
 Solver* getSolver()
 {
   return solver;
+}
+
+static inline void run()
+{
+  LOG(INFO) << "running";
+  LOG(INFO) << "type = " << type;
+  LOG(INFO) << "myIP = " << myIP;
+  LOG(INFO) << "serverIP = " << serverIP;
+
+  if (type == "server")
+  {
+    dpeMasterNode = new DPEMasterNode(myIP, serverIP);
+    if (!dpeMasterNode->Start(port == 0 ? dpe::kServerPort : port))
+    {
+      LOG(ERROR) << "Failed to start master node";
+      willExitDpe();
+    }
+  }
+  else if (type == "worker")
+  {
+    dpeWorkerNode = new DPEWorkerNode(myIP, serverIP);
+    if (!dpeWorkerNode->Start(port == 0 ? dpe::kWorkerPort : port))
+    {
+      LOG(ERROR) << "Failed to start worker node";
+      willExitDpe();
+    }
+  }
+  else
+  {
+    LOG(ERROR) << "Unknown type";
+    willExitDpe();
+  }
 }
 }
 
