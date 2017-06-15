@@ -12,11 +12,10 @@
     'msvs_settings': {
       'VCLinkerTool': {
         'AdditionalLibraryDirectories': [
-          ],
+        ],
       },
     },
     'configurations': {
-      
       'Release_Base': {
         'msvs_settings': {
           'VCLinkerTool': {

@@ -20,15 +20,6 @@
       4244, 4267, 4018, 4355, 4800, 4251, 4996, 4146, 4305, 4309, 4506, 4065, 4005
     ],
     'configurations': {
-      'Common_Base': {
-        'msvs_settings': {
-          'VCLinkerTool': {
-            'AdditionalDependencies': [
-            ],
-          },
-        },
-      },
-
       'Release_Base': {
         'msvs_settings': {
           'VCLinkerTool': {

@@ -13,17 +13,18 @@
     'msvs_settings': {
       'VCLinkerTool': {
         'AdditionalLibraryDirectories': [
-          ],
+        ],
+        'AdditionalDependencies': [
+          'Ws2_32.lib',
+          'Iphlpapi.lib',
+        ],
       },
     },
     'configurations': {
-      
       'Release_Base': {
         'msvs_settings': {
           'VCLinkerTool': {
             'AdditionalDependencies': [
-              'Ws2_32.lib',
-              'Iphlpapi.lib',
             ],
           },
         },
@@ -33,8 +34,6 @@
         'msvs_settings': {
           'VCLinkerTool': {
             'AdditionalDependencies': [
-              'Ws2_32.lib',
-              'Iphlpapi.lib',
             ],
           },
         },
