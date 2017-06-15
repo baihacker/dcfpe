@@ -49,6 +49,11 @@
       'include_dirs': [
         '<(DEPTH)/third_party/protobuf-3.3.1/src',
       ],
+      'msvs_settings': {
+        'VCCLCompilerTool': {
+          'RuntimeTypeInfo': 'true',
+        },
+      },
       'sources':[
           'dpe.h',
           'dpe_internal.h',

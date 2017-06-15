@@ -56,7 +56,12 @@
         'use_zmq': 0,
       },
       'defines': [
-        ],
+      ],
+      'msvs_settings': {
+        'VCCLCompilerTool': {
+          'RuntimeTypeInfo': 'true',
+        },
+      },
       'sources':[
         '../src/google/protobuf/any.cc',
         '../src/google/protobuf/any.pb.cc',
