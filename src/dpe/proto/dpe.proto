@@ -1,7 +1,5 @@
 syntax = "proto2";
 
-import "google/protobuf/any.proto";
-
 package dpe;
 
 message ConnectRequest {
@@ -28,8 +26,8 @@ message FinishComputeRequest {
 
 message Request {
   optional string name = 1;
-  optional int64 request_id = 2 [default = 0];
-  optional int32 connection_id = 3 [default = 0];
+  optional int32 connection_id = 2 [default = 0];
+  optional int64 request_id = 3 [default = 0];
 
   optional int64 timestamp = 100 [default = 0];
   

@@ -16,7 +16,7 @@
       },
     },
     'msvs_disabled_warnings': [
-      4309
+      4309, 4267
     ],
     'configurations': {
       'Release_Base': {

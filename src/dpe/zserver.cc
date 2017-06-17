@@ -68,6 +68,7 @@ std::string ZServer::handle_request(base::ServerContext& context)
   do
   {
     rep.set_error_code(-1);
+    rep.set_name(req.name());
     rep.set_timestamp(base::Time::Now().ToInternalValue());
     rep.set_request_id(req.request_id());
     rep.set_request_timestamp(req.timestamp());

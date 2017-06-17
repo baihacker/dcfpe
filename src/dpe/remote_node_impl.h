@@ -34,10 +34,8 @@ public:
 
   void disconnect();
   
-  static void  handleDisconnect(base::WeakPtr<RemoteNodeImpl> self,
-              scoped_refptr<base::ZMQResponse> rep);
-  
   int sendRequest(Request& req, base::ZMQCallBack callback);
+  int sendRequest(Request& req);
   
   static void  handleResponse(base::WeakPtr<RemoteNodeImpl> self,
               base::ZMQCallBack callback,

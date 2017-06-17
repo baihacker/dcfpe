@@ -10,6 +10,7 @@ RemoteNodeHandler* handler, const std::string myAddress, int connectionId) :
     handler(handler),
     myAddress(myAddress),
     connectionId(connectionId),
+    remoteConnectionId(0),
     zmqClient(base::zmq_client()),
     weakptr_factory_(this)
 {
@@ -22,23 +23,15 @@ void RemoteNodeImpl::connectTo(const std::string& remoteAddress)
 {
   this->remoteAddress = remoteAddress;
   
-  Request req;
-  req.set_name("connect");
-  req.set_timestamp(base::Time::Now().ToInternalValue());
-  
   ConnectRequest* cr = new ConnectRequest();
   cr->set_address(myAddress);
+
+  Request req;
+  req.set_name("connect");
   req.set_allocated_connect(cr);
 
-  std::string val;
-  req.SerializeToString(&val);
-  
-  zmqClient->SendRequest(
-    remoteAddress,
-    val.c_str(),
-    static_cast<int>(val.size()),
-    base::Bind(&RemoteNodeImpl::handleConnect, weakptr_factory_.GetWeakPtr()),
-    0);
+  sendRequest(req, base::Bind(RemoteNodeImpl::handleConnect,
+    weakptr_factory_.GetWeakPtr()));
 }
 
 void  RemoteNodeImpl::handleConnect(base::WeakPtr<RemoteNodeImpl> self,
@@ -76,37 +69,33 @@ void RemoteNodeImpl::disconnect()
   dr->set_address(myAddress);
 
   Request req;
-  req.set_connection_id(remoteConnectionId);
-  req.set_request_id(requestId);
-  req.set_timestamp(base::Time::Now().ToInternalValue());
+  req.set_name("disconnect");
   req.set_allocated_disconnect(dr);
   
-  std::string val;
-  req.SerializeToString(&val);
-  
-  zmqClient->SendRequest(
-    remoteAddress,
-    val.c_str(),
-    static_cast<int>(val.size()),
-    base::Bind(&RemoteNodeImpl::handleDisconnect, weakptr_factory_.GetWeakPtr()),
-    0);
+  sendRequest(req);
 }
-  
-void  RemoteNodeImpl::handleDisconnect(base::WeakPtr<RemoteNodeImpl> self,
-            scoped_refptr<base::ZMQResponse> rep)
+
+static void NullCallback(scoped_refptr<base::ZMQResponse> rep)
 {
-  // no need to handle it
 }
-  
+
+int RemoteNodeImpl::sendRequest(Request& req)
+{
+  return sendRequest(req, base::Bind(&NullCallback));
+}
+
 int RemoteNodeImpl::sendRequest(Request& req, base::ZMQCallBack callback)
 {
   int requestId = ++nextRequestId;
+
   req.set_connection_id(remoteConnectionId);
   req.set_request_id(requestId);
   req.set_timestamp(base::Time::Now().ToInternalValue());
-  
+
   std::string val;
   req.SerializeToString(&val);
+
+  LOG(INFO) << "Send request:\n" << req.DebugString();
 
   zmqClient->SendRequest(
     remoteAddress,
@@ -124,6 +113,9 @@ void  RemoteNodeImpl::handleResponse(base::WeakPtr<RemoteNodeImpl> self,
 {
   if (RemoteNodeImpl* pThis = self.get())
   {
+    Response rep1;
+    rep1.ParseFromString(rep->data_);
+    LOG(INFO) << "handleResponse:\n" << rep1.DebugString();
     callback.Run(rep);
   }
 }
@@ -164,14 +156,12 @@ int RemoteNodeControllerImpl::getId() const
 int RemoteNodeControllerImpl::addTask(int taskId, const std::string& data,
   std::function<void (int, bool, const std::string&)> callback)
 {
-  Request req;
-  req.set_name("compute");
-  
   ComputeRequest* cr = new ComputeRequest();
   cr->set_task_id(taskId);
+  
+  Request req;
+  req.set_name("compute");
   req.set_allocated_compute(cr);
-
-  LOG(INFO) << "Send request:\n" << req.DebugString();
 
   if (auto* remote = pRemoteNode.get())
   {
@@ -211,16 +201,13 @@ void RemoteNodeControllerImpl::handleAddTaskImpl(
 
 int RemoteNodeControllerImpl::finishTask(int taskId, const std::string& result)
 {
-  Request req;
-  req.set_name("finishCompute");
-  
   FinishComputeRequest* cr = new FinishComputeRequest();
   cr->set_task_id(taskId);
   cr->set_result(result);
 
+  Request req;
+  req.set_name("finishCompute");
   req.set_allocated_finish_compute(cr);
-
-  LOG(INFO) << "Send request:\n" << req.DebugString();
 
   if (auto* remote = pRemoteNode.get())
   {
