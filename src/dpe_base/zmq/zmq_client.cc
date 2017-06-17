@@ -223,6 +223,12 @@ bool ZMQClient::Stop()
   ::CloseHandle(thread_handle_);
   thread_handle_ = NULL;
   status_ = STATUS_STOPPED;
+  
+  for (auto& iter: context_)
+  {
+    zmq_close(iter.zmq_socket_);
+  }
+  std::vector<RequestContext>().swap(context_);
   return true;
 }
 

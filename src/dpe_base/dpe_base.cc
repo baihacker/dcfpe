@@ -8,7 +8,7 @@ namespace base
 {
 static void quit_main_lop()
 {
-  LOG(INFO) << "quit_main_lop";
+  LOG(INFO) << "quit_main_loop";
   DCHECK_CURRENTLY_ON(base::ThreadPool::UI);
   base::MessageLoop::current()->Quit();
 }
@@ -56,12 +56,17 @@ int32_t dpe_base_main(void (*logic_main)(),
   LOG(INFO) << "RunMainLoop";
   base::ThreadPool::RunMainLoop(dispatcher);
   
+  LOG(INFO) << "Stop services";
+
+  //LOG(INFO) << "Stop zmq client";
   delete zmq_client_impl;
   zmq_client_impl = NULL;
   
+  //LOG(INFO) << "Stop zmq server";
   delete zmq_server_impl;
   zmq_server_impl = NULL;
   
+  //LOG(INFO) << "Stop zmq center";
   delete msg_center_impl;
   msg_center_impl = NULL;
   

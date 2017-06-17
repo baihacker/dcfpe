@@ -61,7 +61,13 @@ Solver* solver;
 static void exitDpeImpl()
 {
   LOG(INFO) << "exitDpeImpl";
+  if (dpeMasterNode)
+  {
+    dpeMasterNode->Stop();
+    //Sleep(1000);
+  }
   dpeMasterNode = NULL;
+  LOG(INFO) << "exitDpeImpl1";
   dpeWorkerNode = NULL;
   base::will_quit_main_loop();
 }

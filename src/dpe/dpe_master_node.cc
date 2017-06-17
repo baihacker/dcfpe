@@ -39,6 +39,22 @@ bool DPEMasterNode::Start(int port)
   scheduler->start();
   return true;
 }
+
+void DPEMasterNode::Stop()
+{
+  for (auto* node : remoteNodes)
+  {
+    node->disconnect();
+    //delete node;
+  }
+  std::vector<RemoteNodeImpl*>().swap(remoteNodes);
+  if (zserver)
+  {
+    zserver->Stop();
+    delete zserver;
+    zserver = NULL;
+  }
+}
   
 int DPEMasterNode::handleConnectRequest(const std::string& address)
 {

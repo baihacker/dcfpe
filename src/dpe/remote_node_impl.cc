@@ -77,6 +77,7 @@ void RemoteNodeImpl::disconnect()
 
 static void NullCallback(scoped_refptr<base::ZMQResponse> rep)
 {
+  LOG(INFO) << "NullCallback";
 }
 
 int RemoteNodeImpl::sendRequest(Request& req)

@@ -17,6 +17,8 @@ public:
 
   bool Start(int port);
   
+  void Stop();
+  
   int handleConnectRequest(const std::string& address);
 
   int handleDisconnectRequest(const std::string& address);
@@ -30,7 +32,7 @@ private:
   MasterTaskScheduler* scheduler;
   int port;
   std::vector<RemoteNodeImpl*> remoteNodes;
-    base::WeakPtrFactory<DPEMasterNode>                 weakptr_factory_;
+  base::WeakPtrFactory<DPEMasterNode>                 weakptr_factory_;
 };
 }
 #endif
