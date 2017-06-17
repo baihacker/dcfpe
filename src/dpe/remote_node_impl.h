@@ -63,7 +63,7 @@ public:
   virtual void removeNode() = 0;
   virtual int getId() const = 0;
   virtual int addTask(int taskId, const std::string& data, std::function<void (int, bool, const std::string&)> callback) = 0;
-  virtual int finishTask(int taskId, const std::string& result) = 0;
+  virtual int finishTask(int taskId, const Variants& result) = 0;
 };
 
 class RemoteNodeControllerImpl : public RemoteNodeController
@@ -87,7 +87,7 @@ public:
     int taskId, const std::string& data,
     std::function<void (int, bool, const std::string&)> callback, scoped_refptr<base::ZMQResponse> rep);
     
-  int finishTask(int taskId, const std::string& result);
+  int finishTask(int taskId, const Variants& result);
   static void handleFinishTask(base::WeakPtr<RemoteNodeControllerImpl> self,
     scoped_refptr<base::ZMQResponse> rep);
 private:

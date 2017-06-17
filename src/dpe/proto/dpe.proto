@@ -2,6 +2,17 @@ syntax = "proto2";
 
 package dpe;
 
+message Variant {
+  oneof value {
+    int64 value_int64 = 1;
+    string value_string = 2;
+  }
+}
+
+message Variants {
+  repeated Variant element = 1;
+}
+
 message ConnectRequest {
   optional string address = 1;
 }
@@ -20,7 +31,7 @@ message ComputeRequest {
 
 message FinishComputeRequest {
   optional int32 task_id = 1;
-  optional string result = 2;
+  optional Variants result = 2;
 }
 
 
@@ -48,5 +59,3 @@ message Response {
   
   optional ConnectResponse connect = 300;
 }
-
-

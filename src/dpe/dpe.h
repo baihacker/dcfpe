@@ -27,6 +27,22 @@
 #define DPE_EXPORT_PRIVATE
 #endif
 
+#include <cstdint>
+typedef std::int64_t int64;
+
+class VariantsReader {
+public:
+  virtual int size() const = 0;
+  virtual int64 int64Value(int idx) const = 0;
+  virtual const char* stringValue(int idx) const = 0;
+};
+
+class VariantsBuilder {
+public:
+  virtual VariantsBuilder* appendInt64Value(int64 value) = 0;
+  virtual VariantsBuilder* appendStringValue(const char* str) = 0;
+};
+
 class TaskAppender
 {
 public:
@@ -38,9 +54,9 @@ class Solver
 public:
   virtual void initAsMaster(TaskAppender* taskAppender) = 0;
   virtual void initAsWorker() = 0;
-  virtual void setResult(int taskId, const char* result) = 0;
+  virtual void setResult(int taskId, VariantsReader* result) = 0;
   // The result buffer is always 1024 bytes.
-  virtual void compute(int taskId, char* result) = 0;
+  virtual void compute(int taskId, VariantsBuilder* result) = 0;
   virtual void finish() = 0;
 };
 

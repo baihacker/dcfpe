@@ -2,6 +2,7 @@
 #define DPE_COMPUTE_MODEL_H_
 
 #include "dpe/remote_node_impl.h"
+#include "dpe/proto/dpe.pb.h"
 
 namespace dpe
 {
@@ -20,7 +21,7 @@ public:
   virtual void start() = 0;
   virtual void onNodeAvailable(RemoteNodeController* node) = 0;
   virtual void onNodeUnavailable(int id) = 0;
-  virtual void handleFinishCompute(int taskId, bool ok, const std::string& result) = 0;
+  virtual void handleFinishCompute(int taskId, bool ok, const Variants& result) = 0;
 };
 
 struct NodeContext
@@ -51,7 +52,7 @@ public:
 
   void handleAddTaskImpl(int nodeId, int taskId, bool ok, const std::string& result);
 
-  void handleFinishCompute(int taskId, bool ok, const std::string& result);
+  void handleFinishCompute(int taskId, bool ok, const Variants& result);
 
   void prepareTaskQueue();
 

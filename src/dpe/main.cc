@@ -64,15 +64,14 @@ public:
     }
   }
 
-  void setResult(int taskId, const char* result)
+  void setResult(int taskId, VariantsReader* result)
   {
-    //std::cerr << "\n" << taskId << " finished" << std::endl;
-    taskData[taskId].result = atoi(result);
+    taskData[taskId].result = result->int64Value(0);
   }
 
-  void compute(int taskId, char* result)
+  void compute(int taskId, VariantsBuilder* result)
   {
-    sprintf(result, "%d", taskId*taskId);
+    result->appendInt64Value(taskId*taskId);
   }
   
   void finish()

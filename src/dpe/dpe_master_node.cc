@@ -114,7 +114,7 @@ int DPEMasterNode::handleRequest(const Request& req, Response& reply)
   {
     auto& data = req.finish_compute();
     
-    scheduler->handleFinishCompute(data.task_id(), true, data.result().c_str());
+    scheduler->handleFinishCompute(data.task_id(), true, data.result());
     reply.set_error_code(0);
   }
   return 0;

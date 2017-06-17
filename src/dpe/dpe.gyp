@@ -75,6 +75,8 @@
           
           'proto/dpe.pb.h',
           'proto/dpe.pb.cc',
+          'variants.h',
+          'variants.cc',
         ],
       'dependencies':[
           '<(DEPTH)/dpe_base/dpe_base.gyp:dpe_base',

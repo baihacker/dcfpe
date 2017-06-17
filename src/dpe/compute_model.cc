@@ -2,6 +2,7 @@
 
 #include "dpe/dpe.h"
 #include "dpe/dpe_internal.h"
+#include "dpe/variants.h"
 
 namespace dpe
 {
@@ -192,14 +193,15 @@ void  SimpleMasterTaskScheduler::handleAddTaskImpl(int nodeId, int taskId, bool 
   }
 }
 
-void SimpleMasterTaskScheduler::handleFinishCompute(int taskId, bool ok, const std::string& result)
+void SimpleMasterTaskScheduler::handleFinishCompute(int taskId, bool ok, const Variants& result)
 {
   // ok is always true
   for (auto& ctx: nodes)
   {
     if (ctx.status == NodeContext::COMPUTING_TASK && ctx.taskId == taskId)
     {
-      getSolver()->setResult(taskId, result.c_str());
+      VariantsReaderImpl vri(result);
+      getSolver()->setResult(taskId, &vri);
       ctx.status = NodeContext::READY;
       ctx.taskId = -1;
     }

@@ -2,6 +2,7 @@
 #define DPE_WORKER_NODE_H_
 
 #include "dpe/dpe_node_base.h"
+#include "dpe/proto/dpe.pb.h"
 
 namespace dpe
 {
@@ -15,8 +16,8 @@ public:
   void handleCompute(int task_id);
   
   static void doCompute(base::WeakPtr<WorkerTaskExecuter> self, int taskId);
-  static void finishCompute(base::WeakPtr<WorkerTaskExecuter> self, int taskId, const std::string& result);
-  void finishComputeImpl(int taskId, const std::string& result);
+  static void finishCompute(base::WeakPtr<WorkerTaskExecuter> self, int taskId, const Variants& result);
+  void finishComputeImpl(int taskId, const Variants& result);
 private:
   RemoteNodeController* node;
   base::WeakPtrFactory<WorkerTaskExecuter> weakptr_factory_;

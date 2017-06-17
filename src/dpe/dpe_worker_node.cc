@@ -2,6 +2,8 @@
 
 #include "dpe/dpe.h"
 #include "dpe/dpe_internal.h"
+#include "dpe/proto/dpe.pb.h"
+#include "dpe/variants.h"
 
 namespace dpe
 {
@@ -28,16 +30,16 @@ void WorkerTaskExecuter::handleCompute(int taskId)
 
 void WorkerTaskExecuter::doCompute(base::WeakPtr<WorkerTaskExecuter> self, int taskId)
 {
-  char buff[1024];
-  getSolver()->compute(taskId, buff);
-  std::string result = buff;
+  VariantsBuilderImpl vbi;
+
+  getSolver()->compute(taskId, &vbi);
 
   base::ThreadPool::PostTask(base::ThreadPool::UI,
       FROM_HERE,
-      base::Bind(&WorkerTaskExecuter::finishCompute, self, taskId, result));
+      base::Bind(&WorkerTaskExecuter::finishCompute, self, taskId, vbi.getVariants()));
 }
 
-void WorkerTaskExecuter::finishCompute(base::WeakPtr<WorkerTaskExecuter> self, int taskId, const std::string& result)
+void WorkerTaskExecuter::finishCompute(base::WeakPtr<WorkerTaskExecuter> self, int taskId, const Variants& result)
 {
   if (auto* pThis = self.get())
   {
@@ -45,7 +47,7 @@ void WorkerTaskExecuter::finishCompute(base::WeakPtr<WorkerTaskExecuter> self, i
   }
 }
 
-void WorkerTaskExecuter::finishComputeImpl(int taskId, const std::string& result)
+void WorkerTaskExecuter::finishComputeImpl(int taskId, const Variants& result)
 {
   node->finishTask(taskId, result);
 }
