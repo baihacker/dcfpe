@@ -12,7 +12,7 @@ public:
 
   void start();
   void setMasterNode(RemoteNodeController* node);
-  void handleCompute(base::DictionaryValue* req);
+  void handleCompute(int task_id);
   
   static void doCompute(base::WeakPtr<WorkerTaskExecuter> self, int taskId);
   static void finishCompute(base::WeakPtr<WorkerTaskExecuter> self, int taskId, const std::string& result);
@@ -37,7 +37,7 @@ public:
 
   int onConnectionFinished(RemoteNodeImpl* node, bool ok);
   
-  int handleRequest(base::DictionaryValue* req, base::DictionaryValue* reply);
+  int handleRequest(const Request& req, Response& reply);
   
   void removeNode(int id);
 private:

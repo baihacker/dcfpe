@@ -2,6 +2,7 @@
 #define DPE_REMOTE_NODE_IMPL_H_
 
 #include "dpe_base/dpe_base.h"
+#include "dpe/proto/dpe.pb.h"
 
 namespace dpe
 {
@@ -36,7 +37,7 @@ public:
   static void  handleDisconnect(base::WeakPtr<RemoteNodeImpl> self,
               scoped_refptr<base::ZMQResponse> rep);
   
-  int sendRequest(base::DictionaryValue* req, base::ZMQCallBack callback);
+  int sendRequest(Request& req, base::ZMQCallBack callback);
   
   static void  handleResponse(base::WeakPtr<RemoteNodeImpl> self,
               base::ZMQCallBack callback,

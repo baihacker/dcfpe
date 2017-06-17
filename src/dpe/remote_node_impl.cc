@@ -22,13 +22,16 @@ void RemoteNodeImpl::connectTo(const std::string& remoteAddress)
 {
   this->remoteAddress = remoteAddress;
   
-  base::DictionaryValue req;
-  req.SetString("type", "request");
-  req.SetString("action", "connect");
-  req.SetString("address", myAddress);
+  Request req;
+  req.set_name("connect");
+  req.set_timestamp(base::Time::Now().ToInternalValue());
   
+  ConnectRequest* cr = new ConnectRequest();
+  cr->set_address(myAddress);
+  req.set_allocated_connect(cr);
+
   std::string val;
-  base::JSONWriter::Write(&req, &val);
+  req.SerializeToString(&val);
   
   zmqClient->SendRequest(
     remoteAddress,
@@ -54,13 +57,10 @@ void  RemoteNodeImpl::handleConnectImpl(scoped_refptr<base::ZMQResponse> rep)
     handler->onConnectionFinished(this, false);
     return;
   }
-  base::Value* v = base::JSONReader::Read(
-    rep->data_.c_str(), base::JSON_ALLOW_TRAILING_COMMAS);
-  std::string val;
-  base::DictionaryValue* dv = NULL;
-  v->GetAsDictionary(&dv);
-  dv->GetString("connection_id", &val);
-  remoteConnectionId = atoi(val.c_str());
+  Response data;
+  data.ParseFromString(rep->data_);
+
+  remoteConnectionId = data.connect().connection_id();
   
   isReady = true;
   handler->onConnectionFinished(this, true);
@@ -68,15 +68,21 @@ void  RemoteNodeImpl::handleConnectImpl(scoped_refptr<base::ZMQResponse> rep)
 
 void RemoteNodeImpl::disconnect()
 {
+  int requestId = ++nextRequestId;
+
   isReady = false;
 
-  base::DictionaryValue req;
-  req.SetString("type", "request");
-  req.SetString("action", "disconnect");
-  req.SetString("address", myAddress);
+  DisconnectRequest* dr = new DisconnectRequest();
+  dr->set_address(myAddress);
+
+  Request req;
+  req.set_connection_id(remoteConnectionId);
+  req.set_request_id(requestId);
+  req.set_timestamp(base::Time::Now().ToInternalValue());
+  req.set_allocated_disconnect(dr);
   
   std::string val;
-  base::JSONWriter::Write(&req, &val);
+  req.SerializeToString(&val);
   
   zmqClient->SendRequest(
     remoteAddress,
@@ -92,16 +98,16 @@ void  RemoteNodeImpl::handleDisconnect(base::WeakPtr<RemoteNodeImpl> self,
   // no need to handle it
 }
   
-int RemoteNodeImpl::sendRequest(base::DictionaryValue* req, base::ZMQCallBack callback)
+int RemoteNodeImpl::sendRequest(Request& req, base::ZMQCallBack callback)
 {
   int requestId = ++nextRequestId;
-  req->SetString("connection_id", base::StringPrintf("%d", remoteConnectionId));
-  req->SetString("request_id", base::StringPrintf("%d", requestId));
-  req->SetString("request_time", base::StringPrintf("%lld", base::Time::Now().ToInternalValue()));
+  req.set_connection_id(remoteConnectionId);
+  req.set_request_id(requestId);
+  req.set_timestamp(base::Time::Now().ToInternalValue());
   
   std::string val;
-  base::JSONWriter::Write(req, &val);
-  
+  req.SerializeToString(&val);
+
   zmqClient->SendRequest(
     remoteAddress,
     val.c_str(),
@@ -158,14 +164,18 @@ int RemoteNodeControllerImpl::getId() const
 int RemoteNodeControllerImpl::addTask(int taskId, const std::string& data,
   std::function<void (int, bool, const std::string&)> callback)
 {
-  base::DictionaryValue req;
-  req.SetString("type", "request");
-  req.SetString("action", "compute");
-  req.SetString("task_id", base::StringPrintf("%d", taskId));
+  Request req;
+  req.set_name("compute");
+  
+  ComputeRequest* cr = new ComputeRequest();
+  cr->set_task_id(taskId);
+  req.set_allocated_compute(cr);
+
+  LOG(INFO) << "Send request:\n" << req.DebugString();
 
   if (auto* remote = pRemoteNode.get())
   {
-    remote->sendRequest(&req,
+    remote->sendRequest(req,
         base::Bind(&RemoteNodeControllerImpl::handleAddTask, weakptr_factory_.GetWeakPtr(),
         taskId, data, callback));
   }
@@ -201,14 +211,20 @@ void RemoteNodeControllerImpl::handleAddTaskImpl(
 
 int RemoteNodeControllerImpl::finishTask(int taskId, const std::string& result)
 {
-  base::DictionaryValue req;
-  req.SetString("type", "request");
-  req.SetString("action", "finishCompute");
-  req.SetString("task_id", base::StringPrintf("%d", taskId));
-  req.SetString("result", result);
+  Request req;
+  req.set_name("finishCompute");
+  
+  FinishComputeRequest* cr = new FinishComputeRequest();
+  cr->set_task_id(taskId);
+  cr->set_result(result);
+
+  req.set_allocated_finish_compute(cr);
+
+  LOG(INFO) << "Send request:\n" << req.DebugString();
+
   if (auto* remote = pRemoteNode.get())
   {
-    remote->sendRequest(&req,
+    remote->sendRequest(req,
       base::Bind(&RemoteNodeControllerImpl::handleFinishTask, weakptr_factory_.GetWeakPtr()));
   }
   return 0;

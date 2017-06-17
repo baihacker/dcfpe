@@ -1,4 +1,5 @@
 #include "dpe/zserver.h"
+#include "dpe/proto/dpe.pb.h"
 
 namespace dpe
 {
@@ -55,116 +56,69 @@ bool ZServer::Stop()
   return true;
 }
 
-/*
-address: dpe:// physic address / instance address / network address
-msg protocol:
-{
-  "type" : "", # request, reply
-  "action": "",
-  "error_code": "",
-  "cookie": "",
-}
-*/
 std::string ZServer::handle_request(base::ServerContext& context)
 {
-  LOG(INFO) << "\nZServer receives request:\n" << context.data_;
+  LOG(INFO) << "has request";
+  Request req;
+  req.ParseFromString(context.data_);
+
+  LOG(INFO) << "\nZServer receives request:\n" << req.DebugString();
   
-  base::DictionaryValue rep;
-  rep.SetString("type", "reply");
-  rep.SetString("action", "unknown");
-  rep.SetString("error_code", "-1");
-  rep.SetString("reply_time", base::StringPrintf("%lld", base::Time::Now().ToInternalValue()));
-
-  base::Value* v = base::JSONReader::Read(
-          context.data_.c_str(), base::JSON_ALLOW_TRAILING_COMMAS);
-
+  Response rep;
   do
   {
-    if (!v)
-    {
-      LOG(ERROR) << "\n ZServer : can not parse request";
-      break;
-    }
-
-    base::DictionaryValue* dv = NULL;
-    if (!v->GetAsDictionary(&dv)) break;
-
-    std::string val;
-
-    if (!dv->GetString("type", &val)) break;
-    if (val != "request") break;
-
-    // send cookie back
-    if (dv->GetString("cookie", &val))
-    {
-      rep.SetString("cookie", val);
-    }
-    
-    // send request id back
-    if (dv->GetString("request_id", &val))
-    {
-      rep.SetString("request_id", val);
-    }
-
-    if (dv->GetString("request_time", &val))
-    {
-      rep.SetString("request_time", val);
-    }
-
-    if (!dv->GetString("action", &val)) break;
+    rep.set_error_code(-1);
+    rep.set_timestamp(base::Time::Now().ToInternalValue());
+    rep.set_request_id(req.request_id());
+    rep.set_request_timestamp(req.timestamp());
 
     // handle request
-    rep.SetString("action", val);
-    if (val == "connect")
+    if (req.has_connect())
     {
-      HandleConnectRequest(dv, &rep);
+      HandleConnectRequest(req, rep);
     }
-    else if (val == "disconnect")
+    else if (req.has_disconnect())
     {
-      HandleDisconnectRequest(dv, &rep);
+      HandleDisconnectRequest(req, rep);
     }
     else
     {
-      handler->handleRequest(dv, &rep);
+      handler->handleRequest(req, rep);
     }
   } while (false);
   
-  delete v;
-  
   std::string ret;
-  if (base::JSONWriter::Write(&rep, &ret))
-  {
-    LOG(INFO) << "\nZServer reply:\n" << ret;
-    return ret;
-  }
-  return "";
+  rep.SerializeToString(&ret);
+
+  LOG(INFO) << "reply :\n" << rep.DebugString();
+  return ret;
 }
 
-void ZServer::HandleConnectRequest(
-     base::DictionaryValue* req, base::DictionaryValue* reply)
+void ZServer::HandleConnectRequest(const Request& req, Response& reply)
 {
-  std::string val;
-  if (req->GetString("address", &val))
+  const auto& connectRequest = req.connect();
+
+  if (connectRequest.has_address())
   {
-    int connectionId = handler->handleConnectRequest(val);
+    int connectionId = handler->handleConnectRequest(connectRequest.address());
     if (connectionId > 0)
     {
-      reply->SetString("connection_id", base::StringPrintf("%d", connectionId));
-      reply->SetString("error_code", "0");
-      return;
+      ConnectResponse* connectResponse = new ConnectResponse();
+      connectResponse->set_connection_id(connectionId);
+
+      reply.set_allocated_connect(connectResponse);
+      reply.set_error_code(0);
     }
   }
-  reply->SetString("error_code", "-1");
 }
 
-void ZServer::HandleDisconnectRequest(
-     base::DictionaryValue* req, base::DictionaryValue* reply)
+void ZServer::HandleDisconnectRequest(const Request& req, Response& reply)
 {
-  std::string val;
-  if (req->GetString("address", &val))
+  const auto& disconnectRequest = req.disconnect();
+  if (disconnectRequest.has_address())
   {
-    handler->handleDisconnectRequest(val);
+    handler->handleDisconnectRequest(disconnectRequest.address());
+    reply.set_error_code(0);
   }
-  reply->SetString("error_code", "0");
 }
 }

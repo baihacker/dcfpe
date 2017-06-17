@@ -19,12 +19,8 @@ void WorkerTaskExecuter::setMasterNode(RemoteNodeController* node)
   this->node = node;
 }
 
-void WorkerTaskExecuter::handleCompute(base::DictionaryValue* req)
+void WorkerTaskExecuter::handleCompute(int taskId)
 {
-  std::string val;
-  req->GetString("task_id", &val);
-  int64 taskId = atoi(val.c_str());
-
   base::ThreadPool::PostTask(base::ThreadPool::COMPUTE,
       FROM_HERE,
       base::Bind(&WorkerTaskExecuter::doCompute, weakptr_factory_.GetWeakPtr(), taskId));
@@ -123,16 +119,12 @@ int DPEWorkerNode::onConnectionFinished(RemoteNodeImpl* node, bool ok)
   return 0;
 }
   
-int DPEWorkerNode::handleRequest(base::DictionaryValue* req, base::DictionaryValue* reply)
+int DPEWorkerNode::handleRequest(const Request& req, Response& reply)
 {
-  std::string val;
-
-  req->GetString("action", &val);
-  
-  if (val == "compute")
+  if (req.has_compute())
   {
-    taskExecuter.handleCompute(req);
-    reply->SetString("error_code", "0");
+    taskExecuter.handleCompute(req.compute().task_id());
+    reply.set_error_code(0);
   }
   return 0;
 }

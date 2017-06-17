@@ -2,6 +2,7 @@
 #define DPE_ZSERVER_H_
 
 #include "dpe_base/dpe_base.h"
+#include "dpe/proto/dpe.pb.h"
 
 namespace dpe
 {
@@ -9,7 +10,7 @@ struct ZServerHandler
 {
   virtual int handleConnectRequest(const std::string& address) = 0;
   virtual int handleDisconnectRequest(const std::string& address) = 0;
-  virtual int handleRequest(base::DictionaryValue* req, base::DictionaryValue* reply) = 0;
+  virtual int handleRequest(const Request& req, Response& reply) = 0;
 };
 
 class ZServer : public base::RequestHandler, public base::RefCounted<ZServer>
@@ -35,10 +36,8 @@ private:
   bool Start(const std::string& address);
   std::string handle_request(base::ServerContext& context) override;
 
-  void HandleConnectRequest(
-       base::DictionaryValue* req, base::DictionaryValue* reply);
-  void HandleDisconnectRequest(
-       base::DictionaryValue* req, base::DictionaryValue* reply);
+  void HandleConnectRequest(const Request& req, Response& reply);
+  void HandleDisconnectRequest(const Request& req, Response& reply);
 public:
   // remote message handling: bind and receive and send
   int32_t     server_state_;

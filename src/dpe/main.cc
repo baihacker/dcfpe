@@ -66,6 +66,7 @@ public:
 
   void setResult(int taskId, const char* result)
   {
+    //std::cerr << "\n" << taskId << " finished" << std::endl;
     taskData[taskId].result = atoi(result);
   }
 

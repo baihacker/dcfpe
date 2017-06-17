@@ -4,6 +4,7 @@
 #include "dpe_base/dpe_base.h"
 #include "dpe/zserver.h"
 #include "dpe/remote_node_impl.h"
+#include "dpe/proto/dpe.pb.h"
 
 namespace dpe
 {
@@ -34,7 +35,7 @@ public:
   virtual int handleConnectRequest(const std::string& address) = 0;
   virtual int handleDisconnectRequest(const std::string& address) = 0;
   virtual int onConnectionFinished(RemoteNodeImpl* node, bool ok) = 0;
-  virtual int handleRequest(base::DictionaryValue* req, base::DictionaryValue* reply) = 0;
+  virtual int handleRequest(const Request& req, Response& reply) = 0;
   virtual void removeNode(int id) = 0;
 
 protected:

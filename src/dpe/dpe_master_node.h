@@ -23,7 +23,7 @@ public:
 
   int onConnectionFinished(RemoteNodeImpl* node, bool ok);
   
-  int handleRequest(base::DictionaryValue* req, base::DictionaryValue* reply);
+  int handleRequest(const Request& req, Response& reply);
   
   void removeNode(int id);
 private:

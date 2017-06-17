@@ -17,7 +17,11 @@ def build_dependencies():
   # os.system(r'python third_party/zmq/build_zmq.py')
   
   # Build proto here
-  os.system(r'tools\protoc-3.3.0-win32\bin\protoc.exe dpe\proto\dpe.proto --cpp_out=.')
+  includePath1 = os.path.join(ENV_SOLUTION_DIRECTORY, r'third_party\protobuf-3.3.1\src')
+  includePath2 = os.path.join(ENV_SOLUTION_DIRECTORY, r'dpe\proto')
+  filePath = os.path.join(ENV_SOLUTION_DIRECTORY, 'dpe\proto\dpe.proto')
+  outputPath = os.path.join(ENV_SOLUTION_DIRECTORY, r'dpe\proto')
+  os.system(r'tools\protoc-3.3.0-win32\bin\protoc.exe --proto_path=%s --proto_path=%s %s --cpp_out=%s'%(includePath1, includePath2, filePath, outputPath))
 
 def prepare_path():
   if os.environ['GYP_GENERATORS'] == 'ninja':

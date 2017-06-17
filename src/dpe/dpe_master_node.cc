@@ -108,23 +108,14 @@ int DPEMasterNode::onConnectionFinished(RemoteNodeImpl* node, bool ok)
   return 0;
 }
   
-int DPEMasterNode::handleRequest(base::DictionaryValue* req, base::DictionaryValue* reply)
+int DPEMasterNode::handleRequest(const Request& req, Response& reply)
 {
-  std::string val;
-
-  req->GetString("action", &val);
-  
-  if (val == "finishCompute")
+  if (req.has_finish_compute())
   {
-    std::string val;
-    req->GetString("task_id", &val);
-    int64 taskId = atoi(val.c_str());
-
-    req->GetString("result", &val);
-    std::string result = val;
-
-    scheduler->handleFinishCompute(taskId, true, result);
-    reply->SetString("error_code", "0");
+    auto& data = req.finish_compute();
+    
+    scheduler->handleFinishCompute(data.task_id(), true, data.result().c_str());
+    reply.set_error_code(0);
   }
   return 0;
 }
