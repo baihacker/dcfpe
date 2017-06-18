@@ -58,7 +58,7 @@ bool ZServer::Stop()
 
 std::string ZServer::handle_request(base::ServerContext& context)
 {
-  LOG(INFO) << "Has request";
+  LOG(INFO) << "Has request from ";
   Request req;
   req.ParseFromString(context.data_);
 
@@ -101,7 +101,7 @@ void ZServer::HandleConnectRequest(const Request& req, Response& reply)
 
   if (connectRequest.has_address())
   {
-    int connectionId = handler->handleConnectRequest(connectRequest.address());
+    auto connectionId = handler->handleConnectRequest(connectRequest.address());
     if (connectionId > 0)
     {
       ConnectResponse* connectResponse = new ConnectResponse();

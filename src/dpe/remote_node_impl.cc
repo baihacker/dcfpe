@@ -23,7 +23,7 @@ void RemoteNodeImpl::connectTo(const std::string& remoteAddress)
 {
   this->remoteAddress = remoteAddress;
   
-  ConnectRequest* cr = new ConnectRequest();
+  auto* cr = new ConnectRequest();
   cr->set_address(myAddress);
 
   Request req;
@@ -37,7 +37,7 @@ void RemoteNodeImpl::connectTo(const std::string& remoteAddress)
 void  RemoteNodeImpl::handleConnect(base::WeakPtr<RemoteNodeImpl> self,
             scoped_refptr<base::ZMQResponse> rep)
 {
-  if (RemoteNodeImpl* pThis = self.get())
+  if (auto* pThis = self.get())
   {
     pThis->handleConnectImpl(rep);
   }
@@ -63,7 +63,7 @@ void RemoteNodeImpl::disconnect()
 {
   isReady = false;
 
-  DisconnectRequest* dr = new DisconnectRequest();
+  auto* dr = new DisconnectRequest();
   dr->set_address(myAddress);
 
   Request req;
@@ -85,7 +85,7 @@ int RemoteNodeImpl::sendRequest(Request& req)
 
 int RemoteNodeImpl::sendRequest(Request& req, base::ZMQCallBack callback)
 {
-  int64 requestId = ++nextRequestId;
+  auto requestId = ++nextRequestId;
 
   req.set_connection_id(remoteConnectionId);
   req.set_request_id(requestId);
@@ -110,7 +110,7 @@ void  RemoteNodeImpl::handleResponse(base::WeakPtr<RemoteNodeImpl> self,
             base::ZMQCallBack callback,
             scoped_refptr<base::ZMQResponse> rep)
 {
-  if (RemoteNodeImpl* pThis = self.get())
+  if (auto* pThis = self.get())
   {
     Response rep1;
     rep1.ParseFromString(rep->data_);
@@ -155,7 +155,7 @@ int64 RemoteNodeControllerImpl::getId() const
 int RemoteNodeControllerImpl::addTask(int64 taskId, const std::string& data,
   std::function<void (int64, bool, const std::string&)> callback)
 {
-  ComputeRequest* cr = new ComputeRequest();
+  auto* cr = new ComputeRequest();
   cr->set_task_id(taskId);
   
   Request req;
@@ -200,7 +200,7 @@ void RemoteNodeControllerImpl::handleAddTaskImpl(
 
 int RemoteNodeControllerImpl::finishTask(int64 taskId, const Variants& result)
 {
-  FinishComputeRequest* cr = new FinishComputeRequest();
+  auto* cr = new FinishComputeRequest();
   cr->set_task_id(taskId);
   cr->set_allocated_result(new Variants(result));
 
