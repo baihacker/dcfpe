@@ -152,6 +152,15 @@ int64 RemoteNodeControllerImpl::getId() const
   return id;
 }
 
+int64 RemoteNodeControllerImpl::getLastUpdateTimestamp() const
+{
+  if (auto* node = pRemoteNode.get())
+  {
+    return node->getLastUpdateTimestamp();
+  }
+  return -1;
+}
+
 int RemoteNodeControllerImpl::addTask(int64 taskId, const std::string& data,
   std::function<void (int64, bool, const std::string&)> callback)
 {
@@ -189,6 +198,10 @@ void RemoteNodeControllerImpl::handleAddTaskImpl(
     std::function<void (int64, bool, const std::string&)> callback,
     scoped_refptr<base::ZMQResponse> rep)
 {
+  if (rep->error_code_ == base::ZMQResponse::ZMQ_REP_TIME_OUT)
+  {
+    LOG(ERROR) << "Add task timeout";
+  }
   if (rep->error_code_ != base::ZMQResponse::ZMQ_REP_OK)
   {
     callback(taskId, false, "");
@@ -234,6 +247,11 @@ void RemoteNodeControllerImpl::handleFinishTaskImpl(
     std::function<void (bool)> callback,
     scoped_refptr<base::ZMQResponse> rep)
 {
+  if (rep->error_code_ == base::ZMQResponse::ZMQ_REP_TIME_OUT)
+  {
+    LOG(ERROR) << "Finish task timeout";
+  }
+
   if (rep->error_code_ != base::ZMQResponse::ZMQ_REP_OK)
   {
     callback(false);
@@ -277,6 +295,11 @@ void RemoteNodeControllerImpl::handleUpdateWorkerStatusImpl(
     std::function<void (bool)> callback,
     scoped_refptr<base::ZMQResponse> rep)
 {
+  if (rep->error_code_ == base::ZMQResponse::ZMQ_REP_TIME_OUT)
+  {
+    LOG(ERROR) << "Update worker status timeout";
+  }
+  
   if (rep->error_code_ != base::ZMQResponse::ZMQ_REP_OK)
   {
     callback(false);

@@ -45,6 +45,10 @@ public:
     lastRunningTaskId = taskId;
     lastUpdateTimestamp = timestamp;
   }
+  int64 getLastUpdateTimestamp() const
+  {
+    return lastUpdateTimestamp;
+  }
 private:
   bool isReady;
   RemoteNodeHandler* handler;
@@ -79,6 +83,8 @@ public:
     std::function<void (bool)> callback) = 0;
 
   virtual int updateWorkerStatus(int64 taskId, std::function<void (bool)> callback) = 0;
+  
+  virtual int64 getLastUpdateTimestamp() const = 0;
 };
 
 class RemoteNodeControllerImpl : public RemoteNodeController
@@ -92,6 +98,8 @@ public:
 
   void removeNode();
   int64 getId() const;
+  int64 getLastUpdateTimestamp() const;
+  
   
   int addTask(int64 taskId, const std::string& data, std::function<void (int64, bool, const std::string&)> callback);
   static void handleAddTask(

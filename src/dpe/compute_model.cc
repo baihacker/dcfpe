@@ -96,9 +96,18 @@ void SimpleMasterTaskScheduler::removeNodeById(int64 id, bool notifyRemoved)
 void SimpleMasterTaskScheduler::refreshStatusImpl()
 {
   int runningCount = 0;
+  std::vector<int64> willRemove;
   for (auto& ctx: nodes)
   {
-    if (ctx.status == NodeContext::READY)
+    auto now = base::Time::Now().ToInternalValue();
+    auto last = ctx.node->getLastUpdateTimestamp();
+    auto delta = base::TimeDelta::FromInternalValue(now - last);
+    if (delta.InSeconds() > 35)
+    {
+      LOG(ERROR) << "Will remove node " << ctx.node->getId();
+      willRemove.push_back(ctx.node->getId());
+    }
+    else if (ctx.status == NodeContext::READY)
     {
       if (!taskQueue.empty())
       {
@@ -118,6 +127,10 @@ void SimpleMasterTaskScheduler::refreshStatusImpl()
     {
       ++runningCount;
     }
+  }
+  for (auto id: willRemove)
+  {
+    removeNodeById(id, true);
   }
   if (runningCount == 0 && taskQueue.empty())
   {
