@@ -64,10 +64,13 @@ static void exitDpeImpl()
   if (dpeMasterNode)
   {
     dpeMasterNode->Stop();
-    //Sleep(1000);
   }
   dpeMasterNode = NULL;
-  LOG(INFO) << "exitDpeImpl1";
+
+  if (dpeWorkerNode)
+  {
+    dpeWorkerNode->Stop();
+  }
   dpeWorkerNode = NULL;
   base::will_quit_main_loop();
 }

@@ -82,6 +82,21 @@ bool DPEWorkerNode::Start(int port)
   remoteNode->connectTo(base::AddressHelper::MakeZMQTCPAddress(serverIP, kServerPort));
   return true;
 }
+
+void DPEWorkerNode::Stop()
+{
+  if (remoteNode)
+  {
+    remoteNode->disconnect();
+    remoteNode = NULL;
+  }
+  if (zserver)
+  {
+    zserver->Stop();
+    delete zserver;
+    zserver = NULL;
+  }
+}
   
 int DPEWorkerNode::handleConnectRequest(const std::string& address)
 {

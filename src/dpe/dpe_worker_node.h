@@ -31,7 +31,9 @@ public:
   DPEWorkerNode(const std::string& myIP, const std::string& serverIP);
 
   bool Start(int port);
-  
+
+  void Stop();
+
   int handleConnectRequest(const std::string& address);
 
   int handleDisconnectRequest(const std::string& address);

@@ -45,7 +45,7 @@ void DPEMasterNode::Stop()
   for (auto* node : remoteNodes)
   {
     node->disconnect();
-    //delete node;
+    delete node;
   }
   std::vector<RemoteNodeImpl*>().swap(remoteNodes);
   if (zserver)
