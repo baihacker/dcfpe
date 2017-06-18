@@ -72,16 +72,16 @@ SimpleMasterTaskScheduler::~SimpleMasterTaskScheduler()
 class TaskAppenderImpl : public TaskAppender
 {
 public:
-  TaskAppenderImpl(std::deque<int>& taskQueue): taskQueue(taskQueue)
+  TaskAppenderImpl(std::deque<int64>& taskQueue): taskQueue(taskQueue)
   {
   }
 
-  void addTask(int taskId)
+  void addTask(int64 taskId)
   {
     taskQueue.push_back(taskId);
   }
 private:
-  std::deque<int>& taskQueue;
+  std::deque<int64>& taskQueue;
 };
 
 void SimpleMasterTaskScheduler::start()
@@ -104,13 +104,13 @@ void SimpleMasterTaskScheduler::onNodeAvailable(RemoteNodeController* node)
   refreshStatusImpl();
 }
 
-void SimpleMasterTaskScheduler::onNodeUnavailable(int id)
+void SimpleMasterTaskScheduler::onNodeUnavailable(int64 id)
 {
   removeNodeById(id, false);
   refreshStatusImpl();
 }
 
-void SimpleMasterTaskScheduler::removeNodeById(int id, bool notifyRemoved)
+void SimpleMasterTaskScheduler::removeNodeById(int64 id, bool notifyRemoved)
 {
   int idx = -1;
   const int size = static_cast<int>(nodes.size());
@@ -157,11 +157,11 @@ void SimpleMasterTaskScheduler::refreshStatusImpl()
     {
       if (!taskQueue.empty())
       {
-        int nodeId = ctx.node->getId();
-        int taskId = taskQueue.front();
+        int64 nodeId = ctx.node->getId();
+        int64 taskId = taskQueue.front();
         taskQueue.pop_front();
         
-        ctx.node->addTask(taskId, "", [=](int taskId, bool ok, const std::string& result) {
+        ctx.node->addTask(taskId, "", [=](int64 taskId, bool ok, const std::string& result) {
           this->handleAddTaskImpl(nodeId, taskId, ok, result);
         });
         ctx.status = NodeContext::COMPUTING_TASK;
@@ -185,7 +185,7 @@ void SimpleMasterTaskScheduler::refreshStatusImpl()
   }
 }
 
-void  SimpleMasterTaskScheduler::handleAddTaskImpl(int nodeId, int taskId, bool ok, const std::string& result)
+void  SimpleMasterTaskScheduler::handleAddTaskImpl(int64 nodeId, int64 taskId, bool ok, const std::string& result)
 {
   if (!ok)
   {
@@ -193,7 +193,7 @@ void  SimpleMasterTaskScheduler::handleAddTaskImpl(int nodeId, int taskId, bool 
   }
 }
 
-void SimpleMasterTaskScheduler::handleFinishCompute(int taskId, bool ok, const Variants& result)
+void SimpleMasterTaskScheduler::handleFinishCompute(int64 taskId, bool ok, const Variants& result)
 {
   // ok is always true
   for (auto& ctx: nodes)

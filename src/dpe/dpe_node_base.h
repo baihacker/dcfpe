@@ -36,7 +36,7 @@ public:
   virtual int handleDisconnectRequest(const std::string& address) = 0;
   virtual int onConnectionFinished(RemoteNodeImpl* node, bool ok) = 0;
   virtual int handleRequest(const Request& req, Response& reply) = 0;
-  virtual void removeNode(int id) = 0;
+  virtual void removeNode(int64 id) = 0;
 
 protected:
   scoped_refptr<ZServer> zserver;
@@ -44,7 +44,7 @@ protected:
   std::string myIP;
   std::string serverIP;
 
-  int nextConnectionId;
+  int64 nextConnectionId;
 };
 }
 #endif

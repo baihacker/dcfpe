@@ -146,7 +146,7 @@ int DPEWorkerNode::handleRequest(const Request& req, Response& reply)
   return 0;
 }
 
-void DPEWorkerNode::removeNode(int id)
+void DPEWorkerNode::removeNode(int64 id)
 {
 }
 

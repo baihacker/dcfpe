@@ -20,8 +20,8 @@ class MasterTaskScheduler
 public:
   virtual void start() = 0;
   virtual void onNodeAvailable(RemoteNodeController* node) = 0;
-  virtual void onNodeUnavailable(int id) = 0;
-  virtual void handleFinishCompute(int taskId, bool ok, const Variants& result) = 0;
+  virtual void onNodeUnavailable(int64 id) = 0;
+  virtual void handleFinishCompute(int64 taskId, bool ok, const Variants& result) = 0;
 };
 
 struct NodeContext
@@ -46,20 +46,20 @@ public:
 
   void start();
   void onNodeAvailable(RemoteNodeController* node);
-  void onNodeUnavailable(int id);
-  void removeNodeById(int id, bool notifyRemoved);
+  void onNodeUnavailable(int64 id);
+  void removeNodeById(int64 id, bool notifyRemoved);
   void refreshStatusImpl();
 
-  void handleAddTaskImpl(int nodeId, int taskId, bool ok, const std::string& result);
+  void handleAddTaskImpl(int64 nodeId, int64 taskId, bool ok, const std::string& result);
 
-  void handleFinishCompute(int taskId, bool ok, const Variants& result);
+  void handleFinishCompute(int64 taskId, bool ok, const Variants& result);
 
   void prepareTaskQueue();
 
 private:
   std::vector<NodeContext> nodes;
   
-  std::deque<int> taskQueue;
+  std::deque<int64> taskQueue;
   
   RepeatedActionWrapper* raw;
 };

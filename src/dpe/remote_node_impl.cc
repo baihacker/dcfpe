@@ -4,7 +4,7 @@
 namespace dpe
 {
 RemoteNodeImpl::RemoteNodeImpl(
-RemoteNodeHandler* handler, const std::string myAddress, int connectionId) :
+RemoteNodeHandler* handler, const std::string myAddress, int64 connectionId) :
     isReady(false),
     nextRequestId(0),
     handler(handler),
@@ -61,8 +61,6 @@ void  RemoteNodeImpl::handleConnectImpl(scoped_refptr<base::ZMQResponse> rep)
 
 void RemoteNodeImpl::disconnect()
 {
-  int requestId = ++nextRequestId;
-
   isReady = false;
 
   DisconnectRequest* dr = new DisconnectRequest();
@@ -87,7 +85,7 @@ int RemoteNodeImpl::sendRequest(Request& req)
 
 int RemoteNodeImpl::sendRequest(Request& req, base::ZMQCallBack callback)
 {
-  int requestId = ++nextRequestId;
+  int64 requestId = ++nextRequestId;
 
   req.set_connection_id(remoteConnectionId);
   req.set_request_id(requestId);
@@ -149,13 +147,13 @@ void RemoteNodeControllerImpl::removeNode()
   }
 }
 
-int RemoteNodeControllerImpl::getId() const
+int64 RemoteNodeControllerImpl::getId() const
 {
   return id;
 }
 
-int RemoteNodeControllerImpl::addTask(int taskId, const std::string& data,
-  std::function<void (int, bool, const std::string&)> callback)
+int RemoteNodeControllerImpl::addTask(int64 taskId, const std::string& data,
+  std::function<void (int64, bool, const std::string&)> callback)
 {
   ComputeRequest* cr = new ComputeRequest();
   cr->set_task_id(taskId);
@@ -175,8 +173,8 @@ int RemoteNodeControllerImpl::addTask(int taskId, const std::string& data,
 
 void RemoteNodeControllerImpl::handleAddTask(
     base::WeakPtr<RemoteNodeControllerImpl> self,
-    int taskId, const std::string& data,
-    std::function<void (int, bool, const std::string&)> callback,
+    int64 taskId, const std::string& data,
+    std::function<void (int64, bool, const std::string&)> callback,
     scoped_refptr<base::ZMQResponse> rep)
 {
   if (auto* pThis = self.get())
@@ -186,8 +184,8 @@ void RemoteNodeControllerImpl::handleAddTask(
 }
 
 void RemoteNodeControllerImpl::handleAddTaskImpl(
-    int taskId, const std::string& data,
-    std::function<void (int, bool, const std::string&)> callback,
+    int64 taskId, const std::string& data,
+    std::function<void (int64, bool, const std::string&)> callback,
     scoped_refptr<base::ZMQResponse> rep)
 {
   if (rep->error_code_ != base::ZMQResponse::ZMQ_REP_OK)
@@ -200,7 +198,7 @@ void RemoteNodeControllerImpl::handleAddTaskImpl(
   }
 }
 
-int RemoteNodeControllerImpl::finishTask(int taskId, const Variants& result)
+int RemoteNodeControllerImpl::finishTask(int64 taskId, const Variants& result)
 {
   FinishComputeRequest* cr = new FinishComputeRequest();
   cr->set_task_id(taskId);

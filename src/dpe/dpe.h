@@ -46,7 +46,7 @@ public:
 class TaskAppender
 {
 public:
-  virtual void addTask(int taskId) = 0;
+  virtual void addTask(int64 taskId) = 0;
 };
 
 class Solver
@@ -54,9 +54,9 @@ class Solver
 public:
   virtual void initAsMaster(TaskAppender* taskAppender) = 0;
   virtual void initAsWorker() = 0;
-  virtual void setResult(int taskId, VariantsReader* result) = 0;
+  virtual void setResult(int64 taskId, VariantsReader* result) = 0;
   // The result buffer is always 1024 bytes.
-  virtual void compute(int taskId, VariantsBuilder* result) = 0;
+  virtual void compute(int64 taskId, VariantsBuilder* result) = 0;
   virtual void finish() = 0;
 };
 

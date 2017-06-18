@@ -18,7 +18,7 @@ message ConnectRequest {
 }
 
 message ConnectResponse {
-  optional int32 connection_id = 1;
+  optional int64 connection_id = 1;
 }
 
 message DisconnectRequest {
@@ -26,18 +26,18 @@ message DisconnectRequest {
 }
 
 message ComputeRequest {
-  optional int32 task_id = 1;
+  optional int64 task_id = 1;
 }
 
 message FinishComputeRequest {
-  optional int32 task_id = 1;
+  optional int64 task_id = 1;
   optional Variants result = 2;
 }
 
 
 message Request {
   optional string name = 1;
-  optional int32 connection_id = 2 [default = 0];
+  optional int64 connection_id = 2 [default = 0];
   optional int64 request_id = 3 [default = 0];
 
   optional int64 timestamp = 100 [default = 0];

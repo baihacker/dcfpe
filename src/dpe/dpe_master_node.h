@@ -27,7 +27,7 @@ public:
   
   int handleRequest(const Request& req, Response& reply);
   
-  void removeNode(int id);
+  void removeNode(int64 id);
 private:
   MasterTaskScheduler* scheduler;
   int port;

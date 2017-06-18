@@ -17,7 +17,7 @@ struct RemoteNodeHandler
 class RemoteNodeImpl
 {
 public:
-  RemoteNodeImpl(RemoteNodeHandler* handler, const std::string myAddress, int connectionId);
+  RemoteNodeImpl(RemoteNodeHandler* handler, const std::string myAddress, int64 connectionId);
   ~RemoteNodeImpl();
   
   int getId() const {return connectionId;};
@@ -46,9 +46,9 @@ private:
 
   std::string myAddress;
   std::string remoteAddress;
-  const int connectionId;
-  int remoteConnectionId;
-  int nextRequestId;
+  const int64 connectionId;
+  int64 remoteConnectionId;
+  int64 nextRequestId;
   
   base::ZMQClient* zmqClient;
   
@@ -61,9 +61,9 @@ public:
   virtual void addRef() = 0;
   virtual void release() = 0;
   virtual void removeNode() = 0;
-  virtual int getId() const = 0;
-  virtual int addTask(int taskId, const std::string& data, std::function<void (int, bool, const std::string&)> callback) = 0;
-  virtual int finishTask(int taskId, const Variants& result) = 0;
+  virtual int64 getId() const = 0;
+  virtual int addTask(int64 taskId, const std::string& data, std::function<void (int64, bool, const std::string&)> callback) = 0;
+  virtual int finishTask(int64 taskId, const Variants& result) = 0;
 };
 
 class RemoteNodeControllerImpl : public RemoteNodeController
@@ -76,26 +76,26 @@ public:
   void release();
 
   void removeNode();
-  int getId() const;
+  int64 getId() const;
   
-  int addTask(int taskId, const std::string& data, std::function<void (int, bool, const std::string&)> callback);
+  int addTask(int64 taskId, const std::string& data, std::function<void (int64, bool, const std::string&)> callback);
   static void handleAddTask(
     base::WeakPtr<RemoteNodeControllerImpl> self,
-    int taskId, const std::string& data,
-    std::function<void (int, bool, const std::string&)> callback, scoped_refptr<base::ZMQResponse> rep);
+    int64 taskId, const std::string& data,
+    std::function<void (int64, bool, const std::string&)> callback, scoped_refptr<base::ZMQResponse> rep);
   void handleAddTaskImpl(
-    int taskId, const std::string& data,
-    std::function<void (int, bool, const std::string&)> callback, scoped_refptr<base::ZMQResponse> rep);
+    int64 taskId, const std::string& data,
+    std::function<void (int64, bool, const std::string&)> callback, scoped_refptr<base::ZMQResponse> rep);
     
-  int finishTask(int taskId, const Variants& result);
+  int finishTask(int64 taskId, const Variants& result);
   static void handleFinishTask(base::WeakPtr<RemoteNodeControllerImpl> self,
     scoped_refptr<base::ZMQResponse> rep);
 private:
   base::WeakPtr<DPENodeBase>    pNode;
   base::WeakPtr<RemoteNodeImpl> pRemoteNode;
   base::WeakPtrFactory<RemoteNodeControllerImpl> weakptr_factory_;
-  int id;
-  int refCount;
+  int64 id;
+  int64 refCount;
 };
 }
 #endif

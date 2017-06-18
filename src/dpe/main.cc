@@ -23,10 +23,9 @@ struct TaskData
     FINISHED,
   };
   TaskStatus status;
-  int id;
+  int64 id;
   int64 result;
 };
-
 
 class SolverImpl : public Solver
 {
@@ -64,19 +63,19 @@ public:
     }
   }
 
-  void setResult(int taskId, VariantsReader* result)
+  void setResult(int64 taskId, VariantsReader* result)
   {
     taskData[taskId].result = result->int64Value(0);
   }
 
-  void compute(int taskId, VariantsBuilder* result)
+  void compute(int64 taskId, VariantsBuilder* result)
   {
     result->appendInt64Value(taskId*taskId);
   }
   
   void finish()
   {
-    int ans = 0;
+    int64 ans = 0;
     for (auto& t : taskData) ans += t.result;
     std::cerr << std::endl << "ans = " << ans << std::endl << std::endl;
   }

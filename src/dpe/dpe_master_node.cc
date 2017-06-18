@@ -136,7 +136,7 @@ int DPEMasterNode::handleRequest(const Request& req, Response& reply)
   return 0;
 }
   
-void DPEMasterNode::removeNode(int id)
+void DPEMasterNode::removeNode(int64 id)
 {
   const int size = static_cast<int>(remoteNodes.size());
   int idx = -1;
