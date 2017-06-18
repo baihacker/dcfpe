@@ -10,6 +10,7 @@ class WorkerTaskExecuter
 {
 public:
   WorkerTaskExecuter();
+  ~WorkerTaskExecuter();
 
   void start();
   void setMasterNode(RemoteNodeController* node);
@@ -32,10 +33,9 @@ public:
   DPEWorkerNode(const std::string& myIP, const std::string& serverIP);
   ~DPEWorkerNode();
 
-  bool Start(int port);
+  bool start(int port);
+  void stop();
   void OnRepeatedActionFinish(base::RepeatedAction* ra){}
-
-  void Stop();
 
   int handleConnectRequest(const std::string& address);
 

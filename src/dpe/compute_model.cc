@@ -12,30 +12,33 @@ SimpleMasterTaskScheduler::SimpleMasterTaskScheduler()
 
 SimpleMasterTaskScheduler::~SimpleMasterTaskScheduler()
 {
-
 }
-
-class TaskAppenderImpl : public TaskAppender
-{
-public:
-  TaskAppenderImpl(std::deque<int64>& taskQueue): taskQueue(taskQueue)
-  {
-  }
-
-  void addTask(int64 taskId)
-  {
-    taskQueue.push_back(taskId);
-  }
-private:
-  std::deque<int64>& taskQueue;
-};
 
 void SimpleMasterTaskScheduler::start()
 {
+  class TaskAppenderImpl : public TaskAppender
+  {
+  public:
+    TaskAppenderImpl(std::deque<int64>& taskQueue): taskQueue(taskQueue)
+    {
+    }
+
+    ~TaskAppenderImpl()
+    {
+    }
+
+    void addTask(int64 taskId)
+    {
+      taskQueue.push_back(taskId);
+    }
+
+  private:
+    std::deque<int64>& taskQueue;
+  };
   TaskAppenderImpl appender(taskQueue);
   getSolver()->initAsMaster(&appender);
   repeatedAction = new base::RepeatedAction(this);
-  repeatedAction->Start([=](){refreshStatusImpl();}, 0, 10, -1);
+  repeatedAction->Start([=](){refreshStatusImpl();}, 0, kDefaultRefreshIntervalInSeconds, -1);
 }
 
 void SimpleMasterTaskScheduler::onNodeAvailable(RemoteNodeController* node)

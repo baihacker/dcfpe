@@ -63,13 +63,13 @@ static void exitDpeImpl()
   LOG(INFO) << "exitDpeImpl";
   if (dpeMasterNode)
   {
-    dpeMasterNode->Stop();
+    dpeMasterNode->stop();
   }
   dpeMasterNode = NULL;
 
   if (dpeWorkerNode)
   {
-    dpeWorkerNode->Stop();
+    dpeWorkerNode->stop();
   }
   dpeWorkerNode = NULL;
   base::will_quit_main_loop();
@@ -97,7 +97,7 @@ static inline void run()
   if (type == "server")
   {
     dpeMasterNode = new DPEMasterNode(myIP, serverIP);
-    if (!dpeMasterNode->Start(port == 0 ? dpe::kServerPort : port))
+    if (!dpeMasterNode->start(port == 0 ? dpe::kServerPort : port))
     {
       LOG(ERROR) << "Failed to start master node";
       willExitDpe();
@@ -106,7 +106,7 @@ static inline void run()
   else if (type == "worker")
   {
     dpeWorkerNode = new DPEWorkerNode(myIP, serverIP);
-    if (!dpeWorkerNode->Start(port == 0 ? dpe::kWorkerPort : port))
+    if (!dpeWorkerNode->start(port == 0 ? dpe::kWorkerPort : port))
     {
       LOG(ERROR) << "Failed to start worker node";
       willExitDpe();

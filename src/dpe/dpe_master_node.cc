@@ -11,7 +11,7 @@ DPEMasterNode::DPEMasterNode(
   }
 DPEMasterNode::~DPEMasterNode()
 {
-  Stop();
+  stop();
   if (scheduler)
   {
     delete scheduler;
@@ -19,7 +19,7 @@ DPEMasterNode::~DPEMasterNode()
   }
 }
 
-bool DPEMasterNode::Start(int port)
+bool DPEMasterNode::start(int port)
 {
   this->port = port;
   zserver = new ZServer(this);
@@ -41,7 +41,7 @@ bool DPEMasterNode::Start(int port)
   return true;
 }
 
-void DPEMasterNode::Stop()
+void DPEMasterNode::stop()
 {
   for (auto* node : remoteNodes)
   {

@@ -19,6 +19,7 @@ RemoteNodeHandler* handler, const std::string myAddress, int64 connectionId) :
 RemoteNodeImpl::~RemoteNodeImpl()
 {
 }
+
 void RemoteNodeImpl::connectTo(const std::string& remoteAddress)
 {
   this->remoteAddress = remoteAddress;
@@ -121,7 +122,7 @@ void  RemoteNodeImpl::handleResponse(base::WeakPtr<RemoteNodeImpl> self,
 
 RemoteNodeControllerImpl::RemoteNodeControllerImpl(
   base::WeakPtr<DPENodeBase> pLocalNode, base::WeakPtr<RemoteNodeImpl> pRemoteNode) :
-  pLocalNode(pLocalNode), pRemoteNode(pRemoteNode), refCount(0), weakptr_factory_(this)
+  refCount(0), pLocalNode(pLocalNode), pRemoteNode(pRemoteNode), weakptr_factory_(this)
 {
   id = pRemoteNode->getId();
 }
@@ -139,14 +140,6 @@ void RemoteNodeControllerImpl::release()
   }
 }
 
-void RemoteNodeControllerImpl::removeNode()
-{
-  if (auto* local = pLocalNode.get())
-  {
-    local->removeNode(id);
-  }
-}
-
 int64 RemoteNodeControllerImpl::getId() const
 {
   return id;
@@ -159,6 +152,14 @@ int64 RemoteNodeControllerImpl::getLastUpdateTimestamp() const
     return node->getLastUpdateTimestamp();
   }
   return -1;
+}
+
+void RemoteNodeControllerImpl::removeNode()
+{
+  if (auto* local = pLocalNode.get())
+  {
+    local->removeNode(id);
+  }
 }
 
 int RemoteNodeControllerImpl::addTask(int64 taskId, const std::string& data,

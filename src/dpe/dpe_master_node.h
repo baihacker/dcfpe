@@ -15,9 +15,8 @@ public:
     const std::string& myIP, const std::string& serverIP);
   ~DPEMasterNode();
 
-  bool Start(int port);
-  
-  void Stop();
+  bool start(int port);
+  void stop();
   
   int handleConnectRequest(const std::string& address);
 

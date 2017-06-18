@@ -9,6 +9,7 @@ namespace dpe
 class VariantsReaderImpl : public VariantsReader {
 public:
   VariantsReaderImpl(const Variants& variants);
+  ~VariantsReaderImpl();
 
   int size() const;
   int64 int64Value(int idx) const;
@@ -19,6 +20,8 @@ private:
 
 class VariantsBuilderImpl : public VariantsBuilder {
 public:
+  VariantsBuilderImpl();
+  ~VariantsBuilderImpl();
   const Variants& getVariants() const;
   VariantsBuilder* appendInt64Value(int64 value);
   VariantsBuilder* appendStringValue(const char* str);

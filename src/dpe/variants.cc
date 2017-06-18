@@ -6,6 +6,10 @@ VariantsReaderImpl::VariantsReaderImpl(const Variants& variants) : variants(vari
 {
 }
 
+VariantsReaderImpl::~VariantsReaderImpl()
+{
+}
+
 int VariantsReaderImpl::size() const
 {
   return variants.element_size();
@@ -20,6 +24,15 @@ const char* VariantsReaderImpl::stringValue(int idx) const
 {
   return variants.element(idx).value_string().c_str();
 }
+
+VariantsBuilderImpl::VariantsBuilderImpl()
+{
+}
+
+VariantsBuilderImpl::~VariantsBuilderImpl()
+{
+}
+
 
 const Variants& VariantsBuilderImpl::getVariants() const
 {

@@ -98,12 +98,13 @@ public:
   void addRef();
   void release();
 
-  void removeNode();
   int64 getId() const;
   int64 getLastUpdateTimestamp() const;
   DPENodeBase* getLocalNode() const {return pLocalNode.get();}
   RemoteNodeImpl* getRemoteNode() const {return pRemoteNode.get();}
-  
+
+  void removeNode();
+
   int addTask(int64 taskId, const std::string& data, std::function<void (int64, bool, const std::string&)> callback);
   static void handleAddTask(
     base::WeakPtr<RemoteNodeControllerImpl> self,
@@ -132,11 +133,11 @@ public:
     std::function<void (bool)> callback,
     scoped_refptr<base::ZMQResponse> rep);
 private:
+  int64 id;
+  int64 refCount;
   base::WeakPtr<DPENodeBase>    pLocalNode;
   base::WeakPtr<RemoteNodeImpl> pRemoteNode;
   base::WeakPtrFactory<RemoteNodeControllerImpl> weakptr_factory_;
-  int64 id;
-  int64 refCount;
 };
 }
 #endif

@@ -7,6 +7,8 @@
 
 namespace dpe
 {
+static const int kDefaultRefreshIntervalInSeconds = 10;
+
 class MasterTaskScheduler
 {
 public:

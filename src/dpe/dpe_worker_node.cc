@@ -11,6 +11,10 @@ WorkerTaskExecuter::WorkerTaskExecuter() : weakptr_factory_(this)
 {
 }
 
+WorkerTaskExecuter::~WorkerTaskExecuter()
+{
+}
+
 void WorkerTaskExecuter::start()
 {
   getSolver()->initAsWorker();
@@ -67,10 +71,10 @@ DPEWorkerNode::DPEWorkerNode(const std::string& myIP, const std::string& serverI
 
 DPEWorkerNode::~DPEWorkerNode()
 {
-  Stop();
+  stop();
 }
 
-bool DPEWorkerNode::Start(int port)
+bool DPEWorkerNode::start(int port)
 {
   this->port = port;
   zserver = new ZServer(this);
@@ -95,7 +99,7 @@ bool DPEWorkerNode::Start(int port)
   return true;
 }
 
-void DPEWorkerNode::Stop()
+void DPEWorkerNode::stop()
 {
   if (remoteNode)
   {
