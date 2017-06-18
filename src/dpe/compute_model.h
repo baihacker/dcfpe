@@ -28,7 +28,7 @@ struct NodeContext
   };
   NodeStatus status;
   RemoteNodeController* node;
-  int taskId;
+  int64 taskId;
 };
 
 class SimpleMasterTaskScheduler : public MasterTaskScheduler,

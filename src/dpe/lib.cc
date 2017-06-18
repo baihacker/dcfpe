@@ -56,6 +56,7 @@ std::string type = "server";
 std::string myIP;
 std::string serverIP;
 int port = 0;
+int instanceId = 0;
 Solver* solver;
 
 static void exitDpeImpl()
@@ -97,7 +98,7 @@ static inline void run()
   if (type == "server")
   {
     dpeMasterNode = new DPEMasterNode(myIP, serverIP);
-    if (!dpeMasterNode->start(port == 0 ? dpe::kServerPort : port))
+    if (!dpeMasterNode->start(port == 0 ? dpe::kServerPort + instanceId : port))
     {
       LOG(ERROR) << "Failed to start master node";
       willExitDpe();
@@ -106,7 +107,7 @@ static inline void run()
   else if (type == "worker")
   {
     dpeWorkerNode = new DPEWorkerNode(myIP, serverIP);
-    if (!dpeWorkerNode->start(port == 0 ? dpe::kWorkerPort : port))
+    if (!dpeWorkerNode->start(port == 0 ? dpe::kWorkerPort + instanceId : port))
     {
       LOG(ERROR) << "Failed to start worker node";
       willExitDpe();
@@ -134,24 +135,31 @@ DPE_EXPORT void start_dpe(Solver* solver, int argc, char* argv[])
   int loggingLevel = 1;
   for (int i = 1; i < argc;)
   {
-    const std::string str = removePrefix(argv[i], '-');
+    const std::string str = StringToLowerASCII(removePrefix(argv[i], '-'));
 
-    if (str == "t")
+    if (str == "t" || str == "type")
     {
       type = argv[i+1];
       i += 2;
     }
-    else if (str == "s")
+    else if (str == "ip")
     {
       serverIP = argv[i+1];
       i += 2;
     }
-    else if (str == "l") {
+    else if (str == "l" || str == "log")
+    {
       loggingLevel = atoi(argv[i+1]);
       i += 2;
     }
-    else if (str == "p") {
+    else if (str == "p" || str == "port")
+    {
       port = atoi(argv[i+1]);
+      i += 2;
+    }
+    else if (str == "id")
+    {
+      instanceId = atoi(argv[i+1]);
       i += 2;
     }
     else

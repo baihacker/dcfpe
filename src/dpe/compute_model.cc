@@ -38,7 +38,9 @@ void SimpleMasterTaskScheduler::start()
   TaskAppenderImpl appender(taskQueue);
   getSolver()->initAsMaster(&appender);
   repeatedAction = new base::RepeatedAction(this);
-  repeatedAction->Start([=](){refreshStatusImpl();}, 0, kDefaultRefreshIntervalInSeconds, -1);
+  repeatedAction->Start([=](){
+    refreshStatusImpl();
+    }, 0, kDefaultRefreshIntervalInSeconds, -1);
 }
 
 void SimpleMasterTaskScheduler::onNodeAvailable(RemoteNodeController* node)
@@ -119,7 +121,7 @@ void SimpleMasterTaskScheduler::refreshStatusImpl()
         taskQueue.pop_front();
         
         ctx.node->addTask(taskId, "", [=](int64 taskId, bool ok, const std::string& result) {
-          this->handleAddTaskImpl(nodeId, taskId, ok, result);
+          handleAddTaskImpl(nodeId, taskId, ok, result);
         });
         ctx.status = NodeContext::COMPUTING_TASK;
         ctx.taskId = taskId;
