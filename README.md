@@ -68,3 +68,4 @@ Updated:
 * 2015.05.18 17:17:24 Compute the square of [1..100] by dpe model on two computers. 5011+5465+927=11403 lines, 131459+147496+25257=304212 Bytes.
 * 2017.06.11 A new compute framework called dpe. 1633 lines code. Compute 0^2 + 1^2 + 2^2 + ... + 9^2 = 285 in distributed environment.
 * 2017.06.12 Succeeded in generating .dll .h for x86, x64.
+* 2017.06.18 Release [dpe_1.0.0.0](https://github.com/baihacker/dcfpe/tree/master/releases) and [dpe_1.0.0.1](https://github.com/baihacker/dcfpe/tree/master/releases).
