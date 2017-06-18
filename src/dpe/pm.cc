@@ -80,12 +80,22 @@ static void run()
   monitor.start(processName, minId, maxId, arguments);
 }
 
-static inline std::string removePrefix(const std::string& s, char c)
+static inline std::string parseCmd(const std::string& s, int& idx, std::string& value)
 {
+  idx = -1;
+  value = "";
+
   const int l = static_cast<int>(s.length());
   int i = 0;
-  while (i < l && s[i] == c) ++i;
-  return s.substr(i);
+  while (i < l && s[i] == '-') ++i;
+  int j = i;
+  while (j < l && s[j] != '=') ++j;
+  if (j < l)
+  {
+    idx = j;
+    value = s.substr(j+1);
+  }
+  return StringToLowerASCII(s.substr(i, j-i));
 }
 
 int main(int argc, char* argv[])
@@ -93,7 +103,10 @@ int main(int argc, char* argv[])
   int loggingLevel = 1;
   for (int i = 1; i < argc;)
   {
-    const std::string str = StringToLowerASCII(removePrefix(argv[i], '-'));
+    int idx;
+    std::string value;
+    const std::string str = parseCmd(argv[i], idx, value);
+
     if (str == "")
     {
       for (int j = i + 1; j < argc; ++j)
@@ -104,18 +117,37 @@ int main(int argc, char* argv[])
     }
     else if (str == "l" || str == "log")
     {
-      loggingLevel = atoi(argv[i+1]);
-      i += 2;
+      if (idx == -1)
+      {
+        loggingLevel = atoi(argv[i+1]);
+        i += 2;
+      }
+      else
+      {
+        loggingLevel = atoi(value.c_str());
+        ++i;
+      }
     }
     else if (str == "id")
     {
+      std::string data;
+      if (idx == -1)
+      {
+        data = argv[i+1];
+        i += 2;
+      }
+      else
+      {
+        data = value;
+        ++i;
+      }
       int l, r;
-      if (sscanf(argv[i+1], "%d-%d", &l, &r) == 2)
+      if (sscanf(data.c_str(), "%d-%d", &l, &r) == 2)
       {
         minId = l;
         maxId = r;
       }
-      else if (sscanf(argv[i+1], "%d", &l) == 1)
+      else if (sscanf(data.c_str(), "%d", &l) == 1)
       {
         minId = maxId = l;
       }
@@ -124,7 +156,6 @@ int main(int argc, char* argv[])
         std::cerr << "Invalid id arguments" << std::endl;
         return -1;
       }
-      i += 2;
     }
     else
     {

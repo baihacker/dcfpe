@@ -42,12 +42,22 @@ static inline void stopNetwork()
   ::WSACleanup();
 }
 
-static inline std::string removePrefix(const std::string& s, char c)
+static inline std::string parseCmd(const std::string& s, int& idx, std::string& value)
 {
+  idx = -1;
+  value = "";
+
   const int l = static_cast<int>(s.length());
   int i = 0;
-  while (i < l && s[i] == c) ++i;
-  return s.substr(i);
+  while (i < l && s[i] == '-') ++i;
+  int j = i;
+  while (j < l && s[j] != '=') ++j;
+  if (j < l)
+  {
+    idx = j;
+    value = s.substr(j+1);
+  }
+  return StringToLowerASCII(s.substr(i, j-i));
 }
 
 scoped_refptr<DPEMasterNode> dpeMasterNode;
@@ -135,32 +145,73 @@ DPE_EXPORT void start_dpe(Solver* solver, int argc, char* argv[])
   int loggingLevel = 1;
   for (int i = 1; i < argc;)
   {
-    const std::string str = StringToLowerASCII(removePrefix(argv[i], '-'));
-
+    int idx;
+    std::string value;
+    const std::string str = parseCmd(argv[i], idx, value);
     if (str == "t" || str == "type")
     {
-      type = argv[i+1];
-      i += 2;
+      if (idx == -1)
+      {
+        type = argv[i+1];
+        i += 2;
+      }
+      else
+      {
+        type = value;
+        ++i;
+      }
     }
     else if (str == "ip")
     {
-      serverIP = argv[i+1];
-      i += 2;
+      if (idx == -1)
+      {
+        serverIP = argv[i+1];
+        i += 2;
+      }
+      else
+      {
+        serverIP = value;
+        ++i;
+      }
     }
     else if (str == "l" || str == "log")
     {
-      loggingLevel = atoi(argv[i+1]);
-      i += 2;
+      if (idx == -1)
+      {
+        loggingLevel = atoi(argv[i+1]);
+        i += 2;
+      }
+      else
+      {
+        loggingLevel = atoi(value.c_str());
+        ++i;
+      }
     }
     else if (str == "p" || str == "port")
     {
-      port = atoi(argv[i+1]);
-      i += 2;
+      if (idx == -1)
+      {
+        port = atoi(argv[i+1]);
+        i += 2;
+      }
+      else
+      {
+        port = atoi(value.c_str());
+        ++i;
+      }
     }
     else if (str == "id")
     {
-      instanceId = atoi(argv[i+1]);
-      i += 2;
+      if (idx == -1)
+      {
+        instanceId = atoi(argv[i+1]);
+        i += 2;
+      }
+      else
+      {
+        instanceId = atoi(value.c_str());
+        ++i;
+      }
     }
     else
     {
