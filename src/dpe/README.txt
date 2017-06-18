@@ -105,7 +105,7 @@ a.exe --l=0 -type=worker --id=1 --server_ip=<server ip>
 4.3.1.1
 main.exe --log=0
 4.3.1.2
-pm main.exe --log=0 --id=0-1 -- --log=0 --type=worker
+pm.exe main.exe --log=0 --id=0-1 -- --log=0 --type=worker
 
 4.3.2 在一台计算机部署1个master,在另一台计算机上部署2个worker
 4.3.2.1

@@ -135,7 +135,7 @@ using namespace dpe;
 
 DPE_EXPORT void start_dpe(Solver* solver, int argc, char* argv[])
 {
-  std::cout << "DCFPE (version 1.0.0.0)" << std::endl;
+  std::cout << "DCFPE (version 1.0.0.1)" << std::endl;
   std::cout << "Author: baihacker" << std::endl;
   std::cout << "HomePage: https://github.com/baihacker/dcfpe" << std::endl;
 
