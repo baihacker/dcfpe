@@ -20,7 +20,8 @@ class DPE_BASE_EXPORT RepeatedAction : public base::RefCounted<RepeatedAction>
 public:
   RepeatedAction(RepeatedActionHost* host);
   ~RepeatedAction();
-  
+
+  bool Start(std::function<void()> callback, int delay, int period, int repeated_time);
   bool Start(const base::Closure& action, base::TimeDelta time_delay, base::TimeDelta time_interval, int32_t repeated_time);
   bool Stop();
   bool Restart(base::TimeDelta time_delay, base::TimeDelta time_interval, int32_t repeated_time);

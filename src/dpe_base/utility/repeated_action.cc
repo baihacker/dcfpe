@@ -12,6 +12,19 @@ RepeatedAction::~RepeatedAction()
 {
 }
 
+static void doActionInternal(std::function<void()> callback)
+{
+  callback();
+}
+
+bool RepeatedAction::Start(std::function<void()> callback, int delay, int period, int32 repeated_time)
+{
+  return Start(base::Bind(&doActionInternal, callback),
+      base::TimeDelta::FromSeconds(delay),
+      base::TimeDelta::FromSeconds(period),
+      repeated_time);
+}
+
 bool RepeatedAction::Start(const base::Closure& action,
         base::TimeDelta time_delay, base::TimeDelta time_interval, int32_t repeated_time)
 {

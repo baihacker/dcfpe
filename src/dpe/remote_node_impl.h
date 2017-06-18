@@ -34,12 +34,17 @@ public:
 
   void disconnect();
   
-  int sendRequest(Request& req, base::ZMQCallBack callback);
-  int sendRequest(Request& req);
+  int sendRequest(Request& req, base::ZMQCallBack callback, int timeout = 0);
+  int sendRequest(Request& req, int timeout = 0);
   
   static void  handleResponse(base::WeakPtr<RemoteNodeImpl> self,
               base::ZMQCallBack callback,
               scoped_refptr<base::ZMQResponse> rep);
+  void updateStatus(int64 taskId, int64 timestamp)
+  {
+    lastRunningTaskId = taskId;
+    lastUpdateTimestamp = timestamp;
+  }
 private:
   bool isReady;
   RemoteNodeHandler* handler;
@@ -53,6 +58,9 @@ private:
   base::ZMQClient* zmqClient;
   
   base::WeakPtrFactory<RemoteNodeImpl>                 weakptr_factory_;
+  
+  int64 lastUpdateTimestamp;
+  int64 lastRunningTaskId;
 };
 
 class RemoteNodeController
@@ -60,10 +68,17 @@ class RemoteNodeController
 public:
   virtual void addRef() = 0;
   virtual void release() = 0;
+
   virtual void removeNode() = 0;
   virtual int64 getId() const = 0;
-  virtual int addTask(int64 taskId, const std::string& data, std::function<void (int64, bool, const std::string&)> callback) = 0;
-  virtual int finishTask(int64 taskId, const Variants& result) = 0;
+
+  virtual int addTask(int64 taskId, const std::string& data,
+    std::function<void (int64, bool, const std::string&)> callback) = 0;
+
+  virtual int finishTask(int64 taskId, const Variants& result,
+    std::function<void (bool)> callback) = 0;
+
+  virtual int updateWorkerStatus(int64 taskId, std::function<void (bool)> callback) = 0;
 };
 
 class RemoteNodeControllerImpl : public RemoteNodeController
@@ -82,13 +97,28 @@ public:
   static void handleAddTask(
     base::WeakPtr<RemoteNodeControllerImpl> self,
     int64 taskId, const std::string& data,
-    std::function<void (int64, bool, const std::string&)> callback, scoped_refptr<base::ZMQResponse> rep);
+    std::function<void (int64, bool, const std::string&)> callback,
+    scoped_refptr<base::ZMQResponse> rep);
   void handleAddTaskImpl(
     int64 taskId, const std::string& data,
-    std::function<void (int64, bool, const std::string&)> callback, scoped_refptr<base::ZMQResponse> rep);
-    
-  int finishTask(int64 taskId, const Variants& result);
+    std::function<void (int64, bool, const std::string&)> callback,
+    scoped_refptr<base::ZMQResponse> rep);
+
+  int finishTask(int64 taskId, const Variants& result, std::function<void (bool)> callback);
   static void handleFinishTask(base::WeakPtr<RemoteNodeControllerImpl> self,
+    std::function<void (bool)> callback,
+    scoped_refptr<base::ZMQResponse> rep);
+  void handleFinishTaskImpl(
+    std::function<void (bool)> callback,
+    scoped_refptr<base::ZMQResponse> rep);
+    
+    
+  int updateWorkerStatus(int64 taskId, std::function<void (bool)> callback);
+  static void handleUpdateWorkerStatus(base::WeakPtr<RemoteNodeControllerImpl> self,
+    std::function<void (bool)> callback,
+    scoped_refptr<base::ZMQResponse> rep);
+  void handleUpdateWorkerStatusImpl(
+    std::function<void (bool)> callback,
     scoped_refptr<base::ZMQResponse> rep);
 private:
   base::WeakPtr<DPENodeBase>    pNode;

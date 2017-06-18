@@ -11,6 +11,7 @@ DPEMasterNode::DPEMasterNode(
   }
 DPEMasterNode::~DPEMasterNode()
 {
+  Stop();
   if (scheduler)
   {
     delete scheduler;
@@ -71,17 +72,19 @@ int DPEMasterNode::handleConnectRequest(const std::string& address)
 
   if (idx != -1)
   {
-    RemoteNodeImpl* node = remoteNodes[idx];
+    auto* node = remoteNodes[idx];
     std::remove(remoteNodes.begin(), remoteNodes.end(), node);
     scheduler->onNodeUnavailable(node->getId());
     delete node;
   }
 
-  RemoteNodeImpl* remoteNode = new RemoteNodeImpl(
+  auto* remoteNode = new RemoteNodeImpl(
       this,
       zserver->GetServerAddress(),
       nextConnectionId++);
   remoteNode->connectTo(address);
+  
+  remoteNode->updateStatus(-1, base::Time::Now().ToInternalValue());
   remoteNodes.push_back(remoteNode);
 
   return remoteNode->getId();
@@ -126,11 +129,34 @@ int DPEMasterNode::onConnectionFinished(RemoteNodeImpl* node, bool ok)
   
 int DPEMasterNode::handleRequest(const Request& req, Response& reply)
 {
+  RemoteNodeImpl* remoteNode = NULL;
+  
+  auto id = req.connection_id();
+  for (auto node: remoteNodes)
+  {
+    if (node->getId() == id)
+    {
+      remoteNode = node;
+      break;
+    }
+  }
+  if (remoteNode == NULL)
+  {
+    return 0;
+  }
+
   if (req.has_finish_compute())
   {
     auto& data = req.finish_compute();
-    
+    remoteNode->updateStatus(data.task_id(), base::Time::Now().ToInternalValue());
+
     scheduler->handleFinishCompute(data.task_id(), true, data.result());
+    reply.set_error_code(0);
+  }
+  else if (req.has_update_worker_status())
+  {
+    auto& data = req.update_worker_status();
+    remoteNode->updateStatus(data.running_task_id(), base::Time::Now().ToInternalValue());
     reply.set_error_code(0);
   }
   return 0;

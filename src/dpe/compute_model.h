@@ -1,20 +1,12 @@
 #ifndef DPE_COMPUTE_MODEL_H_
 #define DPE_COMPUTE_MODEL_H_
 
+#include "dpe_base/dpe_base.h"
 #include "dpe/remote_node_impl.h"
 #include "dpe/proto/dpe.pb.h"
 
 namespace dpe
 {
-class RepeatedActionWrapper
-{
-public:
-  virtual void addRef() = 0;
-  virtual void release() = 0;
-  virtual void start(std::function<void ()> action, int delay, int period) = 0;
-  virtual void stop() = 0;
-};
-
 class MasterTaskScheduler
 {
 public:
@@ -37,7 +29,8 @@ struct NodeContext
   int taskId;
 };
 
-class SimpleMasterTaskScheduler : public MasterTaskScheduler
+class SimpleMasterTaskScheduler : public MasterTaskScheduler,
+  public base::RepeatedActionHost
 {
 public:
   SimpleMasterTaskScheduler();
@@ -45,6 +38,7 @@ public:
   ~SimpleMasterTaskScheduler();
 
   void start();
+  void OnRepeatedActionFinish(base::RepeatedAction* ra){}
   void onNodeAvailable(RemoteNodeController* node);
   void onNodeUnavailable(int64 id);
   void removeNodeById(int64 id, bool notifyRemoved);
@@ -61,7 +55,7 @@ private:
   
   std::deque<int64> taskQueue;
   
-  RepeatedActionWrapper* raw;
+  scoped_refptr<base::RepeatedAction> repeatedAction;
 };
 
 }

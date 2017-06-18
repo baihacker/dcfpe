@@ -6,67 +6,13 @@
 
 namespace dpe
 {
-class RepeatedActionrapperImpl : public RepeatedActionWrapper,
-  public base::RepeatedActionHost
-{
-public:
-  RepeatedActionrapperImpl() : refCount(0), weakptr_factory_(this) {}
-  void addRef()
-  {
-    ++refCount;
-  }
-
-  void release()
-  {
-    if (--refCount == 0)
-    {
-      delete this;
-    }
-  }
-
-  void start(std::function<void ()> action, int delay, int period)
-  {
-    repeatedAction = new base::RepeatedAction(this);
-    repeatedAction->Start(
-      base::Bind(&RepeatedActionrapperImpl::doAction, action),
-      base::TimeDelta::FromSeconds(delay),
-      base::TimeDelta::FromSeconds(period),
-      -1);
-  }
-
-  static void doAction(std::function<void ()> action)
-  {
-    action();
-  }
-  void OnRepeatedActionFinish(base::RepeatedAction* ra)
-  {
-    
-  }
-  void stop()
-  {
-    if (repeatedAction)
-    {
-      repeatedAction->Stop();
-      repeatedAction = NULL;
-    }
-  }
-private:
-  int refCount;
-  scoped_refptr<base::RepeatedAction> repeatedAction;
-  base::WeakPtrFactory<RepeatedActionrapperImpl> weakptr_factory_;
-};
-
-SimpleMasterTaskScheduler::SimpleMasterTaskScheduler() : raw(NULL)
+SimpleMasterTaskScheduler::SimpleMasterTaskScheduler()
 {
 }
 
 SimpleMasterTaskScheduler::~SimpleMasterTaskScheduler()
 {
-  if (raw)
-  {
-    raw->release();
-    raw = NULL;
-  }
+
 }
 
 class TaskAppenderImpl : public TaskAppender
@@ -88,9 +34,8 @@ void SimpleMasterTaskScheduler::start()
 {
   TaskAppenderImpl appender(taskQueue);
   getSolver()->initAsMaster(&appender);
-  raw = new RepeatedActionrapperImpl();
-  raw->addRef();
-  raw->start([=](){refreshStatusImpl();}, 0, 10);
+  repeatedAction = new base::RepeatedAction(this);
+  repeatedAction->Start([=](){refreshStatusImpl();}, 0, 10, -1);
 }
 
 void SimpleMasterTaskScheduler::onNodeAvailable(RemoteNodeController* node)
@@ -177,9 +122,9 @@ void SimpleMasterTaskScheduler::refreshStatusImpl()
   if (runningCount == 0 && taskQueue.empty())
   {
     getSolver()->finish();
-    if (raw)
+    if (repeatedAction)
     {
-      raw->stop();
+      repeatedAction->Stop();
     }
     willExitDpe();
   }

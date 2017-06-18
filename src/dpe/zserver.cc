@@ -58,7 +58,7 @@ bool ZServer::Stop()
 
 std::string ZServer::handle_request(base::ServerContext& context)
 {
-  LOG(INFO) << "Has request from ";
+  LOG(INFO) << "Has request";
   Request req;
   req.ParseFromString(context.data_);
 

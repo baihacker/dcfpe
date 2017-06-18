@@ -34,6 +34,9 @@ message FinishComputeRequest {
   optional Variants result = 2;
 }
 
+message UpdateWorkerStatusRequest {
+  optional int64 running_task_id = 1; // -1 if no task is running
+}
 
 message Request {
   optional string name = 1;
@@ -46,6 +49,7 @@ message Request {
   optional DisconnectRequest disconnect = 301;
   optional ComputeRequest compute = 302;
   optional FinishComputeRequest finish_compute = 303;
+  optional UpdateWorkerStatusRequest update_worker_status = 304;
 }
 
 message Response {

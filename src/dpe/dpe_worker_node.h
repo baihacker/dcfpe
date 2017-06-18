@@ -25,12 +25,15 @@ private:
 
 class DPEWorkerNode:
     public DPENodeBase,
+    public base::RepeatedActionHost,
     public base::RefCounted<DPEWorkerNode>
 {
 public:
   DPEWorkerNode(const std::string& myIP, const std::string& serverIP);
+  ~DPEWorkerNode();
 
   bool Start(int port);
+  void OnRepeatedActionFinish(base::RepeatedAction* ra){}
 
   void Stop();
 
@@ -43,11 +46,17 @@ public:
   int handleRequest(const Request& req, Response& reply);
   
   void removeNode(int64 id);
+  
+  void updateWorkerStatus();
 private:
   WorkerTaskExecuter taskExecuter;
   RemoteNodeImpl* remoteNode;
+  RemoteNodeController* remoteNodeController;
   int port;
   base::WeakPtrFactory<DPEWorkerNode>                 weakptr_factory_;
+  
+  int64 runningTaskId;
+  scoped_refptr<base::RepeatedAction> repeatedAction;
 };
 }
 #endif

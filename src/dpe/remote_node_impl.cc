@@ -78,12 +78,12 @@ static void NullCallback(scoped_refptr<base::ZMQResponse> rep)
   LOG(INFO) << "NullCallback";
 }
 
-int RemoteNodeImpl::sendRequest(Request& req)
+int RemoteNodeImpl::sendRequest(Request& req, int timeout)
 {
-  return sendRequest(req, base::Bind(&NullCallback));
+  return sendRequest(req, base::Bind(&NullCallback), timeout);
 }
 
-int RemoteNodeImpl::sendRequest(Request& req, base::ZMQCallBack callback)
+int RemoteNodeImpl::sendRequest(Request& req, base::ZMQCallBack callback, int timeout)
 {
   auto requestId = ++nextRequestId;
 
@@ -101,7 +101,7 @@ int RemoteNodeImpl::sendRequest(Request& req, base::ZMQCallBack callback)
     val.c_str(),
     static_cast<int>(val.size()),
     base::Bind(&RemoteNodeImpl::handleResponse, weakptr_factory_.GetWeakPtr(), callback),
-    0);
+    timeout);
   
   return requestId;
 }
@@ -166,7 +166,8 @@ int RemoteNodeControllerImpl::addTask(int64 taskId, const std::string& data,
   {
     remote->sendRequest(req,
         base::Bind(&RemoteNodeControllerImpl::handleAddTask, weakptr_factory_.GetWeakPtr(),
-        taskId, data, callback));
+        taskId, data, callback),
+        1000);
   }
   return 0;
 }
@@ -191,14 +192,16 @@ void RemoteNodeControllerImpl::handleAddTaskImpl(
   if (rep->error_code_ != base::ZMQResponse::ZMQ_REP_OK)
   {
     callback(taskId, false, "");
+    return;
   }
-  else
-  {
-    callback(id, true, "");
-  }
+
+  Response body;
+  body.ParseFromString(rep->data_);
+  callback(id, body.error_code() == 0, "");
 }
 
-int RemoteNodeControllerImpl::finishTask(int64 taskId, const Variants& result)
+int RemoteNodeControllerImpl::finishTask(int64 taskId, const Variants& result,
+    std::function<void (bool)> callback)
 {
   auto* cr = new FinishComputeRequest();
   cr->set_task_id(taskId);
@@ -211,12 +214,77 @@ int RemoteNodeControllerImpl::finishTask(int64 taskId, const Variants& result)
   if (auto* remote = pRemoteNode.get())
   {
     remote->sendRequest(req,
-      base::Bind(&RemoteNodeControllerImpl::handleFinishTask, weakptr_factory_.GetWeakPtr()));
+      base::Bind(&RemoteNodeControllerImpl::handleFinishTask, weakptr_factory_.GetWeakPtr(), callback),
+      10000);
   }
   return 0;
 }
+
 void RemoteNodeControllerImpl::handleFinishTask(base::WeakPtr<RemoteNodeControllerImpl> self,
+    std::function<void (bool)> callback,
     scoped_refptr<base::ZMQResponse> rep)
 {
+  if (auto* pThis = self.get())
+  {
+    pThis->handleFinishTaskImpl(callback, rep);
+  }
+}
+
+void RemoteNodeControllerImpl::handleFinishTaskImpl(
+    std::function<void (bool)> callback,
+    scoped_refptr<base::ZMQResponse> rep)
+{
+  if (rep->error_code_ != base::ZMQResponse::ZMQ_REP_OK)
+  {
+    callback(false);
+    return;
+  }
+  
+  Response body;
+  body.ParseFromString(rep->data_);
+  callback(body.error_code() == 0);
+}
+
+int RemoteNodeControllerImpl::updateWorkerStatus(int64 taskId, std::function<void (bool)> callback)
+{
+  auto* cr = new UpdateWorkerStatusRequest();
+  cr->set_running_task_id(taskId);
+
+  Request req;
+  req.set_name("updateWorkerStatus");
+  req.set_allocated_update_worker_status(cr);
+
+  if (auto* remote = pRemoteNode.get())
+  {
+    remote->sendRequest(req,
+      base::Bind(&RemoteNodeControllerImpl::handleUpdateWorkerStatus, weakptr_factory_.GetWeakPtr(), callback),
+      10000);
+  }
+  return 0;
+}
+
+void RemoteNodeControllerImpl::handleUpdateWorkerStatus(base::WeakPtr<RemoteNodeControllerImpl> self,
+    std::function<void (bool)> callback,
+    scoped_refptr<base::ZMQResponse> rep)
+{
+  if (auto* pThis = self.get())
+  {
+    pThis->handleUpdateWorkerStatusImpl(callback, rep);
+  }
+}
+
+void RemoteNodeControllerImpl::handleUpdateWorkerStatusImpl(
+    std::function<void (bool)> callback,
+    scoped_refptr<base::ZMQResponse> rep)
+{
+  if (rep->error_code_ != base::ZMQResponse::ZMQ_REP_OK)
+  {
+    callback(false);
+    return;
+  }
+  
+  Response body;
+  body.ParseFromString(rep->data_);
+  callback(body.error_code() == 0);
 }
 }
