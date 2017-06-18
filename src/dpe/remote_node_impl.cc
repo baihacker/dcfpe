@@ -112,16 +112,16 @@ void  RemoteNodeImpl::handleResponse(base::WeakPtr<RemoteNodeImpl> self,
 {
   if (auto* pThis = self.get())
   {
-    Response rep1;
-    rep1.ParseFromString(rep->data_);
-    LOG(INFO) << "handleResponse:\n" << rep1.DebugString();
+    Response body;
+    body.ParseFromString(rep->data_);
+    LOG(INFO) << "handleResponse:\n" << body.DebugString();
     callback.Run(rep);
   }
 }
 
 RemoteNodeControllerImpl::RemoteNodeControllerImpl(
-  base::WeakPtr<DPENodeBase> pNode, base::WeakPtr<RemoteNodeImpl> pRemoteNode) :
-  pNode(pNode), pRemoteNode(pRemoteNode), refCount(0), weakptr_factory_(this)
+  base::WeakPtr<DPENodeBase> pLocalNode, base::WeakPtr<RemoteNodeImpl> pRemoteNode) :
+  pLocalNode(pLocalNode), pRemoteNode(pRemoteNode), refCount(0), weakptr_factory_(this)
 {
   id = pRemoteNode->getId();
 }
@@ -141,7 +141,7 @@ void RemoteNodeControllerImpl::release()
 
 void RemoteNodeControllerImpl::removeNode()
 {
-  if (auto* local = pNode.get())
+  if (auto* local = pLocalNode.get())
   {
     local->removeNode(id);
   }
@@ -176,9 +176,10 @@ int RemoteNodeControllerImpl::addTask(int64 taskId, const std::string& data,
     remote->sendRequest(req,
         base::Bind(&RemoteNodeControllerImpl::handleAddTask, weakptr_factory_.GetWeakPtr(),
         taskId, data, callback),
-        1000);
+        kDefaultRequestTimeoutInSeconds * 1000);
+    return 0;
   }
-  return 0;
+  return -1;
 }
 
 void RemoteNodeControllerImpl::handleAddTask(
@@ -228,9 +229,10 @@ int RemoteNodeControllerImpl::finishTask(int64 taskId, const Variants& result,
   {
     remote->sendRequest(req,
       base::Bind(&RemoteNodeControllerImpl::handleFinishTask, weakptr_factory_.GetWeakPtr(), callback),
-      10000);
+      kDefaultRequestTimeoutInSeconds * 1000);
+    return 0;
   }
-  return 0;
+  return -1;
 }
 
 void RemoteNodeControllerImpl::handleFinishTask(base::WeakPtr<RemoteNodeControllerImpl> self,
@@ -276,9 +278,10 @@ int RemoteNodeControllerImpl::updateWorkerStatus(int64 taskId, std::function<voi
   {
     remote->sendRequest(req,
       base::Bind(&RemoteNodeControllerImpl::handleUpdateWorkerStatus, weakptr_factory_.GetWeakPtr(), callback),
-      10000);
+      kDefaultRequestTimeoutInSeconds * 1000);
+    return 0;
   }
-  return 0;
+  return -1;
 }
 
 void RemoteNodeControllerImpl::handleUpdateWorkerStatus(base::WeakPtr<RemoteNodeControllerImpl> self,

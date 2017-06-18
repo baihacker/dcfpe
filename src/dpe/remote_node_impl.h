@@ -6,6 +6,8 @@
 
 namespace dpe
 {
+static const int kDefaultRequestTimeoutInSeconds = 10;
+
 class RemoteNodeImpl;
 class DPENodeBase;
 
@@ -91,7 +93,7 @@ class RemoteNodeControllerImpl : public RemoteNodeController
 {
 public:
   RemoteNodeControllerImpl(
-  base::WeakPtr<DPENodeBase> pNode, base::WeakPtr<RemoteNodeImpl> pRemoteNode);
+    base::WeakPtr<DPENodeBase> pLocalNode, base::WeakPtr<RemoteNodeImpl> pRemoteNode);
   
   void addRef();
   void release();
@@ -99,7 +101,8 @@ public:
   void removeNode();
   int64 getId() const;
   int64 getLastUpdateTimestamp() const;
-  
+  DPENodeBase* getLocalNode() const {return pLocalNode.get();}
+  RemoteNodeImpl* getRemoteNode() const {return pRemoteNode.get();}
   
   int addTask(int64 taskId, const std::string& data, std::function<void (int64, bool, const std::string&)> callback);
   static void handleAddTask(
@@ -129,7 +132,7 @@ public:
     std::function<void (bool)> callback,
     scoped_refptr<base::ZMQResponse> rep);
 private:
-  base::WeakPtr<DPENodeBase>    pNode;
+  base::WeakPtr<DPENodeBase>    pLocalNode;
   base::WeakPtr<RemoteNodeImpl> pRemoteNode;
   base::WeakPtrFactory<RemoteNodeControllerImpl> weakptr_factory_;
   int64 id;
