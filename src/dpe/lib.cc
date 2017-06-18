@@ -135,6 +135,10 @@ using namespace dpe;
 
 DPE_EXPORT void start_dpe(Solver* solver, int argc, char* argv[])
 {
+  std::cout << "DCFPE (version 1.0.0.0)" << std::endl;
+  std::cout << "Author: baihacker" << std::endl;
+  std::cout << "HomePage: https://github.com/baihacker/dcfpe" << std::endl;
+
   ::solver = solver;
   startNetwork();
 
@@ -162,6 +166,19 @@ DPE_EXPORT void start_dpe(Solver* solver, int argc, char* argv[])
       }
     }
     else if (str == "ip")
+    {
+      if (idx == -1)
+      {
+        myIP = argv[i+1];
+        i += 2;
+      }
+      else
+      {
+        myIP = value;
+        ++i;
+      }
+    }
+    else if (str == "server_ip")
     {
       if (idx == -1)
       {
