@@ -28,7 +28,7 @@ public:
   bool Start(uint32_t ip, int port);
   bool Start(const std::string& ip, int port);
   bool Stop();
-  
+
   std::string GetServerAddress(){return server_address_;}
 
 private:

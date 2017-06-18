@@ -62,11 +62,11 @@ void WorkerTaskExecuter::finishComputeImpl(int taskId, const Variants& result)
   });
 }
 
-DPEWorkerNode::DPEWorkerNode(const std::string& myIP, const std::string& serverIP): 
+DPEWorkerNode::DPEWorkerNode(const std::string& myIP, const std::string& serverIP):
   DPENodeBase(myIP, serverIP), port(kWorkerPort), weakptr_factory_(this), runningTaskId(-1),
   remoteNode(NULL), remoteNodeController(NULL)
 {
-  
+
 }
 
 DPEWorkerNode::~DPEWorkerNode()
@@ -118,7 +118,7 @@ void DPEWorkerNode::stop()
     zserver = NULL;
   }
 }
-  
+
 int DPEWorkerNode::handleConnectRequest(const std::string& address)
 {
   if (remoteNode && remoteNode->getRemoteAddress() == address)
@@ -160,7 +160,7 @@ int DPEWorkerNode::onConnectionFinished(RemoteNodeImpl* node, bool ok)
         new RemoteNodeControllerImpl(weakptr_factory_.GetWeakPtr(), node->getWeakPtr());
     remoteNodeController->addRef();
     taskExecuter.setMasterNode(remoteNodeController);
-    
+
   repeatedAction = new base::RepeatedAction(this);
   repeatedAction->Start([=](){
       updateWorkerStatus();
@@ -179,7 +179,7 @@ void DPEWorkerNode::updateWorkerStatus()
     }
   });
 }
-  
+
 int DPEWorkerNode::handleRequest(const Request& req, Response& reply)
 {
   if (req.has_compute())

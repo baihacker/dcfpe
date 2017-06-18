@@ -17,15 +17,15 @@ public:
 
   bool start(int port);
   void stop();
-  
+
   int handleConnectRequest(const std::string& address);
 
   int handleDisconnectRequest(const std::string& address);
 
   int onConnectionFinished(RemoteNodeImpl* node, bool ok);
-  
+
   int handleRequest(const Request& req, Response& reply);
-  
+
   void removeNode(int64 id);
 private:
   MasterTaskScheduler* scheduler;

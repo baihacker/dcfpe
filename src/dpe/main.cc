@@ -72,7 +72,7 @@ public:
   {
     result->appendInt64Value(taskId*taskId);
   }
-  
+
   void finish()
   {
     int64 ans = 0;

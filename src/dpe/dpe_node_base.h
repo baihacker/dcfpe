@@ -16,10 +16,10 @@ class DPENodeBase :
     public RemoteNodeHandler
 {
 public:
-  DPENodeBase(const std::string& myIP, const std::string& serverIP): 
+  DPENodeBase(const std::string& myIP, const std::string& serverIP):
     myIP(myIP), serverIP(serverIP), nextConnectionId(1)
   {
-    
+
   }
 
   ~DPENodeBase()

@@ -54,9 +54,9 @@ public:
 
 private:
   std::vector<NodeContext> nodes;
-  
+
   std::deque<int64> taskQueue;
-  
+
   scoped_refptr<base::RepeatedAction> repeatedAction;
 };
 

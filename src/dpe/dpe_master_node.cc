@@ -7,7 +7,7 @@ DPEMasterNode::DPEMasterNode(
     const std::string& myIP, const std::string& serverIP):
     DPENodeBase(myIP, serverIP), port(kServerPort), weakptr_factory_(this)
   {
-    
+
   }
 DPEMasterNode::~DPEMasterNode()
 {
@@ -56,7 +56,7 @@ void DPEMasterNode::stop()
     zserver = NULL;
   }
 }
-  
+
 int DPEMasterNode::handleConnectRequest(const std::string& address)
 {
   const int size = static_cast<int>(remoteNodes.size());
@@ -83,7 +83,7 @@ int DPEMasterNode::handleConnectRequest(const std::string& address)
       zserver->GetServerAddress(),
       nextConnectionId++);
   remoteNode->connectTo(address);
-  
+
   remoteNode->updateStatus(-1, base::Time::Now().ToInternalValue());
   remoteNodes.push_back(remoteNode);
 
@@ -126,11 +126,11 @@ int DPEMasterNode::onConnectionFinished(RemoteNodeImpl* node, bool ok)
   }
   return 0;
 }
-  
+
 int DPEMasterNode::handleRequest(const Request& req, Response& reply)
 {
   RemoteNodeImpl* remoteNode = NULL;
-  
+
   auto id = req.connection_id();
   for (auto node: remoteNodes)
   {
@@ -161,7 +161,7 @@ int DPEMasterNode::handleRequest(const Request& req, Response& reply)
   }
   return 0;
 }
-  
+
 void DPEMasterNode::removeNode(int64 id)
 {
   const int size = static_cast<int>(remoteNodes.size());

@@ -23,7 +23,7 @@ RemoteNodeImpl::~RemoteNodeImpl()
 void RemoteNodeImpl::connectTo(const std::string& remoteAddress)
 {
   this->remoteAddress = remoteAddress;
-  
+
   auto* cr = new ConnectRequest();
   cr->set_address(myAddress);
 
@@ -55,7 +55,7 @@ void  RemoteNodeImpl::handleConnectImpl(scoped_refptr<base::ZMQResponse> rep)
   data.ParseFromString(rep->data_);
 
   remoteConnectionId = data.connect().connection_id();
-  
+
   isReady = true;
   handler->onConnectionFinished(this, true);
 }
@@ -70,7 +70,7 @@ void RemoteNodeImpl::disconnect()
   Request req;
   req.set_name("disconnect");
   req.set_allocated_disconnect(dr);
-  
+
   sendRequest(req);
 }
 
@@ -103,10 +103,10 @@ int RemoteNodeImpl::sendRequest(Request& req, base::ZMQCallBack callback, int ti
     static_cast<int>(val.size()),
     base::Bind(&RemoteNodeImpl::handleResponse, weakptr_factory_.GetWeakPtr(), callback),
     timeout);
-  
+
   return requestId;
 }
-  
+
 void  RemoteNodeImpl::handleResponse(base::WeakPtr<RemoteNodeImpl> self,
             base::ZMQCallBack callback,
             scoped_refptr<base::ZMQResponse> rep)
@@ -167,7 +167,7 @@ int RemoteNodeControllerImpl::addTask(int64 taskId, const std::string& data,
 {
   auto* cr = new ComputeRequest();
   cr->set_task_id(taskId);
-  
+
   Request req;
   req.set_name("compute");
   req.set_allocated_compute(cr);
@@ -260,7 +260,7 @@ void RemoteNodeControllerImpl::handleFinishTaskImpl(
     callback(false);
     return;
   }
-  
+
   Response body;
   body.ParseFromString(rep->data_);
   callback(body.error_code() == 0);
@@ -303,13 +303,13 @@ void RemoteNodeControllerImpl::handleUpdateWorkerStatusImpl(
   {
     LOG(ERROR) << "Update worker status timeout";
   }
-  
+
   if (rep->error_code_ != base::ZMQResponse::ZMQ_REP_OK)
   {
     callback(false);
     return;
   }
-  
+
   Response body;
   body.ParseFromString(rep->data_);
   callback(body.error_code() == 0);

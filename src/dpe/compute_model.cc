@@ -76,9 +76,9 @@ void SimpleMasterTaskScheduler::removeNodeById(int64 id, bool notifyRemoved)
   {
     return;
   }
-  
+
   NodeContext removed = nodes[idx];
-  
+
   for (int i = idx; i + 1 < size; ++i)
   {
     nodes[i] = nodes[i+1];
@@ -89,7 +89,7 @@ void SimpleMasterTaskScheduler::removeNodeById(int64 id, bool notifyRemoved)
   {
     removed.node->removeNode();
   }
-  
+
   if (removed.status == NodeContext::COMPUTING_TASK && removed.taskId != -1)
   {
     taskQueue.push_front(removed.taskId);
@@ -119,7 +119,7 @@ void SimpleMasterTaskScheduler::refreshStatusImpl()
         int64 nodeId = ctx.node->getId();
         int64 taskId = taskQueue.front();
         taskQueue.pop_front();
-        
+
         ctx.node->addTask(taskId, "", [=](int64 taskId, bool ok, const std::string& result) {
           handleAddTaskImpl(nodeId, taskId, ok, result);
         });

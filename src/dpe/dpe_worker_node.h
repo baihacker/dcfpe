@@ -15,7 +15,7 @@ public:
   void start();
   void setMasterNode(RemoteNodeController* node);
   void handleCompute(int task_id);
-  
+
   static void doCompute(base::WeakPtr<WorkerTaskExecuter> self, int taskId);
   static void finishCompute(base::WeakPtr<WorkerTaskExecuter> self, int taskId, const Variants& result);
   void finishComputeImpl(int taskId, const Variants& result);
@@ -42,11 +42,11 @@ public:
   int handleDisconnectRequest(const std::string& address);
 
   int onConnectionFinished(RemoteNodeImpl* node, bool ok);
-  
+
   int handleRequest(const Request& req, Response& reply);
-  
+
   void removeNode(int64 id);
-  
+
   void updateWorkerStatus();
 private:
   WorkerTaskExecuter taskExecuter;
@@ -54,7 +54,7 @@ private:
   RemoteNodeController* remoteNodeController;
   int port;
   base::WeakPtrFactory<DPEWorkerNode>                 weakptr_factory_;
-  
+
   int64 runningTaskId;
   scoped_refptr<base::RepeatedAction> repeatedAction;
 };

@@ -62,7 +62,7 @@ public:
   }
   void OnOutput(process::Process* p, bool is_std_out, const std::string& data)
   {
-    
+
   }
 private:
   std::vector<process::Process*> processes;

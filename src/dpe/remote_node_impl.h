@@ -21,7 +21,7 @@ class RemoteNodeImpl
 public:
   RemoteNodeImpl(RemoteNodeHandler* handler, const std::string myAddress, int64 connectionId);
   ~RemoteNodeImpl();
-  
+
   int getId() const {return connectionId;};
   std::string getRemoteAddress() const {return remoteAddress;}
   bool checkIsReady() const {return isReady;}
@@ -35,10 +35,10 @@ public:
   void  handleConnectImpl(scoped_refptr<base::ZMQResponse> rep);
 
   void disconnect();
-  
+
   int sendRequest(Request& req, base::ZMQCallBack callback, int timeout = 0);
   int sendRequest(Request& req, int timeout = 0);
-  
+
   static void  handleResponse(base::WeakPtr<RemoteNodeImpl> self,
               base::ZMQCallBack callback,
               scoped_refptr<base::ZMQResponse> rep);
@@ -60,11 +60,11 @@ private:
   const int64 connectionId;
   int64 remoteConnectionId;
   int64 nextRequestId;
-  
+
   base::ZMQClient* zmqClient;
-  
+
   base::WeakPtrFactory<RemoteNodeImpl>                 weakptr_factory_;
-  
+
   int64 lastUpdateTimestamp;
   int64 lastRunningTaskId;
 };
@@ -85,7 +85,7 @@ public:
     std::function<void (bool)> callback) = 0;
 
   virtual int updateWorkerStatus(int64 taskId, std::function<void (bool)> callback) = 0;
-  
+
   virtual int64 getLastUpdateTimestamp() const = 0;
 };
 
@@ -94,7 +94,7 @@ class RemoteNodeControllerImpl : public RemoteNodeController
 public:
   RemoteNodeControllerImpl(
     base::WeakPtr<DPENodeBase> pLocalNode, base::WeakPtr<RemoteNodeImpl> pRemoteNode);
-  
+
   void addRef();
   void release();
 
@@ -123,8 +123,8 @@ public:
   void handleFinishTaskImpl(
     std::function<void (bool)> callback,
     scoped_refptr<base::ZMQResponse> rep);
-    
-    
+
+
   int updateWorkerStatus(int64 taskId, std::function<void (bool)> callback);
   static void handleUpdateWorkerStatus(base::WeakPtr<RemoteNodeControllerImpl> self,
     std::function<void (bool)> callback,
