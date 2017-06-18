@@ -96,6 +96,22 @@
       'dependencies':[
           '<(DEPTH)/dpe/dpe.gyp:dpe',
         ],
+    },
+    {
+      'target_name': 'pm',
+      'type': 'executable',
+      'variables': {
+        'use_zmq': 1,
+      },
+      'sources':[
+          'pm.cc',
+        ],
+      'dependencies':[
+          '<(DEPTH)/dpe_base/dpe_base.gyp:dpe_base',
+          '<(DEPTH)/third_party/chromium/base/base.gyp:base',
+          '<(DEPTH)/process/process.gyp:process',
+          '<(DEPTH)/third_party/zeromq_4.2.1/builds/msvc/vs2015/libzmq/zmq.gyp:zmq',
+        ],
     }
   ]
 }

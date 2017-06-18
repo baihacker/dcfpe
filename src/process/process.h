@@ -13,7 +13,7 @@
   Process is owned by its host.
   Process has a background thread which will receive message from completion port。
 */
-namespace process{
+namespace process {
 
 enum
 {
