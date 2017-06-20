@@ -7,6 +7,10 @@ namespace dpe
 {
 Solver* getSolver();
 void willExitDpe();
+
+CacheReader* newCacheReader(const char* path);
+CacheWriter* newCacheWriter(const char* path, bool reset);
+void runDpe(Solver* solver, int argc, char* argv[]);
 }
 
 #endif

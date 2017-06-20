@@ -7,6 +7,7 @@
 #include <Shlobj.h>
 #pragma comment(lib, "ws2_32")
 
+#include "dpe/dpe_internal.h"
 #include "dpe/dpe_master_node.h"
 #include "dpe/dpe_worker_node.h"
 
@@ -129,17 +130,14 @@ static inline void run()
     willExitDpe();
   }
 }
-}
 
-using namespace dpe;
-
-DPE_EXPORT void start_dpe(Solver* solver, int argc, char* argv[])
+void runDpe(Solver* solver, int argc, char* argv[])
 {
   std::cout << "DCFPE (version 1.0.0.1)" << std::endl;
   std::cout << "Author: baihacker" << std::endl;
   std::cout << "HomePage: https://github.com/baihacker/dcfpe" << std::endl;
 
-  ::solver = solver;
+  dpe::solver = solver;
   startNetwork();
 
   type = "server";
@@ -239,4 +237,17 @@ DPE_EXPORT void start_dpe(Solver* solver, int argc, char* argv[])
   base::dpe_base_main(run, NULL, loggingLevel);
 
   stopNetwork();
+}
+}
+
+static DpeStub __stub_impl =
+{
+  &dpe::newCacheReader,
+  &dpe::newCacheWriter,
+  &dpe::runDpe
+};
+
+DPE_EXPORT DpeStub* get_stub()
+{
+  return &__stub_impl;
 }

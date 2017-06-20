@@ -59,7 +59,7 @@
       'sources':[
           'dpe.h',
           'dpe_internal.h',
-          'lib.cc',
+          'dpe.cc',
           'zserver.h',
           'zserver.cc',
           'remote_node_impl.h',
@@ -77,6 +77,8 @@
           'proto/dpe.pb.cc',
           'variants.h',
           'variants.cc',
+          'cache.h',
+          'cache.cc',
         ],
       'dependencies':[
           '<(DEPTH)/dpe_base/dpe_base.gyp:dpe_base',

@@ -30,17 +30,40 @@
 #include <cstdint>
 typedef std::int64_t int64;
 
-class VariantsReader {
+class VariantsReader
+{
 public:
+  virtual ~VariantsReader(){}
   virtual int size() const = 0;
   virtual int64 int64Value(int idx) const = 0;
   virtual const char* stringValue(int idx) const = 0;
 };
 
-class VariantsBuilder {
+class VariantsBuilder
+{
 public:
+  virtual ~VariantsBuilder(){}
   virtual VariantsBuilder* appendInt64Value(int64 value) = 0;
   virtual VariantsBuilder* appendStringValue(const char* str) = 0;
+};
+
+class CacheReader
+{
+public:
+  virtual ~CacheReader(){}
+  virtual void addRef() = 0;
+  virtual void release() = 0;
+  // The VariantsReader* is valid before releasing the CacheReader.
+  virtual VariantsReader* get(int64 taskId) = 0;
+};
+
+class CacheWriter
+{
+public:
+  virtual ~CacheWriter(){}
+  virtual void addRef() = 0;
+  virtual void release() = 0;
+  virtual void append(int64 taskId, VariantsBuilder* result) = 0;
 };
 
 class TaskAppender
@@ -55,11 +78,17 @@ public:
   virtual void initAsMaster(TaskAppender* taskAppender) = 0;
   virtual void initAsWorker() = 0;
   virtual void setResult(int64 taskId, VariantsReader* result) = 0;
-  // The result buffer is always 1024 bytes.
   virtual void compute(int64 taskId, VariantsBuilder* result) = 0;
   virtual void finish() = 0;
 };
 
-DPE_EXPORT void start_dpe(Solver* solver, int argc, char* argv[]);
+struct DpeStub
+{
+  CacheReader* (*newCacheReader)(const char* path);
+  CacheWriter* (*newCacheWriter)(const char* path, bool reset);
+  void (*runDpe)(Solver* solver, int argc, char* argv[]);
+};
+
+DPE_EXPORT DpeStub* get_stub();
 
 #endif

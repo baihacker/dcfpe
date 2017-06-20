@@ -5,15 +5,15 @@
 
 #include <windows.h>
 
-typedef void (*DPEStartEntryType)(Solver* solver, int argc, char* argv[]);
-
-DPEStartEntryType getEntry()
+DpeStub* getDpeStub()
 {
+  typedef DpeStub* (*GetStubType)();
   HINSTANCE hDLL = LoadLibraryA("dpe.dll");
-  return (DPEStartEntryType)GetProcAddress(hDLL, "start_dpe");
+  return ((GetStubType)GetProcAddress(hDLL, "get_stub"))();
 }
 
-typedef long long int64;
+DpeStub* stub = getDpeStub();
+
 struct TaskData
 {
   enum TaskStatus
@@ -87,8 +87,6 @@ static SolverImpl impl;
 
 int main(int argc, char* argv[])
 {
-  //Sleep(5000);
-  //start_dpe(&impl, argc, argv);
-  getEntry()(&impl, argc, argv);
+  stub->runDpe(&impl, argc, argv);
   return 0;
 }
