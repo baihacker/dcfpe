@@ -1,9 +1,11 @@
 #ifndef DPE_CACHE_H_
 #define DPE_CACHE_H_
 
+#include <unordered_map>
+
 #include "dpe/dpe.h"
 #include "dpe_base/dpe_base.h"
-#include <unordered_map>
+#include "dpe/proto/dpe.pb.h"
 
 namespace dpe
 {
@@ -16,7 +18,9 @@ public:
   void addRef();
   void release();
   VariantsReader* get(int64 taskId);
-  
+  int64 getInt64(int64 taskId);
+  const char* getString(int64 taskId);
+
   static CacheReaderImpl* fromLines(std::vector<std::string>& lines);
 private:
   void clearMap();
@@ -37,6 +41,10 @@ public:
   void addRef();
   void release();
   void append(int64 taskId, VariantsBuilder* result);
+  void append(int64 taskId, int64 value);
+  void append(int64 taskId, const char* value);
+private:
+  void append(int64 taskId, const Variants& vars);
 private:
   int refCount;
   base::File file;

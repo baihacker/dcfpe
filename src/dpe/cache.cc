@@ -42,6 +42,26 @@ VariantsReader* CacheReaderImpl::get(int64 taskId)
   return NULL;
 }
 
+int64 CacheReaderImpl::getInt64(int64 taskId)
+{
+  auto result = get(taskId);
+  if (result == NULL)
+  {
+    exit(-1);
+  }
+  return result->int64Value(0);
+}
+
+const char* CacheReaderImpl::getString(int64 taskId)
+{
+  auto result = get(taskId);
+  if (result == NULL)
+  {
+    exit(-1);
+  }
+  return result->stringValue(0);
+}
+
 void CacheReaderImpl::clearMap()
 {
   for (auto& iter: data)
@@ -105,34 +125,27 @@ void CacheWriterImpl::release()
 void CacheWriterImpl::append(int64 taskId, VariantsBuilder* result)
 {
   auto impl = static_cast<VariantsBuilderImpl*>(result);
+  append(taskId, impl->getVariants());
+}
+
+void CacheWriterImpl::append(int64 taskId, int64 value)
+{
+  Variants vars;
+  vars.add_element()->set_value_int64(value);
+  append(taskId, vars);
+}
+
+void CacheWriterImpl::append(int64 taskId, const char* value)
+{
+  Variants vars;
+  vars.add_element()->set_value_string(value);
+  append(taskId, vars);
+}
+
+void CacheWriterImpl::append(int64 taskId, const Variants& vars)
+{
   std::string data = base::StringPrintf("%s:%s\n",
-    std::to_string(taskId).c_str(), impl->getVariants().ShortDebugString().c_str());
+    std::to_string(taskId).c_str(), vars.ShortDebugString().c_str());
   file.Write(0, data.c_str(), data.size());
-}
-
-CacheReader* newCacheReader(const char* path)
-{
-  std::string data;
-  base::FilePath filePath(base::UTF8ToNative(path));
-  if (!base::ReadFileToString(filePath, &data))
-  {
-    return NULL;
-  }
-  
-  std::vector<std::string> lines;
-  Tokenize(data, "\n", &lines);
-  
-  return dpe::CacheReaderImpl::fromLines(lines);
-}
-
-CacheWriter* newCacheWriter(const char* path, bool reset)
-{
-  auto result = new dpe::CacheWriterImpl(base::FilePath(base::UTF8ToNative(path)), reset);
-  if (!result->ready())
-  {
-    delete result;
-    return NULL;
-  }
-  return result;
 }
 }

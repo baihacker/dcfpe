@@ -69,6 +69,20 @@ worker默认值为3311.
 未使用port参数时,默认端口为 默认值+id.
 默认值0.
 
+--c=cacheFilePath
+--cache=cacheFilePath
+缓存文件路径.
+使用默认缓存Reader和Writer时对应的路径.
+注意:多个Worker在同一计算机上时会读写相同文件而导致问题.
+可以通过在默认路径上追加id来使得Worker读写不同Cache.但是
+一般不在Worker上使用缓存.
+默认值为:dpeCache.txt.
+
+--reset_cache=value
+在新建默认缓存Writer时是否清空已有文件.
+value=true或1认为值是true,其它值均认为是false.
+默认值为:false
+
 示例:
 在同一台计算机上
 

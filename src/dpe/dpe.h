@@ -55,6 +55,8 @@ public:
   virtual void release() = 0;
   // The VariantsReader* is valid before releasing the CacheReader.
   virtual VariantsReader* get(int64 taskId) = 0;
+  virtual int64 getInt64(int64 taskId) = 0;
+  virtual const char* getString(int64 taskId) = 0;
 };
 
 class CacheWriter
@@ -64,6 +66,8 @@ public:
   virtual void addRef() = 0;
   virtual void release() = 0;
   virtual void append(int64 taskId, VariantsBuilder* result) = 0;
+  virtual void append(int64 taskId, int64 value) = 0;
+  virtual void append(int64 taskId, const char* value) = 0;
 };
 
 class TaskAppender
@@ -86,6 +90,8 @@ struct DpeStub
 {
   CacheReader* (*newCacheReader)(const char* path);
   CacheWriter* (*newCacheWriter)(const char* path, bool reset);
+  CacheReader* (*newDefaultCacheReader)();
+  CacheWriter* (*newDefaultCacheWriter)();
   void (*runDpe)(Solver* solver, int argc, char* argv[]);
 };
 

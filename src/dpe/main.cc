@@ -40,6 +40,16 @@ public:
 
   void initAsMaster(TaskAppender* taskAppender)
   {
+#if 0
+    auto cw = stub->newDefaultCacheWriter();
+    cw->addRef();
+    cw->append(1, 1234567891234567);
+    cw->release();
+    auto cr = stub->newDefaultCacheReader();
+    cr->addRef();
+    std::cerr << cr->getInt64(1) << std::endl;
+    cr->release();
+#endif
     for (int i = 0; i < 10; ++i)
     {
       TaskData item;

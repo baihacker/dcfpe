@@ -10,6 +10,7 @@
 #include "dpe/dpe_internal.h"
 #include "dpe/dpe_master_node.h"
 #include "dpe/dpe_worker_node.h"
+#include "dpe/cache.h"
 
 namespace dpe
 {
@@ -68,6 +69,9 @@ std::string myIP;
 std::string serverIP;
 int port = 0;
 int instanceId = 0;
+std::string defaultCacheFilePath = "dpeCache.txt";
+std::string cacheFilePath = defaultCacheFilePath;
+bool resetCache = false;
 Solver* solver;
 
 static void exitDpeImpl()
@@ -92,6 +96,46 @@ void willExitDpe()
   LOG(INFO) << "willExitDpe";
   base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
     base::Bind(exitDpeImpl));
+}
+
+CacheReader* newCacheReader(const char* path)
+{
+  std::string data;
+  base::FilePath filePath(base::UTF8ToNative(path));
+  if (!base::ReadFileToString(filePath, &data))
+  {
+    return NULL;
+  }
+  
+  std::vector<std::string> lines;
+  Tokenize(data, "\n", &lines);
+  
+  return dpe::CacheReaderImpl::fromLines(lines);
+}
+
+CacheWriter* newCacheWriter(const char* path, bool reset)
+{
+  auto result = new dpe::CacheWriterImpl(base::FilePath(base::UTF8ToNative(path)), reset);
+  if (!result->ready())
+  {
+    delete result;
+    return NULL;
+  }
+  return result;
+}
+
+CacheReader* newDefaultCacheReader()
+{
+  if (cacheFilePath.empty())
+  {
+    cacheFilePath = defaultCacheFilePath;
+  }
+  return newCacheReader(cacheFilePath.c_str());
+}
+
+CacheWriter* newDefaultCacheWriter()
+{
+  return newCacheWriter(cacheFilePath.c_str(), resetCache);
 }
 
 Solver* getSolver()
@@ -228,6 +272,46 @@ void runDpe(Solver* solver, int argc, char* argv[])
         ++i;
       }
     }
+    else if (str == "c" || str == "cache")
+    {
+      if (idx == -1)
+      {
+        cacheFilePath = argv[i+1];
+        i += 2;
+      }
+      else
+      {
+        cacheFilePath = value;
+        ++i;
+      }
+    }
+    else if (str == "reset_cache")
+    {
+      std::string data;
+      if (idx == -1)
+      {
+        data = argv[i+1];
+        i += 2;
+      }
+      else
+      {
+        data = value;
+        ++i;
+      }
+      data = StringToLowerASCII(data);
+      if (data == "true" || data == "1")
+      {
+        resetCache = true;
+      }
+      else if (data == "false" || data == "0")
+      {
+        resetCache = false;
+      }
+      else
+      {
+        resetCache = false;
+      }
+    }
     else
     {
       ++i;
@@ -244,6 +328,8 @@ static DpeStub __stub_impl =
 {
   &dpe::newCacheReader,
   &dpe::newCacheWriter,
+  &dpe::newDefaultCacheReader,
+  &dpe::newDefaultCacheWriter,
   &dpe::runDpe
 };
 
