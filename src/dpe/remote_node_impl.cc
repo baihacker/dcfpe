@@ -12,6 +12,8 @@ RemoteNodeHandler* handler, const std::string myAddress, int64 connectionId) :
     connectionId(connectionId),
     remoteConnectionId(0),
     zmqClient(base::zmq_client()),
+    latencySum(0),
+    requestCount(0),
     weakptr_factory_(this)
 {
 }
@@ -53,7 +55,6 @@ void  RemoteNodeImpl::handleConnectImpl(scoped_refptr<base::ZMQResponse> rep)
   }
   Response data;
   data.ParseFromString(rep->data_);
-
   remoteConnectionId = data.connect().connection_id();
 
   isReady = true;
@@ -115,8 +116,20 @@ void  RemoteNodeImpl::handleResponse(base::WeakPtr<RemoteNodeImpl> self,
   {
     Response body;
     body.ParseFromString(rep->data_);
+    pThis->parseRequestLatency(body);
     LOG(INFO) << "handleResponse:\n" << body.DebugString();
     callback.Run(rep);
+  }
+}
+
+void RemoteNodeImpl::parseRequestLatency(const Response& response)
+{
+  auto t0 = response.request_timestamp();
+  auto t1 = base::Time::Now().ToInternalValue();
+  if (t0 > 0)
+  {
+    latencySum += t1 - t0;
+    ++requestCount;
   }
 }
 

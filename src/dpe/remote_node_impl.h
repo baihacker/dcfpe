@@ -51,6 +51,10 @@ public:
   {
     return lastUpdateTimestamp;
   }
+
+  void parseRequestLatency(const Response& response);
+  int64 getLatencySum() const {return latencySum;}
+  int64 getRequestCount() const {return requestCount;}
 private:
   bool isReady;
   RemoteNodeHandler* handler;
@@ -67,6 +71,9 @@ private:
 
   int64 lastUpdateTimestamp;
   int64 lastRunningTaskId;
+  
+  int64 latencySum;
+  int64 requestCount;
 };
 
 class RemoteNodeController
