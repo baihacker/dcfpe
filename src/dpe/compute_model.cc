@@ -156,7 +156,7 @@ void  SimpleMasterTaskScheduler::handleAddTaskImpl(int64 nodeId, int64 taskId, b
   }
 }
 
-void SimpleMasterTaskScheduler::handleFinishCompute(int64 taskId, bool ok, const Variants& result)
+void SimpleMasterTaskScheduler::handleFinishCompute(int64 taskId, bool ok, const Variants& result, int64 timeUsage)
 {
   // ok is always true
   for (auto& ctx: nodes)
@@ -164,7 +164,7 @@ void SimpleMasterTaskScheduler::handleFinishCompute(int64 taskId, bool ok, const
     if (ctx.status == NodeContext::COMPUTING_TASK && ctx.taskId == taskId)
     {
       VariantsReaderImpl vri(result);
-      getSolver()->setResult(taskId, &vri);
+      getSolver()->setResult(taskId, &vri, timeUsage);
       ctx.status = NodeContext::READY;
       ctx.taskId = -1;
     }

@@ -150,7 +150,7 @@ int DPEMasterNode::handleRequest(const Request& req, Response& reply)
     auto& data = req.finish_compute();
     remoteNode->updateStatus(data.task_id(), base::Time::Now().ToInternalValue());
 
-    scheduler->handleFinishCompute(data.task_id(), true, data.result());
+    scheduler->handleFinishCompute(data.task_id(), true, data.result(), data.time_usage());
     reply.set_error_code(0);
   }
   else if (req.has_update_worker_status())

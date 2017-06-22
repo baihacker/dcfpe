@@ -32,6 +32,7 @@ message ComputeRequest {
 message FinishComputeRequest {
   optional int64 task_id = 1;
   optional Variants result = 2;
+  optional int64 time_usage = 3 [default = 0];
 }
 
 message UpdateWorkerStatusRequest {

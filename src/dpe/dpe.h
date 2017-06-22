@@ -81,7 +81,7 @@ class Solver
 public:
   virtual void initAsMaster(TaskAppender* taskAppender) = 0;
   virtual void initAsWorker() = 0;
-  virtual void setResult(int64 taskId, VariantsReader* result) = 0;
+  virtual void setResult(int64 taskId, VariantsReader* result, int64 timeUsage) = 0;
   virtual void compute(int64 taskId, VariantsBuilder* result) = 0;
   virtual void finish() = 0;
 };

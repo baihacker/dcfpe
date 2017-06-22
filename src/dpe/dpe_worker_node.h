@@ -17,8 +17,8 @@ public:
   void handleCompute(int task_id);
 
   static void doCompute(base::WeakPtr<WorkerTaskExecuter> self, int taskId);
-  static void finishCompute(base::WeakPtr<WorkerTaskExecuter> self, int taskId, const Variants& result);
-  void finishComputeImpl(int taskId, const Variants& result);
+  static void finishCompute(base::WeakPtr<WorkerTaskExecuter> self, int taskId, const Variants& result, int64 timeUsage);
+  void finishComputeImpl(int taskId, const Variants& result, int64 timeUsage);
 private:
   RemoteNodeController* node;
   base::WeakPtrFactory<WorkerTaskExecuter> weakptr_factory_;

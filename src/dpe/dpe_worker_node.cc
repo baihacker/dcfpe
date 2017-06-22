@@ -35,25 +35,26 @@ void WorkerTaskExecuter::handleCompute(int taskId)
 void WorkerTaskExecuter::doCompute(base::WeakPtr<WorkerTaskExecuter> self, int taskId)
 {
   VariantsBuilderImpl vbi;
-
+  auto t0 = base::Time::Now().ToInternalValue();
   getSolver()->compute(taskId, &vbi);
+  auto t1 = base::Time::Now().ToInternalValue();
 
   base::ThreadPool::PostTask(base::ThreadPool::UI,
       FROM_HERE,
-      base::Bind(&WorkerTaskExecuter::finishCompute, self, taskId, vbi.getVariants()));
+      base::Bind(&WorkerTaskExecuter::finishCompute, self, taskId, vbi.getVariants(), t1 - t0));
 }
 
-void WorkerTaskExecuter::finishCompute(base::WeakPtr<WorkerTaskExecuter> self, int taskId, const Variants& result)
+void WorkerTaskExecuter::finishCompute(base::WeakPtr<WorkerTaskExecuter> self, int taskId, const Variants& result, int64 timeUsage)
 {
   if (auto* pThis = self.get())
   {
-    pThis->finishComputeImpl(taskId, result);
+    pThis->finishComputeImpl(taskId, result, timeUsage);
   }
 }
 
-void WorkerTaskExecuter::finishComputeImpl(int taskId, const Variants& result)
+void WorkerTaskExecuter::finishComputeImpl(int taskId, const Variants& result, int64 timeUsage)
 {
-  node->finishTask(taskId, result, [=](bool ok){
+  node->finishTask(taskId, result, timeUsage, [=](bool ok){
     if (!ok)
     {
       LOG(ERROR) << "Cannot finish compute properly";

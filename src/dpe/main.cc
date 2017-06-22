@@ -73,9 +73,10 @@ public:
     }
   }
 
-  void setResult(int64 taskId, VariantsReader* result)
+  void setResult(int64 taskId, VariantsReader* result, int64 timeUsage)
   {
     taskData[taskId].result = result->int64Value(0);
+    std::cerr << taskId << " finished. Timeusage " << timeUsage << std::endl;
   }
 
   void compute(int64 taskId, VariantsBuilder* result)

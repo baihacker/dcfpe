@@ -15,7 +15,7 @@ public:
   virtual void start() = 0;
   virtual void onNodeAvailable(RemoteNodeController* node) = 0;
   virtual void onNodeUnavailable(int64 id) = 0;
-  virtual void handleFinishCompute(int64 taskId, bool ok, const Variants& result) = 0;
+  virtual void handleFinishCompute(int64 taskId, bool ok, const Variants& result, int64 timeUsage) = 0;
 };
 
 struct NodeContext
@@ -48,7 +48,7 @@ public:
 
   void handleAddTaskImpl(int64 nodeId, int64 taskId, bool ok, const std::string& result);
 
-  void handleFinishCompute(int64 taskId, bool ok, const Variants& result);
+  void handleFinishCompute(int64 taskId, bool ok, const Variants& result, int64 timeUsage);
 
   void prepareTaskQueue();
 

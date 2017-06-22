@@ -88,7 +88,7 @@ public:
   virtual int addTask(int64 taskId, const std::string& data,
     std::function<void (int64, bool, const std::string&)> callback) = 0;
 
-  virtual int finishTask(int64 taskId, const Variants& result,
+  virtual int finishTask(int64 taskId, const Variants& result, int64 timeUsage, 
     std::function<void (bool)> callback) = 0;
 
   virtual int updateWorkerStatus(int64 taskId, std::function<void (bool)> callback) = 0;
@@ -123,7 +123,7 @@ public:
     std::function<void (int64, bool, const std::string&)> callback,
     scoped_refptr<base::ZMQResponse> rep);
 
-  int finishTask(int64 taskId, const Variants& result, std::function<void (bool)> callback);
+  int finishTask(int64 taskId, const Variants& result, int64 timeUsage, std::function<void (bool)> callback);
   static void handleFinishTask(base::WeakPtr<RemoteNodeControllerImpl> self,
     std::function<void (bool)> callback,
     scoped_refptr<base::ZMQResponse> rep);

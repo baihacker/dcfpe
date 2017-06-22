@@ -228,12 +228,13 @@ void RemoteNodeControllerImpl::handleAddTaskImpl(
   callback(id, body.error_code() == 0, "");
 }
 
-int RemoteNodeControllerImpl::finishTask(int64 taskId, const Variants& result,
+int RemoteNodeControllerImpl::finishTask(int64 taskId, const Variants& result, int64 timeUsage, 
     std::function<void (bool)> callback)
 {
   auto* cr = new FinishComputeRequest();
   cr->set_task_id(taskId);
   cr->set_allocated_result(new Variants(result));
+  cr->set_time_usage(timeUsage);
 
   Request req;
   req.set_name("finishCompute");
