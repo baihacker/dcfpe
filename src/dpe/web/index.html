@@ -19,12 +19,16 @@
 </div>
 
 <div class="header" style="display:flex;justify-content:flex-end;font-size:12px;line-height:22px;">
+<div style="flex-grow:1;text-align:center;">
+<span>Progress:</span>
+<span class="progress">0/0</span>
+</div>
 <div>
-<input type="checkbox" class="auto-refresh" style="vertical-align:-2px" checked>
-<span>Auto Refresh</span>
+  <input type="checkbox" class="auto-refresh" style="vertical-align:-2px" checked>
+  <span>Auto Refresh</span>
 </div>
 <div style="margin-left:8px">
-<button class="refresh-button">Refresh</button>
+  <button class="refresh-button">Refresh</button>
 </div>
 </div>
 
@@ -119,7 +123,7 @@ function getStartTaskId()
   {
     return 0;
   }
-  return taskInfos[l-1].taskId;
+  return +taskInfos[l-1].taskId + 1;
 }
 
 function addTaskInfo(taskInfo) {
@@ -180,12 +184,15 @@ function refresh(byAuto) {
         taskIds.push(+taskInfo.taskId);
         var thisTime = (+taskInfo.timeUsage)/1e6;
         taskTimeUsages.push(thisTime);
-        var t = accTaskTimeUsages.length == 0 ? 0 : accTaskTimeUsages[accTaskTimeUsages.length-1];
+        var t = accTaskTimeUsages.length == 0 ?
+            0 : accTaskTimeUsages[accTaskTimeUsages.length-1];
         accTaskTimeUsages.push(t+thisTime);
       }
       timeChart.update(0, true);
       accChart.update(0, true);
     }
+    
+    $(".progress").text(taskInfos.length + "/" + result.taskCount);
   });
 }
 
