@@ -26,6 +26,7 @@ dpe.dll dpe支持dll (dpe实现)
 zmq.dll zmq支持dll (消息库)
 msvcp120.dll, msvcr120.dll C++运行时库
 pm.exe 可选的ProcessMonitor,用于同时启动多个子进程,监控子进程,在被监控进程退出时重启子进程
+index.html, Chart.bundle.js, jquery.min.js 可选的master结点监控页面,需要访问本页面时应该这些文件
 
 在Master(或称为Server)和Worker结点上的部署方法相同
 
@@ -82,6 +83,11 @@ worker默认值为3311.
 在新建默认缓存Writer时是否清空已有文件.
 value=true或1认为值是true,其它值均认为是false.
 默认值为:false
+
+--http_port=port
+--hp=port
+用于master结点的结点监控页面端口.
+默认值为:80
 
 示例:
 在同一台计算机上

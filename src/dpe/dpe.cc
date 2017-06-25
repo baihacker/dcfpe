@@ -75,6 +75,7 @@ std::string defaultCacheFilePath = "dpeCache.txt";
 std::string cacheFilePath = defaultCacheFilePath;
 bool resetCache = false;
 Solver* solver;
+int httpPort = 80;
 
 static void exitDpeImpl()
 {
@@ -157,7 +158,7 @@ static inline void run()
   {
     dpeMasterNode = new DPEMasterNode(myIP, serverIP);
     httpServer.setHandler(dpeMasterNode);
-    httpServer.start(8080);
+    httpServer.start(httpPort);
     if (!dpeMasterNode->start(port == 0 ? dpe::kServerPort + instanceId : port))
     {
       LOG(ERROR) << "Failed to start master node";
@@ -315,6 +316,19 @@ void runDpe(Solver* solver, int argc, char* argv[])
       else
       {
         resetCache = false;
+      }
+    }
+    else if (str == "hp" || str == "http_port")
+    {
+      if (idx == -1)
+      {
+        httpPort = atoi(argv[i+1]);
+        i += 2;
+      }
+      else
+      {
+        httpPort = atoi(value.c_str());
+        ++i;
       }
     }
     else

@@ -151,12 +151,14 @@ HttpRequest HttpServer::parseRequest(const std::string& requestData)
     {
       req.fullPath = verb[1];
       parsePath(req.fullPath, req.path, req.parameters);
+#if 0
       std::cerr << req.fullPath << std::endl;
       std::cerr << req.path << std::endl;
       for (auto& iter: req.parameters)
       {
         std::cerr << iter.first << " " << iter.second << std::endl;
       }
+#endif
     }
     if (hs > 2) req.version = verb[2];
   }
