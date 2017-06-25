@@ -5,7 +5,7 @@ Distributed Computation Framework for Project Euler
 
 It is a tool to make computer compute together.
 
-[Download releases](https://github.com/baihacker/dcfpe/tree/master/releases)
+[Download releases](http://pan.baidu.com/s/1o8fqAqI) pwd:235f
 
 Overview:
 ====================
