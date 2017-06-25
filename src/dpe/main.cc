@@ -50,7 +50,7 @@ public:
     std::cerr << cr->getInt64(1) << std::endl;
     cr->release();
 #endif
-    for (int i = 0; i < 10; ++i)
+    for (int i = 0; i < 1000; ++i)
     {
       TaskData item;
       item.status = TaskData::NEW_TASK;
@@ -63,7 +63,7 @@ public:
 
   void initAsWorker()
   {
-    for (int i = 0; i < 10; ++i)
+    for (int i = 0; i < 1000; ++i)
     {
       TaskData item;
       item.status = TaskData::NEW_TASK;
@@ -82,6 +82,7 @@ public:
   void compute(int64 taskId, VariantsBuilder* result)
   {
     result->appendInt64Value(taskId*taskId);
+    Sleep(500);
   }
 
   void finish()

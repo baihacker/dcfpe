@@ -181,4 +181,35 @@ void DPEMasterNode::removeNode(int64 id)
     delete node;
   }
 }
+
+bool DPEMasterNode::handleRequest(const http::HttpRequest& req, http::HttpResponse* rep)
+{
+  if (req.method == "GET")
+  {
+    if (req.path == "/")
+    {
+      std::string data;
+      base::FilePath filePath(base::UTF8ToNative("index.html"));
+      if (!base::ReadFileToString(filePath, &data))
+      {
+        return true;
+      }
+      rep->setBody(data);
+    }
+    else if (req.path == "/status")
+    {
+      if (scheduler)
+      {
+        auto where = req.parameters.find("startTaskId");
+        int64 taskId = -1;
+        if (where != req.parameters.end())
+        {
+          taskId = std::atoll(where->second.c_str());
+        }
+        rep->setBody(scheduler->makeStatusJSON(taskId));
+      }
+    }
+  }
+  return true;
+}
 }

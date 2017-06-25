@@ -94,6 +94,9 @@ public:
   virtual int updateWorkerStatus(int64 taskId, std::function<void (bool)> callback) = 0;
 
   virtual int64 getLastUpdateTimestamp() const = 0;
+  
+  virtual DPENodeBase* getLocalNode() const = 0;
+  virtual RemoteNodeImpl* getRemoteNode() const = 0;
 };
 
 class RemoteNodeControllerImpl : public RemoteNodeController

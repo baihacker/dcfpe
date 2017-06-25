@@ -11,6 +11,7 @@
 #include "dpe/dpe_master_node.h"
 #include "dpe/dpe_worker_node.h"
 #include "dpe/cache.h"
+#include "dpe/http_server.h"
 
 namespace dpe
 {
@@ -64,6 +65,7 @@ static inline std::string parseCmd(const std::string& s, int& idx, std::string& 
 
 scoped_refptr<DPEMasterNode> dpeMasterNode;
 scoped_refptr<DPEWorkerNode> dpeWorkerNode;
+http::HttpServer httpServer;
 std::string type = "server";
 std::string myIP;
 std::string serverIP;
@@ -82,7 +84,7 @@ static void exitDpeImpl()
     dpeMasterNode->stop();
   }
   dpeMasterNode = NULL;
-
+  httpServer.stop();
   if (dpeWorkerNode)
   {
     dpeWorkerNode->stop();
@@ -94,6 +96,7 @@ static void exitDpeImpl()
 void willExitDpe()
 {
   LOG(INFO) << "willExitDpe";
+  httpServer.setHandler(NULL);
   base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
     base::Bind(exitDpeImpl));
 }
@@ -153,6 +156,8 @@ static inline void run()
   if (type == "server")
   {
     dpeMasterNode = new DPEMasterNode(myIP, serverIP);
+    httpServer.setHandler(dpeMasterNode);
+    httpServer.start(8080);
     if (!dpeMasterNode->start(port == 0 ? dpe::kServerPort + instanceId : port))
     {
       LOG(ERROR) << "Failed to start master node";

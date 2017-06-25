@@ -6,7 +6,7 @@
 
 namespace dpe
 {
-SimpleMasterTaskScheduler::SimpleMasterTaskScheduler()
+SimpleMasterTaskScheduler::SimpleMasterTaskScheduler() : nextCompletedTask(0)
 {
 }
 
@@ -37,6 +37,10 @@ void SimpleMasterTaskScheduler::start()
   };
   TaskAppenderImpl appender(taskQueue);
   getSolver()->initAsMaster(&appender);
+  for (auto& iter: taskQueue)
+  {
+    taskInfos.push_back({iter, -1, -1});
+  }
   repeatedAction = new base::RepeatedAction(this);
   repeatedAction->Start([=](){
     refreshStatusImpl();
@@ -167,9 +171,79 @@ void SimpleMasterTaskScheduler::handleFinishCompute(int64 taskId, bool ok, const
       getSolver()->setResult(taskId, &vri, timeUsage);
       ctx.status = NodeContext::READY;
       ctx.taskId = -1;
+      
+      TaskInfo info{taskId, ctx.node->getId(), timeUsage};
+      finishedTask[taskId] = info;
+      flushFinishedTask();
+      break;
     }
   }
   refreshStatusImpl();
+}
+
+void SimpleMasterTaskScheduler::flushFinishedTask()
+{
+  const int taskCount = static_cast<int>(taskInfos.size());
+  while (nextCompletedTask < taskCount)
+  {
+    auto where = finishedTask.find(taskInfos[nextCompletedTask].taskId);
+    if (where != finishedTask.end())
+    {
+      taskInfos[nextCompletedTask++] = std::move(where->second);
+      finishedTask.erase(where);
+    }
+    else
+    {
+      break;
+    }
+  }
+}
+
+std::string SimpleMasterTaskScheduler::makeStatusJSON(int64 startTaskId) const
+{
+  auto* lv = new base::ListValue();
+  for (const auto& iter: nodes)
+  {
+    auto* node = iter.node->getRemoteNode();
+    auto* v = new base::DictionaryValue();
+    v->SetString("id", std::to_string(node->getId()));
+    v->SetString("status", statusToString(iter.status));
+    v->SetString("taskId", std::to_string(iter.taskId));
+    v->SetString("latencySum", std::to_string(node->getLatencySum()));
+    v->SetString("requestCount", std::to_string(node->getRequestCount()));
+    lv->Append(v);
+  }
+
+  base::DictionaryValue dv;
+  dv.Set("nodeStatus", lv);
+
+  dv.SetString("taskCount", std::to_string(taskInfos.size()));
+  LOG(INFO) << startTaskId;
+  if (startTaskId != -1)
+  {
+    int l = 0, r = nextCompletedTask - 1;
+    while (l <= r)
+    {
+      const int mid = (l + r) >> 1;
+      if (taskInfos[mid].taskId >= startTaskId) r = mid - 1; else l = mid + 1;
+    }
+    auto* lv = new base::ListValue();
+    for (int i = l; i < nextCompletedTask; ++i)
+    {
+      auto* v = new base::DictionaryValue();
+      auto& info = taskInfos[i];
+      v->SetString("taskId", std::to_string(info.taskId));
+      v->SetString("node", std::to_string(info.node));
+      v->SetString("timeUsage", std::to_string(info.timeUsage));
+      lv->Append(v);
+    }
+    dv.Set("tasks", lv);
+  }
+  
+  std::string ret;
+  base::JSONWriter::Write(&dv, &ret);
+  
+  return ret;
 }
 
 }

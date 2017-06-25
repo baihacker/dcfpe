@@ -79,6 +79,9 @@
           'variants.cc',
           'cache.h',
           'cache.cc',
+          
+          'http_server.h',
+          'http_server.cc',
         ],
       'dependencies':[
           '<(DEPTH)/dpe_base/dpe_base.gyp:dpe_base',

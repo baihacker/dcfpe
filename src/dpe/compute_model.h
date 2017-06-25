@@ -9,15 +9,6 @@ namespace dpe
 {
 static const int kDefaultRefreshIntervalInSeconds = 10;
 
-class MasterTaskScheduler
-{
-public:
-  virtual void start() = 0;
-  virtual void onNodeAvailable(RemoteNodeController* node) = 0;
-  virtual void onNodeUnavailable(int64 id) = 0;
-  virtual void handleFinishCompute(int64 taskId, bool ok, const Variants& result, int64 timeUsage) = 0;
-};
-
 struct NodeContext
 {
   enum NodeStatus
@@ -29,6 +20,38 @@ struct NodeContext
   NodeStatus status;
   RemoteNodeController* node;
   int64 taskId;
+};
+
+static inline std::string statusToString(int status)
+{
+  switch (status)
+  {
+    case NodeContext::READY: return "ready";
+    case NodeContext::ADDING_TASK: return "adding task";
+    case NodeContext::COMPUTING_TASK: return "running";
+    default: return "unknown";
+  }
+}
+
+struct TaskInfo
+{
+  TaskInfo(int64 taskId = 0, int64 node = 0, int64 timeUsage = 0) :
+    taskId(taskId), node(node), timeUsage(timeUsage)
+    {
+    }
+  int64 taskId;
+  int64 node;
+  int64 timeUsage;
+};
+
+class MasterTaskScheduler
+{
+public:
+  virtual void start() = 0;
+  virtual void onNodeAvailable(RemoteNodeController* node) = 0;
+  virtual void onNodeUnavailable(int64 id) = 0;
+  virtual void handleFinishCompute(int64 taskId, bool ok, const Variants& result, int64 timeUsage) = 0;
+  virtual std::string makeStatusJSON(int64 startTaskId = -1) const = 0;
 };
 
 class SimpleMasterTaskScheduler : public MasterTaskScheduler,
@@ -52,10 +75,16 @@ public:
 
   void prepareTaskQueue();
 
+  std::string makeStatusJSON(int64 startTaskId) const;
+  void flushFinishedTask();
 private:
   std::vector<NodeContext> nodes;
 
   std::deque<int64> taskQueue;
+
+  std::vector<TaskInfo> taskInfos;
+  int nextCompletedTask;
+  std::map<int64, TaskInfo> finishedTask;
 
   scoped_refptr<base::RepeatedAction> repeatedAction;
 };

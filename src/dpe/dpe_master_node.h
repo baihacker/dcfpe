@@ -3,11 +3,13 @@
 
 #include "dpe/dpe_node_base.h"
 #include "dpe/compute_model.h"
+#include "dpe/http_server.h"
 
 namespace dpe
 {
 class DPEMasterNode :
     public DPENodeBase,
+    public http::HttpReqestHandler,
     public base::RefCounted<DPEMasterNode>
 {
 public:
@@ -27,6 +29,8 @@ public:
   int handleRequest(const Request& req, Response& reply);
 
   void removeNode(int64 id);
+  
+  bool handleRequest(const http::HttpRequest& req, http::HttpResponse* rep);
 private:
   MasterTaskScheduler* scheduler;
   int port;
