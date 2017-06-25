@@ -14,6 +14,12 @@ public:
   }
   ~ProcessMonitor()
   {
+    const int size = static_cast<int>(processes.size());
+    for (int i = 0; i < size; ++i)
+    {
+      processes[i]->Release();
+    }
+    std::vector<process::Process*>().swap(processes);
   }
   void start(const std::string& processName, int minId, int maxId, std::vector<std::string>& arguments)
   {
@@ -40,6 +46,7 @@ public:
     const int size = static_cast<int>(processes.size());
     for (int i = 0; i < size; ++i)
     {
+      processes[i]->AddRef();
       processes[i]->Start();
       LOG(INFO) << "Process " << i << " starts";
     }
@@ -53,8 +60,9 @@ public:
     {
       if (processes[i] == p)
       {
-        np->Start();
+        processes[i]->Release();
         processes[i] = np;
+        np->Start();
         LOG(INFO) << "Process " << i << " restarts";
         break;
       }

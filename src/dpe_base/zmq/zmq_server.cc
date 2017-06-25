@@ -264,6 +264,7 @@ unsigned ZMQServer::Run()
 {
   for (int32_t id = 0; !quit_flag_; ++id)
   {
+    context_mutex_.lock();
     std::vector<zmq_pollitem_t> items(context_.size() + 1);
     
     items[0].socket = zmq_ctrl_sub_;
@@ -272,7 +273,6 @@ unsigned ZMQServer::Run()
     
     int32_t top = 1;
     
-    context_mutex_.lock();
     for (auto& it: context_)
     {
       if (it.state_ == STATE_LISTENING)

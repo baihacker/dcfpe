@@ -246,6 +246,7 @@ unsigned ZMQClient::Run()
 
   for (int32_t id = 0; !quit_flag_; ++id)
   {
+    context_mutex_.lock();
     std::vector<zmq_pollitem_t> items(context_.size() + 1);
     
     items[0].socket = zmq_ctrl_sub_;
@@ -254,7 +255,6 @@ unsigned ZMQClient::Run()
     
     int32_t top = 1;
     
-    context_mutex_.lock();
     int32_t current_time = GetTickCount();
     int32_t timeout = -1;
     for (auto& it: context_)

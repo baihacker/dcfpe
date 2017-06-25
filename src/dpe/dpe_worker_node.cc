@@ -120,7 +120,6 @@ void DPEWorkerNode::stop()
   if (zserver)
   {
     zserver->Stop();
-    delete zserver;
     zserver = NULL;
   }
 }

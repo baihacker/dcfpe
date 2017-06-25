@@ -56,7 +56,6 @@ void DPEMasterNode::stop()
   if (zserver)
   {
     zserver->Stop();
-    delete zserver;
     zserver = NULL;
   }
 }
