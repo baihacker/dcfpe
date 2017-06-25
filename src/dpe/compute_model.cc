@@ -6,7 +6,10 @@
 
 namespace dpe
 {
-SimpleMasterTaskScheduler::SimpleMasterTaskScheduler() : nextCompletedTask(0)
+SimpleMasterTaskScheduler::SimpleMasterTaskScheduler(int64 srvUid) :
+  srvUid(srvUid),
+  srvUidString(std::to_string(srvUid)),
+  nextCompletedTask(0)
 {
 }
 
@@ -240,6 +243,7 @@ std::string SimpleMasterTaskScheduler::makeStatusJSON(int64 startTaskId) const
     dv.Set("tasks", lv);
   }
 
+  dv.SetString("srvUid", srvUidString);
   std::string ret;
   base::JSONWriter::Write(&dv, &ret);
 

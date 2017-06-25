@@ -65,6 +65,8 @@
 <script>
 (function(){
 
+var srvUid = "";
+
 var taskInfos = [];
 var taskIds = [];
 var taskTimeUsages = [];
@@ -151,6 +153,15 @@ function refresh(byAuto) {
     url: "status?" + "startTaskId=" + getStartTaskId(),
   }).done(function(repdata) {
     var result = JSON.parse(repdata);
+    
+    if (srvUid == "") {
+      srvUid = result.srvUid;
+    }
+    else if (srvUid != result.srvUid)
+    {
+      window.location.reload();
+      return;
+    }
     
     var nodeStatus = result.nodeStatus;
     var newLength = nodeStatus.length;

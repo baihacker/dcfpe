@@ -58,7 +58,7 @@ class SimpleMasterTaskScheduler : public MasterTaskScheduler,
   public base::RepeatedActionHost
 {
 public:
-  SimpleMasterTaskScheduler();
+  SimpleMasterTaskScheduler(int64 srvUid);
 
   ~SimpleMasterTaskScheduler();
 
@@ -78,6 +78,8 @@ public:
   std::string makeStatusJSON(int64 startTaskId) const;
   void flushFinishedTask();
 private:
+  int64 srvUid;
+  std::string srvUidString;
   std::vector<NodeContext> nodes;
 
   std::deque<int64> taskQueue;

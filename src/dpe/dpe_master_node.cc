@@ -40,7 +40,7 @@ bool DPEMasterNode::start(int port)
     LOG(INFO) << "Zserver starts at: " << zserver->GetServerAddress();
   }
 
-  scheduler = new SimpleMasterTaskScheduler();
+  scheduler = new SimpleMasterTaskScheduler(srvUid);
   scheduler->start();
   return true;
 }
