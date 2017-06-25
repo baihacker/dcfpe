@@ -74,6 +74,7 @@ int DPEMasterNode::handleConnectRequest(const std::string& address)
   {
     auto* node = remoteNodes[idx];
     std::remove(remoteNodes.begin(), remoteNodes.end(), node);
+    remoteNodes.pop_back();
     scheduler->onNodeUnavailable(node->getId());
     delete node;
   }
@@ -106,6 +107,7 @@ int DPEMasterNode::handleDisconnectRequest(const std::string& address)
   {
     RemoteNodeImpl* node = remoteNodes[idx];
     std::remove(remoteNodes.begin(), remoteNodes.end(), node);
+    remoteNodes.pop_back();
     scheduler->onNodeUnavailable(node->getId());
     delete node;
   }
@@ -116,7 +118,10 @@ int DPEMasterNode::onConnectionFinished(RemoteNodeImpl* node, bool ok)
 {
   if (!ok)
   {
-    std::remove(remoteNodes.begin(), remoteNodes.end(), node);
+    if (std::remove(remoteNodes.begin(), remoteNodes.end(), node) != remoteNodes.end())
+    {
+      remoteNodes.pop_back();
+    }
     delete node;
   }
   else
@@ -178,6 +183,7 @@ void DPEMasterNode::removeNode(int64 id)
   {
     RemoteNodeImpl* node = remoteNodes[idx];
     std::remove(remoteNodes.begin(), remoteNodes.end(), node);
+    remoteNodes.pop_back();
     delete node;
   }
 }
