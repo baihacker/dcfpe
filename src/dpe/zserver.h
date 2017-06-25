@@ -8,7 +8,7 @@ namespace dpe
 {
 struct ZServerHandler
 {
-  virtual int handleConnectRequest(const std::string& address) = 0;
+  virtual int handleConnectRequest(const std::string& address, int64& srvUid) = 0;
   virtual int handleDisconnectRequest(const std::string& address) = 0;
   virtual int handleRequest(const Request& req, Response& reply) = 0;
 };

@@ -5,6 +5,7 @@ namespace dpe
 {
 RemoteNodeImpl::RemoteNodeImpl(
 RemoteNodeHandler* handler, const std::string myAddress, int64 connectionId) :
+    srvUid(0),
     isReady(false),
     nextRequestId(0),
     handler(handler),
@@ -56,6 +57,7 @@ void  RemoteNodeImpl::handleConnectImpl(scoped_refptr<base::ZMQResponse> rep)
   Response data;
   data.ParseFromString(rep->data_);
   remoteConnectionId = data.connect().connection_id();
+  srvUid = data.srv_uid();
 
   isReady = true;
   handler->onConnectionFinished(this, true);
@@ -91,6 +93,7 @@ int RemoteNodeImpl::sendRequest(Request& req, base::ZMQCallBack callback, int ti
 
   req.set_connection_id(remoteConnectionId);
   req.set_request_id(requestId);
+  req.set_srv_uid(srvUid);
   req.set_timestamp(base::Time::Now().ToInternalValue());
 
   std::string val;

@@ -5,7 +5,11 @@ namespace dpe
 
 DPEMasterNode::DPEMasterNode(
     const std::string& myIP, const std::string& serverIP):
-    DPENodeBase(myIP, serverIP), port(kServerPort), weakptr_factory_(this)
+    DPENodeBase(myIP, serverIP),
+    srvUid(base::Time::Now().ToInternalValue()),
+    srvUidString(std::to_string(srvUid)),
+    port(kServerPort),
+    weakptr_factory_(this)
   {
 
   }
@@ -57,7 +61,7 @@ void DPEMasterNode::stop()
   }
 }
 
-int DPEMasterNode::handleConnectRequest(const std::string& address)
+int DPEMasterNode::handleConnectRequest(const std::string& address, int64& srvUid)
 {
   const int size = static_cast<int>(remoteNodes.size());
   int idx = -1;
@@ -79,15 +83,19 @@ int DPEMasterNode::handleConnectRequest(const std::string& address)
     delete node;
   }
 
+  srvUid = this->srvUid;
+
   auto* remoteNode = new RemoteNodeImpl(
       this,
       zserver->GetServerAddress(),
       nextConnectionId++);
+  remoteNode->setSrvUid(srvUid);
   remoteNode->connectTo(address);
 
   remoteNode->updateStatus(-1, base::Time::Now().ToInternalValue());
   remoteNodes.push_back(remoteNode);
 
+  
   return remoteNode->getId();
 }
 
@@ -134,8 +142,14 @@ int DPEMasterNode::onConnectionFinished(RemoteNodeImpl* node, bool ok)
 
 int DPEMasterNode::handleRequest(const Request& req, Response& reply)
 {
-  RemoteNodeImpl* remoteNode = NULL;
+  reply.set_srv_uid(srvUid);
 
+  if (req.srv_uid() != srvUid)
+  {
+    return 0;
+  }
+
+  RemoteNodeImpl* remoteNode = NULL;
   auto id = req.connection_id();
   for (auto node: remoteNodes)
   {

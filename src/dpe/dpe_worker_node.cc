@@ -64,8 +64,13 @@ void WorkerTaskExecuter::finishComputeImpl(int taskId, const Variants& result, i
 }
 
 DPEWorkerNode::DPEWorkerNode(const std::string& myIP, const std::string& serverIP):
-  DPENodeBase(myIP, serverIP), port(kWorkerPort), weakptr_factory_(this), runningTaskId(-1),
-  remoteNode(NULL), remoteNodeController(NULL)
+  DPENodeBase(myIP, serverIP),
+  srvUid(0),
+  port(kWorkerPort),
+  weakptr_factory_(this),
+  runningTaskId(-1),
+  remoteNode(NULL),
+  remoteNodeController(NULL)
 {
 
 }
@@ -120,10 +125,12 @@ void DPEWorkerNode::stop()
   }
 }
 
-int DPEWorkerNode::handleConnectRequest(const std::string& address)
+int DPEWorkerNode::handleConnectRequest(const std::string& address, int64& srvUid)
 {
   if (remoteNode && remoteNode->getRemoteAddress() == address)
   {
+    this->srvUid = srvUid;
+    remoteNode->setSrvUid(srvUid);
     return remoteNode->getId();
   }
   return -1;
@@ -183,6 +190,13 @@ void DPEWorkerNode::updateWorkerStatus()
 
 int DPEWorkerNode::handleRequest(const Request& req, Response& reply)
 {
+  reply.set_srv_uid(srvUid);
+
+  if (req.srv_uid() != srvUid)
+  {
+    return 0;
+  }
+
   if (req.has_compute())
   {
     if (runningTaskId == -1)

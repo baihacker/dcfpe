@@ -22,6 +22,7 @@ public:
   RemoteNodeImpl(RemoteNodeHandler* handler, const std::string myAddress, int64 connectionId);
   ~RemoteNodeImpl();
 
+  void setSrvUid(int64 srvUid) {this->srvUid = srvUid;}
   int getId() const {return connectionId;};
   std::string getRemoteAddress() const {return remoteAddress;}
   bool checkIsReady() const {return isReady;}
@@ -56,6 +57,7 @@ public:
   int64 getLatencySum() const {return latencySum;}
   int64 getRequestCount() const {return requestCount;}
 private:
+  int64 srvUid;
   bool isReady;
   RemoteNodeHandler* handler;
 

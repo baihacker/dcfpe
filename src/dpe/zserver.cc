@@ -101,12 +101,14 @@ void ZServer::HandleConnectRequest(const Request& req, Response& reply)
 
   if (connectRequest.has_address())
   {
-    auto connectionId = handler->handleConnectRequest(connectRequest.address());
+    int64 srvUid = req.srv_uid();
+    auto connectionId = handler->handleConnectRequest(connectRequest.address(), srvUid);
     if (connectionId > 0)
     {
       ConnectResponse* connectResponse = new ConnectResponse();
       connectResponse->set_connection_id(connectionId);
 
+      reply.set_srv_uid(srvUid);
       reply.set_allocated_connect(connectResponse);
       reply.set_error_code(0);
     }

@@ -20,7 +20,7 @@ public:
   bool start(int port);
   void stop();
 
-  int handleConnectRequest(const std::string& address);
+  int handleConnectRequest(const std::string& address, int64& srvUid);
 
   int handleDisconnectRequest(const std::string& address);
 
@@ -33,6 +33,8 @@ public:
   bool handleRequest(const http::HttpRequest& req, http::HttpResponse* rep);
 private:
   MasterTaskScheduler* scheduler;
+  int64 srvUid;
+  std::string srvUidString;
   int port;
   std::vector<RemoteNodeImpl*> remoteNodes;
   base::WeakPtrFactory<DPEMasterNode>                 weakptr_factory_;

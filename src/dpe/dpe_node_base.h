@@ -34,7 +34,7 @@ public:
   virtual bool start(int port) = 0;
   virtual void stop() = 0;
 
-  virtual int handleConnectRequest(const std::string& address) = 0;
+  virtual int handleConnectRequest(const std::string& address, int64& srvUid) = 0;
   virtual int handleDisconnectRequest(const std::string& address) = 0;
   virtual int onConnectionFinished(RemoteNodeImpl* node, bool ok) = 0;
   virtual int handleRequest(const Request& req, Response& reply) = 0;
@@ -42,6 +42,7 @@ public:
 
 protected:
   scoped_refptr<ZServer> zserver;
+
   std::string type;
   std::string myIP;
   std::string serverIP;

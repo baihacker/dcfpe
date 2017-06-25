@@ -43,6 +43,7 @@ message Request {
   optional string name = 1;
   optional int64 connection_id = 2 [default = 0];
   optional int64 request_id = 3 [default = 0];
+  optional int64 srv_uid = 4 [default = 0];
 
   optional int64 timestamp = 100 [default = 0];
   
@@ -56,6 +57,7 @@ message Request {
 message Response {
   optional string name = 1;
   optional int64 error_code = 2;
+  optional int64 srv_uid = 3 [default = 0];
 
   optional int64 timestamp = 100 [default = 0];
   

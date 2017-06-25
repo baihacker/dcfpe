@@ -37,7 +37,7 @@ public:
   void stop();
   void OnRepeatedActionFinish(base::RepeatedAction* ra){}
 
-  int handleConnectRequest(const std::string& address);
+  int handleConnectRequest(const std::string& address, int64& srvUid);
 
   int handleDisconnectRequest(const std::string& address);
 
@@ -49,6 +49,7 @@ public:
 
   void updateWorkerStatus();
 private:
+  int64 srvUid;
   WorkerTaskExecuter taskExecuter;
   RemoteNodeImpl* remoteNode;
   RemoteNodeController* remoteNodeController;

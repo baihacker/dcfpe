@@ -171,7 +171,7 @@ void SimpleMasterTaskScheduler::handleFinishCompute(int64 taskId, bool ok, const
       getSolver()->setResult(taskId, &vri, timeUsage);
       ctx.status = NodeContext::READY;
       ctx.taskId = -1;
-      
+
       TaskInfo info{taskId, ctx.node->getId(), timeUsage};
       finishedTask[taskId] = info;
       flushFinishedTask();
@@ -218,7 +218,7 @@ std::string SimpleMasterTaskScheduler::makeStatusJSON(int64 startTaskId) const
   dv.Set("nodeStatus", lv);
 
   dv.SetString("taskCount", std::to_string(taskInfos.size()));
-  LOG(INFO) << startTaskId;
+
   if (startTaskId != -1)
   {
     int l = 0, r = nextCompletedTask - 1;
@@ -239,10 +239,10 @@ std::string SimpleMasterTaskScheduler::makeStatusJSON(int64 startTaskId) const
     }
     dv.Set("tasks", lv);
   }
-  
+
   std::string ret;
   base::JSONWriter::Write(&dv, &ret);
-  
+
   return ret;
 }
 
