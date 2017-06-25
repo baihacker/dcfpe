@@ -186,17 +186,7 @@ bool DPEMasterNode::handleRequest(const http::HttpRequest& req, http::HttpRespon
 {
   if (req.method == "GET")
   {
-    if (req.path == "/")
-    {
-      std::string data;
-      base::FilePath filePath(base::UTF8ToNative("index.html"));
-      if (!base::ReadFileToString(filePath, &data))
-      {
-        return true;
-      }
-      rep->setBody(data);
-    }
-    else if (req.path == "/status")
+    if (req.path == "/status")
     {
       if (scheduler)
       {
@@ -208,6 +198,36 @@ bool DPEMasterNode::handleRequest(const http::HttpRequest& req, http::HttpRespon
         }
         rep->setBody(scheduler->makeStatusJSON(taskId));
       }
+    }
+    else if (req.path == "/")
+    {
+      std::string data;
+      base::FilePath filePath(base::UTF8ToNative("index.html"));
+      if (!base::ReadFileToString(filePath, &data))
+      {
+        return true;
+      }
+      rep->setBody(data);
+    }
+    else if (req.path == "/jquery.min.js")
+    {
+      std::string data;
+      base::FilePath filePath(base::UTF8ToNative("jquery.min.js"));
+      if (!base::ReadFileToString(filePath, &data))
+      {
+        return true;
+      }
+      rep->setBody(data);
+    }
+    else if (req.path == "/Chart.bundle.js")
+    {
+      std::string data;
+      base::FilePath filePath(base::UTF8ToNative("Chart.bundle.js"));
+      if (!base::ReadFileToString(filePath, &data))
+      {
+        return true;
+      }
+      rep->setBody(data);
     }
   }
   return true;

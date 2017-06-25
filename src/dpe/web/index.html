@@ -54,8 +54,10 @@
 <div class="task-info-list">
 </div>
 </body>
-<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.0/jquery.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.6.0/Chart.bundle.js"></script>
+<!--script src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.0/jquery.min.js"></script-->
+<!--script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.6.0/Chart.bundle.js"></script-->
+<script src="jquery.min.js"></script>
+<script src="Chart.bundle.js"></script>
 <script>
 (function(){
 
@@ -176,9 +178,10 @@ function refresh(byAuto) {
         var taskInfo = taskList[i];
         taskInfos.push(taskInfo);
         taskIds.push(+taskInfo.taskId);
-        taskTimeUsages.push(+taskInfo.timeUsage);
+        var thisTime = (+taskInfo.timeUsage)/1e6;
+        taskTimeUsages.push(thisTime);
         var t = accTaskTimeUsages.length == 0 ? 0 : accTaskTimeUsages[accTaskTimeUsages.length-1];
-        accTaskTimeUsages.push(t+(+taskInfo.timeUsage)/1e6);
+        accTaskTimeUsages.push(t+thisTime);
       }
       timeChart.update(0, true);
       accChart.update(0, true);
@@ -186,13 +189,8 @@ function refresh(byAuto) {
   });
 }
 
-function autoRefresh(byAuto) {
-  refresh(true);
-}
-
-setInterval(autoRefresh, 1000);
+setInterval(function(){refresh(true);}, 1000);
 $(".refresh-button").click(function(){refresh(false);});
-//refresh();
 
 })();
 
