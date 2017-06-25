@@ -3,7 +3,7 @@
 <head>
   <title>DPE</title>
 </head>
-<body>
+<body style="background-color:#000;color:#0f0;">
 <div class="template" style="display: none">
   <div class="node-row" style="display: none; justify-content: space-around; width: 100%">
     <div class="id" style="width:20%"></div>
@@ -76,11 +76,10 @@ var timeData = {
   labels : taskIds,
   datasets : [
     {
+      borderWidth: 0,
+      borderColor: "rgba(255,255,255,1)",
+      backgroundColor: "rgba(0,0,255,1)",
       label: "Time usage",
-      fillColor : "rgba(220,220,220,0.5)",
-      strokeColor : "rgba(220,220,220,1)",
-      pointColor : "rgba(220,220,220,1)",
-      pointStrokeColor : "#fff",
       data : taskTimeUsages
     }
   ]
@@ -90,21 +89,23 @@ var accData = {
   labels : taskIds,
   datasets : [
     {
+      borderWidth: 1,
+      borderColor: "rgba(255,0,0,1)",
+      backgroundColor: "rgba(255,255,0,1)",
       label: "Accumulated time usage",
-      fillColor : "rgba(220,220,220,0.5)",
-      strokeColor : "rgba(220,220,220,1)",
-      pointColor : "rgba(220,220,220,1)",
-      pointStrokeColor : "#fff",
       data : accTaskTimeUsages
     }
   ]
 };
+Chart.defaults.global.defaultFontColor = 'white';
+Chart.defaults.scale.gridLines.color = 'green';
+Chart.defaults.global.elements.point.radius = 1;
 
 var timeCtx = $("#timeChart").get(0).getContext("2d");
-var timeChart = new Chart(timeCtx, {type: 'line', data: timeData, options:{
+var timeChart = new Chart(timeCtx, {type: 'bar', data: timeData, options:{
   elements: {
     line: {
-      tension: 0,
+      tension: 0.4,
     }
   }
 }});
@@ -113,9 +114,10 @@ var accCtx = $("#accChart").get(0).getContext("2d");
 var accChart = new Chart(accCtx, {type: 'line', data: accData, options:{
   elements: {
     line: {
-      tension: 0,
+      tension: 0.4,
     }
-  }
+  },
+  scaleLineColor: 'white',
 }});
 
 function getStartTaskId()

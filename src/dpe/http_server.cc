@@ -7,7 +7,13 @@
 
 namespace http
 {
-HttpServer::HttpServer() : port(0), threadHandle(NULL), taskEvent(NULL), handler(NULL), weakptr_factory_(this)
+HttpServer::HttpServer() :
+    port(0),
+    quitFlag(0),
+    threadHandle(NULL),
+    taskEvent(NULL),
+    handler(NULL),
+    weakptr_factory_(this)
 {
   taskEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
 }
@@ -36,16 +42,24 @@ void HttpServer::stop()
   struct sockaddr_in server;
   client = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   server.sin_family = AF_INET;
-  server.sin_port = htons(8080);
+  server.sin_port = htons(port);
   server.sin_addr.s_addr = inet_addr("127.0.0.1");
-  connect(client, (struct sockaddr*)&server, sizeof(server));
   
-  const std::string data = "GET quit HTTP/1.0\n\n";
-  send(client, data.c_str(), data.size(), 0);
+  quitFlag = 1;
+
+  SetEvent(taskEvent);
+  DWORD result = ::WaitForMultipleObjects(1, &threadHandle, FALSE, 0);
+
+  if (result == WAIT_TIMEOUT)
+  {
+    connect(client, (struct sockaddr*)&server, sizeof(server));
+    const std::string data = "GET quit HTTP/1.0\n\n";
+    send(client, data.c_str(), data.size(), 0);
+  }
 
   closesocket(client);
 
-  DWORD result = ::WaitForMultipleObjects(1, &threadHandle, FALSE, 3000);
+  result = ::WaitForMultipleObjects(1, &threadHandle, FALSE, 3000);
   
   if (result == WAIT_TIMEOUT)
   {
@@ -88,6 +102,11 @@ unsigned HttpServer::run()
     struct sockaddr addr;
     int addrLen = sizeof(addr);
     SOCKET c = accept(s, &addr, &addrLen);
+    if (quitFlag)
+    {
+      closesocket(c);
+      break;
+    }
     int len = recv(c, buff, buffLen, 0);
     if (len == SOCKET_ERROR)
     {
@@ -125,6 +144,10 @@ bool HttpServer::handleRequestOnThread(const std::string& reqData, std::string& 
       base::Bind(handleRequest, weakptr_factory_.GetWeakPtr(), req, &rep));
       
   DWORD result = WaitForSingleObject(taskEvent, 10*1000);
+  if (quitFlag)
+  {
+    return false;
+  }
   if (result != WAIT_OBJECT_0)
   {
     return false;

@@ -231,6 +231,7 @@ bool ZMQServer::StopServer(RequestHandler* handler)
   DCHECK_CURRENTLY_ON(base::ThreadPool::UI);
   
   if (handler == NULL) return false;
+  void* willClose = NULL;
   {
     std::lock_guard<std::mutex> lock(context_mutex_);
     const int n = static_cast<int>(context_.size());
@@ -238,7 +239,7 @@ bool ZMQServer::StopServer(RequestHandler* handler)
     {
       if (iter->handler_ == handler)
       {
-        zmq_close(iter->zmq_socket_);
+        willClose = iter->zmq_socket_;
         context_.erase(iter);
         break;
       }
@@ -248,6 +249,9 @@ bool ZMQServer::StopServer(RequestHandler* handler)
       }
     }
   }
+  int32_t cmd = CMD_HELLO;
+  SendCtrlMessage((const char*)&cmd, sizeof(cmd));
+  zmq_close(willClose);
   return true;
 }
 

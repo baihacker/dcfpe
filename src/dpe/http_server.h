@@ -76,6 +76,7 @@ public:
   void handleRequestImpl(const HttpRequest& req, HttpResponse* rep);
 private:
   int port;
+  volatile int quitFlag;
   HANDLE taskEvent;
   HANDLE threadHandle;
   HttpReqestHandler* handler;
