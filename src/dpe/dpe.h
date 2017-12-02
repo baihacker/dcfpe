@@ -76,13 +76,25 @@ public:
   virtual void addTask(int64 taskId) = 0;
 };
 
+#define RUN_ON_MASTER_NODE
+#define RUN_ON_WORKER_NODE
+
 class Solver
 {
 public:
+  #pragma RUN_ON_MASTER_NODE
   virtual void initAsMaster(TaskAppender* taskAppender) = 0;
+
+  #pragma RUN_ON_WORKER_NODE
   virtual void initAsWorker() = 0;
+
+  #pragma RUN_ON_MASTER_NODE
   virtual void setResult(int64 taskId, VariantsReader* result, int64 timeUsage) = 0;
+
+  #pragma RUN_ON_WORKER_NODE
   virtual void compute(int64 taskId, VariantsBuilder* result) = 0;
+
+  #pragma RUN_ON_MASTER_NODE
   virtual void finish() = 0;
 };
 

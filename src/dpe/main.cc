@@ -38,6 +38,8 @@ public:
   {
   }
 
+
+  #pragma RUN_ON_MASTER_NODE
   void initAsMaster(TaskAppender* taskAppender)
   {
 #if 0
@@ -61,6 +63,7 @@ public:
     }
   }
 
+  #pragma RUN_ON_WORKER_NODE
   void initAsWorker()
   {
     for (int i = 0; i < 300; ++i)
@@ -73,18 +76,21 @@ public:
     }
   }
 
+  #pragma RUN_ON_MASTER_NODE
   void setResult(int64 taskId, VariantsReader* result, int64 timeUsage)
   {
     taskData[taskId].result = result->int64Value(0);
     std::cerr << taskId << " finished. Timeusage " << timeUsage << std::endl;
   }
 
+  #pragma RUN_ON_WORKER_NODE
   void compute(int64 taskId, VariantsBuilder* result)
   {
     result->appendInt64Value(taskId*taskId);
     Sleep(500);
   }
 
+  #pragma RUN_ON_MASTER_NODE
   void finish()
   {
     int64 ans = 0;

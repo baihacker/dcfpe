@@ -16,7 +16,7 @@
         #'<(DEPTH)/dpe_service/dpe_service.gyp:base_test1',
         #'<(DEPTH)/dpe_service/dpe_service.gyp:publisher',
         #'<(DEPTH)/dpe_service/dpe_service.gyp:subscriber',
-        #'<(DEPTH)/dpe/dpe.gyp:dpe',
+        '<(DEPTH)/dpe/dpe.gyp:dpe',
         '<(DEPTH)/dpe/dpe.gyp:main',
         '<(DEPTH)/dpe/dpe.gyp:pm',
         #'<(DEPTH)/third_party/zeromq_4.2.1/builds/msvc/vs2015/libzmq/zmq.gyp:zmq',
