@@ -167,6 +167,9 @@ bool ZMQClient::SendRequest(const std::string& address, const char* buffer, int3
     skt = zmq_socket(zmq_context_, ZMQ_REQ);
     if (!skt) return false;
     
+    int32_t value = 0;
+    zmq_setsockopt(skt, ZMQ_LINGER, (const void*)&value, sizeof(value));
+
     int32_t rc = zmq_connect(skt, address.c_str());
     if (rc != 0)
     {
