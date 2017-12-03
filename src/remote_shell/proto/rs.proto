@@ -10,15 +10,19 @@ message ExecuteCommandRequest {
 
 message ExecuteCommandResponse {
   optional string address = 1;
-  optional int64 connection_id = 2;
   optional string command = 3;
 }
 
 message ExecuteCommandOutputRequest {
-  optional int32 is_exit = 1;
-  optional int32 exit_code = 2;
-  optional int32 is_error_output = 3;
-  optional string output = 4;
+  optional int64 original_request_id = 1;
+  optional int32 is_exit = 2;
+  optional int32 exit_code = 3;
+  optional int32 is_error_output = 4;
+  optional string output = 5;
+}
+
+message ExecuteCommandHeartBeatRequest {
+  optional int64 original_request_id = 1;
 }
 
 message FileOperationRequest {
@@ -28,26 +32,26 @@ message FileOperationRequest {
 
 message Request {
   optional string name = 1;
-  optional int64 connection_id = 2 [default = 0];
-  optional int64 request_id = 3 [default = 0];
-  optional int64 srv_uid = 4 [default = 0];
+  optional int64 request_id = 2 [default = 0]; // auto fill by message sender
+  optional int64 srv_uid = 3 [default = 0];
 
-  optional int64 timestamp = 100 [default = 0];
+  optional int64 timestamp = 100 [default = 0]; // auto fill by message sender
   
   optional ExecuteCommandRequest execute_command = 300;
   optional ExecuteCommandOutputRequest execute_output = 301;
   optional FileOperationRequest file_operation = 302;
+  optional ExecuteCommandHeartBeatRequest execute_command_heart_beat = 303;
 }
 
 message Response {
-  optional string name = 1;
+  optional string name = 1; // auto fill from request
   optional int64 error_code = 2;
   optional int64 srv_uid = 3 [default = 0];
 
-  optional int64 timestamp = 100 [default = 0];
+  optional int64 timestamp = 100 [default = 0]; // auto fill from request
   
-  optional int64 request_timestamp = 200 [default = 0];
-  optional int64 request_id = 201 [default = 0];
+  optional int64 request_timestamp = 200 [default = 0]; // auto fill from request
+  optional int64 request_id = 201 [default = 0]; // auto fill from request
   
   optional ExecuteCommandResponse execute_command = 300;
 }

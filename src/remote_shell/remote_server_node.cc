@@ -23,18 +23,16 @@ void RemoteServerNode::handleRequest(const Request& req, Response& reply)
   if (req.has_execute_command()) {
     const auto& executeCommandRequest = req.execute_command();
 
-    int64 srvUid = req.srv_uid();
     auto connectionId = nextConnectionId++;
 
     ExecuteCommandResponse* response = new ExecuteCommandResponse();
-    response->set_connection_id(connectionId);
     reply.set_srv_uid(srvUid);
     reply.set_allocated_execute_command(response);
     reply.set_error_code(0);
     
     CommandExecutor* executor = new CommandExecutor();
 
-    std::string cmd = executor->execute(executeCommandRequest);
+    std::string cmd = executor->execute(executeCommandRequest, req.request_id());
     if (cmd.empty()) {
       reply.set_error_code(-1);
       delete executor;
@@ -48,7 +46,7 @@ void RemoteServerNode::handleRequest(const Request& req, Response& reply)
 }
 
 void RemoteServerNode::handleFileOperation(const FileOperationRequest& req, Response& reply) {
-  if (req.cmd() == "sf") {
+  if (req.cmd() == "fs") {
     const auto& args = req.args();
     const int size = args.size();
     for (int i = 0; i + 1 < size; i += 2) {

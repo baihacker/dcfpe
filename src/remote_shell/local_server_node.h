@@ -21,12 +21,15 @@ public:
 
   void handleRequest(const Request& req, Response& reply);
   
-  void handleExecuteCommandResponse(const Response& reply);
+  void handleExecuteCommandResponse(int32_t zmqError, const Response& reply);
   
-  void handleFileOperationResponse(const Request& req, const Response& reply);
+  void handleFileOperationResponse(int32_t zmqError, const Request& req, const Response& reply);
+  
+  base::WeakPtr<LocalServerNode> getWeakPtr() {return weakptr_factory_.GetWeakPtr();}
 private:
   scoped_refptr<MessageSender> msgSender;
   std::string targetAddress;
+  int64_t runningRequestId;
   base::WeakPtrFactory<LocalServerNode>                 weakptr_factory_;
 };
 }

@@ -7,6 +7,7 @@ namespace rs
 LocalServerNode::LocalServerNode(
     const std::string& myIP):
     ServerNode(myIP),
+    runningRequestId(-1),
     weakptr_factory_(this)
   {
 
@@ -98,9 +99,9 @@ void LocalServerNode::executeCommand() {
     
     Request req;
     req.set_allocated_execute_command(ecRequest);
-    msgSender->sendRequest(req, [=](const Response& reply){
-      this->handleExecuteCommandResponse(reply);
-    }, 0);
+    runningRequestId = msgSender->sendRequest(req, [=](int32_t zmqError, const Response& reply){
+      this->handleExecuteCommandResponse(zmqError, reply);
+    }, 10*1000);
     break;
   }
 }
@@ -112,7 +113,7 @@ bool LocalServerNode::handleInternalCommand(const std::vector<std::string>& cmds
   }
   const int size = cmds.size();
   LOG(INFO)<<size;
-  if (cmds[0] == "sf") {
+  if (cmds[0] == "fs") {
     if (cmds.size() == 1) {
       printf("No file specified!\n");
       willRunNextCommand(this);
@@ -127,7 +128,7 @@ bool LocalServerNode::handleInternalCommand(const std::vector<std::string>& cmds
     }
 
     FileOperationRequest* foRequest = new FileOperationRequest();
-    foRequest->set_cmd("sf");
+    foRequest->set_cmd("fs");
     for (int i = 1; i < size; ++i) {
       foRequest->add_args(cmds[i]);
       std::string data;
@@ -142,18 +143,23 @@ bool LocalServerNode::handleInternalCommand(const std::vector<std::string>& cmds
     msgSender = new MessageSender(targetAddress);
     Request req;
     req.set_allocated_file_operation(foRequest);
-    msgSender->sendRequest(req, [=](const Response& reply){
-      this->handleFileOperationResponse(req, reply);
+    msgSender->sendRequest(req, [=](int32_t zmqError, const Response& reply){
+      this->handleFileOperationResponse(zmqError, req, reply);
     }, 0);
     return true;
   }
   return false;
 }
 
-void LocalServerNode::handleFileOperationResponse(const Request& req, const Response& reply) {
+void LocalServerNode::handleFileOperationResponse(int32_t zmqError, const Request& req, const Response& reply) {
+  if (zmqError != 0 || reply.error_code() != 0) {
+    printf("Failed!");
+    willRunNextCommand(this);
+    return;
+  }
   const auto& foRequest = req.file_operation();
-  if (foRequest.cmd() == "sf") {
-    printf(reply.error_code() == 0 ? "Succeed\n" : "failed\n");
+  if (foRequest.cmd() == "fs") {
+    printf(reply.error_code() == 0 ? "Succeed\n" : "Failed\n");
     willRunNextCommand(this);
     return;
   }
@@ -161,27 +167,36 @@ void LocalServerNode::handleFileOperationResponse(const Request& req, const Resp
 
 void LocalServerNode::handleRequest(const Request& req, Response& reply)
 {
-  const auto& executeCommandRequest = req.execute_command();
-
-  int64 srvUid = req.srv_uid();
-  auto connectionId = nextConnectionId++;
+  reply.set_error_code(-1);
 
   if (req.has_execute_output()) {
-    const auto& result = req.execute_output();
-    if (result.is_exit()) {
-      printf("exit code: %d\n", result.exit_code());
+    const auto& detail = req.execute_output();
+    if (detail.original_request_id() != runningRequestId) {
+      // Unexpected output request.
+      return;
+    }
+
+    if (detail.is_exit()) {
+      printf("exit code: %d\n", detail.exit_code());
       willRunNextCommand(this);
     } else {
-      printf(result.output().c_str());
+      printf(detail.output().c_str());
+    }
+    reply.set_error_code(0);
+  } else if (req.has_execute_command_heart_beat()) {
+    const auto& detail = req.execute_command_heart_beat();
+    if (detail.original_request_id() == runningRequestId) {
+      reply.set_error_code(0);
+    } else {
+      reply.set_error_code(-1);
     }
   }
-
-  reply.set_error_code(0);
 }
 
-void LocalServerNode::handleExecuteCommandResponse(const Response& reply) {
-  if (reply.error_code() != 0) {
+void LocalServerNode::handleExecuteCommandResponse(int32_t zmqError, const Response& reply) {
+  if (zmqError != 0 || reply.error_code() != 0) {
     printf("Failed to execute command remotely!");
+    runningRequestId = -1;
     willRunNextCommand(this);
     return;
   }

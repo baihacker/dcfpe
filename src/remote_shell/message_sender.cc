@@ -10,7 +10,7 @@ MessageSender::MessageSender(const std::string& address): address(address), weak
 MessageSender::~MessageSender() {
 }
 
-static void NullCallback(const Response& rep)
+static void NullCallback(int32_t zmqError, const Response& rep)
 {
 }
 
@@ -45,7 +45,7 @@ void  MessageSender::handleResponse(base::WeakPtr<MessageSender> self,
   {
     Response body;
     body.ParseFromString(rep->data_);
-    callback(body);
+    callback(rep->error_code_, body);
   }
 }
 }

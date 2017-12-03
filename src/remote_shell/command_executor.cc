@@ -14,16 +14,19 @@ CommandExecutor::CommandExecutor(): weakptr_factory_(this), isStdout(1), lastSen
 CommandExecutor::~CommandExecutor() {
 }
 
-static void deleteExecutorImpl(CommandExecutor* executor) {
-  delete executor;
+static void deleteExecutorImpl(base::WeakPtr<CommandExecutor> executor) {
+  if (auto* who = executor.get()) {
+    delete who;
+  }
 }
 
 static void willDeleteExecutor(CommandExecutor* executor) {
   base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
-    base::Bind(deleteExecutorImpl, executor));
+    base::Bind(deleteExecutorImpl, executor->getWeakPtr()));
 }
 
-std::string CommandExecutor::execute(const ExecuteCommandRequest& command) {
+std::string CommandExecutor::execute(const ExecuteCommandRequest& command, int64_t originalRequestId) {
+  this->originalRequestId = originalRequestId;
   msgSender = new MessageSender(command.address());
 
   base::FilePath imagePath(base::UTF8ToNative("C:\\Windows\\System32\\cmd.exe"));
@@ -52,6 +55,7 @@ void CommandExecutor::OnStop(process::Process* p, process::ProcessContext* conte
   sendBufferedOutput();
 
   ExecuteCommandOutputRequest* ecoRequest = new ExecuteCommandOutputRequest();
+  ecoRequest->set_original_request_id(originalRequestId);
   ecoRequest->set_is_exit(1);
   ecoRequest->set_exit_code(context->exit_code_);
 
@@ -67,6 +71,7 @@ void CommandExecutor::OnStop(process::Process* p, process::ProcessContext* conte
 void CommandExecutor::sendBufferedOutput() {
   if (!bufferedOutput.empty()) {
     ExecuteCommandOutputRequest* ecoRequest = new ExecuteCommandOutputRequest();
+    ecoRequest->set_original_request_id(originalRequestId);
     ecoRequest->set_is_exit(0);
     ecoRequest->set_is_error_output(!isStdout);
     ecoRequest->set_output(bufferedOutput);
@@ -75,7 +80,15 @@ void CommandExecutor::sendBufferedOutput() {
     req.set_name("");
     req.set_allocated_execute_output(ecoRequest);
 
-    msgSender->sendRequest(req, 0);
+    msgSender->sendRequest(req, [=](int32_t zmqError, const Response& response) {
+      if (zmqError != 0 || response.error_code() != 0) {
+        if (this->process.get()) {
+          this->process->Stop();
+          this->process = NULL;
+        }
+        willDeleteExecutor(this);
+      }
+    }, 10*1000);
     std::string().swap(bufferedOutput);
     lastSendTime = base::Time::Now().ToInternalValue();
   }

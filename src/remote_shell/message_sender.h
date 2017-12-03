@@ -5,7 +5,7 @@
 #include "remote_shell/proto/rs.pb.h"
 namespace rs
 {
-typedef std::function<void (const Response&)> MessageCallback;
+typedef std::function<void (int32_t zmqError, const Response&)> MessageCallback;
 class ZMQClientContext {
 public:
   static base::ZMQClient* getClient() {return base::zmq_client();}
