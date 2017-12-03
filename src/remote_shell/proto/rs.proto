@@ -6,6 +6,9 @@ message CreateSessionRequest {
   optional string address = 1;
 }
 
+message DeleteSessionRequest {
+}
+
 message ExecuteCommandRequest {
   optional string address = 1;
   optional string cmd = 3;
@@ -43,6 +46,7 @@ message Request {
   optional int64 timestamp = 100 [default = 0]; // auto fill by message sender
 
   optional CreateSessionRequest create_session = 200;
+  optional DeleteSessionRequest delete_session = 201;
   
   optional ExecuteCommandRequest execute_command = 300;
   optional ExecuteCommandOutputRequest execute_output = 301;

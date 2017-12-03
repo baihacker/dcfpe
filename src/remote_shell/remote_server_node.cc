@@ -48,6 +48,7 @@ void RemoteServerNode::connectToHost(const std::string& host, int64_t sid) {
   csRequest->set_address(zserver->GetServerAddress());
   
   Request req;
+  req.set_name("CreateSession");
   req.set_session_id(sessionId);
   req.set_allocated_create_session(csRequest);
 
@@ -70,7 +71,14 @@ void RemoteServerNode::handleRequest(const Request& req, Response& reply)
 {
   reply.set_session_id(sessionId);
   reply.set_error_code(-1);
-  if (req.has_execute_command()) {
+  
+  if (req.session_id() != sessionId) {
+    return;
+  }
+
+  if (req.has_delete_session()) {
+    willStop(this);
+  } else if (req.has_execute_command()) {
     const auto& executeCommandRequest = req.execute_command();
 
     auto connectionId = nextConnectionId++;

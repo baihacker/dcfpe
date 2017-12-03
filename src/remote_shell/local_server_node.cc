@@ -47,6 +47,7 @@ void LocalServerNode::connectToTarget(const std::string& target) {
   csRequest->set_address(zserver->GetServerAddress());
   
   Request req;
+  req.set_name("CreateSession");
   req.set_allocated_create_session(csRequest);
 
   msgSender = new MessageSender(targetAddress);
@@ -133,6 +134,8 @@ void LocalServerNode::executeCommand() {
     msgSender = new MessageSender(executorAddress);
     
     Request req;
+    req.set_name("ExecuteCommand");
+    req.set_session_id(sessionId);
     req.set_allocated_execute_command(ecRequest);
     runningRequestId = msgSender->sendRequest(req, [=](int32_t zmqError, const Response& reply){
       this->handleExecuteCommandResponse(zmqError, reply);
@@ -143,11 +146,19 @@ void LocalServerNode::executeCommand() {
 
 bool LocalServerNode::handleInternalCommand(const std::vector<std::string>& cmds) {
   if (cmds[0] == "exit" || cmds[0] == "q") {
+    DeleteSessionRequest* dsRequest = new DeleteSessionRequest();
+    Request req;
+    req.set_name("DeleteSession");
+    req.set_session_id(sessionId);
+    req.set_allocated_delete_session(dsRequest);
+    
+    msgSender = new MessageSender(executorAddress);
+    runningRequestId = msgSender->sendRequest(req, 0);
+
     willStop(this);
     return true;
   }
   const int size = cmds.size();
-  LOG(INFO)<<size;
   if (cmds[0] == "fs") {
     if (cmds.size() == 1) {
       printf("No file specified!\n");
@@ -177,6 +188,7 @@ bool LocalServerNode::handleInternalCommand(const std::vector<std::string>& cmds
 
     msgSender = new MessageSender(executorAddress);
     Request req;
+    req.set_name("FileOperation");
     req.set_allocated_file_operation(foRequest);
     msgSender->sendRequest(req, [=](int32_t zmqError, const Response& reply){
       this->handleFileOperationResponse(zmqError, req, reply);
@@ -202,15 +214,14 @@ void LocalServerNode::handleFileOperationResponse(int32_t zmqError, const Reques
 
 void LocalServerNode::handleRequest(const Request& req, Response& reply)
 {
+  reply.set_session_id(sessionId);
   reply.set_error_code(-1);
 
-  if (req.has_execute_output()) {
-    if (req.session_id() != sessionId) {
-      printf("Quit due to invalid session Id.\n");
-      willStop(this);
-      return;
-    }
+  if (req.session_id() != sessionId) {
+    return;
+  }
 
+  if (req.has_execute_output()) {
     const auto& detail = req.execute_output();
     if (detail.original_request_id() != runningRequestId) {
       // Unexpected output request.
@@ -232,11 +243,6 @@ void LocalServerNode::handleRequest(const Request& req, Response& reply)
       reply.set_error_code(-1);
     }
   } else if (req.has_create_session()) {
-    if (req.session_id() != sessionId) {
-      printf("Quit due to invalid session Id.\n");
-      willStop(this);
-      return;
-    }
     const auto& detail = req.create_session();
     printf("Connected!\n");
     executorAddress = detail.address();
