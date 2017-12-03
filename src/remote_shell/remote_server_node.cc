@@ -75,8 +75,7 @@ void RemoteServerNode::scheduleHeartBeat() {
 
 void RemoteServerNode::checkHeartBeat(base::WeakPtr<RemoteServerNode> self)
 {
-  if (RemoteServerNode* pThis = self.get())
-  {
+  if (RemoteServerNode* pThis = self.get()) {
     self->checkHeartBeatImpl();
   }
 }

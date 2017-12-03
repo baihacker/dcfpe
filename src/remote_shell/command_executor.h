@@ -27,6 +27,9 @@ private:
   void OnStop(process::Process* p, process::ProcessContext* exit_code);
   void OnOutput(process::Process* p, bool is_std_out, const std::string& data);
   void sendBufferedOutput();
+  void scheduleFlushOutput();
+  static void flushOutput(base::WeakPtr<CommandExecutor> self);
+  void flushOutputImpl();
 private:
   // remote message handling: bind and receive and send
   base::ZMQClient* clientStub;
@@ -40,6 +43,7 @@ private:
   
   int64_t originalRequestId;
   int64_t sessionId;
+  int stopped;
   base::WeakPtrFactory<CommandExecutor>                 weakptr_factory_;
 };
 

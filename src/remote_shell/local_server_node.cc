@@ -156,7 +156,14 @@ bool LocalServerNode::handleInternalCommand(const std::vector<std::string>& cmds
 
     willStop(this);
     return true;
-  } else if (cmds[0] == "fs") {
+  } else if (cmds[0] == "r") {
+    int now = 0;
+    while (line[now] != 'r') ++now;
+    ++now;
+    system(line + now);
+    willRunNextCommand(this);
+    return true;
+  }else if (cmds[0] == "fs") {
     if (cmds.size() == 1) {
       printf("No file specified!\n");
       willRunNextCommand(this);

@@ -12,6 +12,7 @@ CommandExecutor::CommandExecutor(int64_t sessionId):
   isStdout(1),
   lastSendTime(0),
   sessionId(sessionId),
+  stopped(0),
   weakptr_factory_(this) {
 }
 
@@ -40,6 +41,8 @@ std::string CommandExecutor::execute(const ExecuteCommandRequest& command, int64
     return "";
   }
 
+  lastSendTime = base::Time::Now().ToInternalValue();
+  scheduleFlushOutput();
   return base::NativeToUTF8(process->GetProcessContext()->cmd_line_);
 }
 
@@ -58,6 +61,8 @@ void CommandExecutor::OnStop(process::Process* p, process::ProcessContext* conte
   req.set_allocated_execute_output(ecoRequest);
 
   msgSender->sendRequest(req, 0);
+  
+  stopped = 1;
 }
 
 void CommandExecutor::sendBufferedOutput() {
@@ -89,8 +94,30 @@ void CommandExecutor::OnOutput(process::Process* p, bool is_std_out, const std::
 
   isStdout = (int)is_std_out;
   bufferedOutput += data;
-  if (bufferedOutput.size() > 1024 || base::Time::Now().ToInternalValue() - lastSendTime > 100000) {
+  if (bufferedOutput.size() > 1024 || base::Time::Now().ToInternalValue() - lastSendTime > 50000) {
     sendBufferedOutput();
   }
+}
+
+void CommandExecutor::scheduleFlushOutput() {
+  if (stopped) {
+    return;
+  }
+  base::ThreadPool::PostDelayedTask(base::ThreadPool::UI, FROM_HERE,
+      base::Bind(&CommandExecutor::flushOutput, weakptr_factory_.GetWeakPtr()),
+      base::TimeDelta::FromMilliseconds(1000));
+}
+
+void CommandExecutor::flushOutput(base::WeakPtr<CommandExecutor> self) {
+  if (CommandExecutor* pThis = self.get())
+  {
+    self->flushOutputImpl();
+  }
+}
+
+void CommandExecutor::flushOutputImpl() {
+  // LOG(INFO) << "CommandExecutor::flushOutputImpl";
+  sendBufferedOutput();
+  scheduleFlushOutput();
 }
 }
