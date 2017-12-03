@@ -36,6 +36,11 @@ message FileOperationRequest {
   repeated string args = 2;
 }
 
+message FileOperationResponse {
+  optional string cmd = 1;
+  repeated string args = 2;
+}
+
 message Request {
   optional string name = 1;
   optional int64 session_id = 2 [default = 0];
@@ -65,4 +70,5 @@ message Response {
   optional int64 request_id = 201 [default = 0]; // auto fill from request
   
   optional ExecuteCommandResponse execute_command = 300;
+  optional FileOperationResponse file_operation = 302;
 }

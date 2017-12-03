@@ -163,7 +163,7 @@ bool LocalServerNode::handleInternalCommand(const std::vector<std::string>& cmds
     system(line + now);
     willRunNextCommand(this);
     return true;
-  }else if (cmds[0] == "fs") {
+  } else if (cmds[0] == "fs") {
     if (cmds.size() == 1) {
       printf("No file specified!\n");
       willRunNextCommand(this);
@@ -197,6 +197,26 @@ bool LocalServerNode::handleInternalCommand(const std::vector<std::string>& cmds
       this->handleFileOperationResponse(zmqError, req, reply);
     }, 0);
     return true;
+  } else if (cmds[0] == "fg") {
+    if (cmds.size() == 1) {
+      printf("No file specified!\n");
+      willRunNextCommand(this);
+      return true;
+    }
+
+    FileOperationRequest* foRequest = new FileOperationRequest();
+    foRequest->set_cmd("fg");
+    for (int i = 1; i < size; ++i) {
+      foRequest->add_args(cmds[i]);
+    }
+
+    Request req;
+    req.set_name("FileOperation");
+    req.set_allocated_file_operation(foRequest);
+    msgSender->sendRequest(req, [=](int32_t zmqError, const Response& reply){
+      this->handleFileOperationResponse(zmqError, req, reply);
+    }, 0);
+    return true;
   }
   return false;
 }
@@ -208,10 +228,22 @@ void LocalServerNode::handleFileOperationResponse(int32_t zmqError, const Reques
     return;
   }
   const auto& foRequest = req.file_operation();
+  const auto& detail = reply.file_operation();
   if (foRequest.cmd() == "fs") {
     printf(reply.error_code() == 0 ? "Succeed\n" : "Failed\n");
     willRunNextCommand(this);
-    return;
+  } else if (foRequest.cmd() == "fg") {
+    const auto& args = detail.args();
+    const int size = args.size();
+    for (int i = 0; i + 1 < size; i += 2) {
+      auto path = base::FilePath(base::UTF8ToNative(args[i]));
+      auto dest = path.BaseName();
+      if (base::WriteFile(dest, args[i+1].c_str(), args[i+1].size()) == -1) {
+        willRunNextCommand(this);
+        return;
+      }
+    }
+    willRunNextCommand(this);
   }
 }
 
