@@ -156,9 +156,9 @@ bool LocalServerNode::handleInternalCommand(const std::vector<std::string>& cmds
 
     willStop(this);
     return true;
-  } else if (cmds[0] == "r") {
+  } else if (cmds[0] == "l") {
     int now = 0;
-    while (line[now] != 'r') ++now;
+    while (line[now] != 'l') ++now;
     ++now;
     system(line + now);
     willRunNextCommand(this);
