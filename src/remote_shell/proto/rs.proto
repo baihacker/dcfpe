@@ -1,0 +1,47 @@
+syntax = "proto2";
+
+package rs;
+
+message ExecuteCommandRequest {
+  optional string address = 1;
+  optional string cmd = 3;
+  repeated string args = 4;
+}
+
+message ExecuteCommandResponse {
+  optional string address = 1;
+  optional int64 connection_id = 2;
+  optional string command = 3;
+}
+
+message ExecuteCommandOutputRequest {
+  optional int32 is_exit = 1;
+  optional int32 exit_code = 2;
+  optional int32 is_error_output = 3;
+  optional string output = 4;
+}
+
+message Request {
+  optional string name = 1;
+  optional int64 connection_id = 2 [default = 0];
+  optional int64 request_id = 3 [default = 0];
+  optional int64 srv_uid = 4 [default = 0];
+
+  optional int64 timestamp = 100 [default = 0];
+  
+  optional ExecuteCommandRequest execute_command = 300;
+  optional ExecuteCommandOutputRequest execute_output = 301;
+}
+
+message Response {
+  optional string name = 1;
+  optional int64 error_code = 2;
+  optional int64 srv_uid = 3 [default = 0];
+
+  optional int64 timestamp = 100 [default = 0];
+  
+  optional int64 request_timestamp = 200 [default = 0];
+  optional int64 request_id = 201 [default = 0];
+  
+  optional ExecuteCommandResponse execute_command = 300;
+}

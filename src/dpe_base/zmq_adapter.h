@@ -228,7 +228,7 @@ public:
   bool          SendRequest(const std::string& address,
                       const char* buffer, int32_t size,
                       ZMQCallBack callback, int32_t timeout);
-
+  WeakPtr<ZMQClient> GetWeakPtr() {return weakptr_factory_.GetWeakPtr();}
 private:
   int32_t       SendCtrlMessage(const char* msg, int32_t length);
   int32_t       SendMessage(void* channel, const char* msg, int32_t length);
