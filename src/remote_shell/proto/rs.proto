@@ -21,6 +21,11 @@ message ExecuteCommandOutputRequest {
   optional string output = 4;
 }
 
+message FileOperationRequest {
+  optional string cmd = 1;
+  repeated string args = 2;
+}
+
 message Request {
   optional string name = 1;
   optional int64 connection_id = 2 [default = 0];
@@ -31,6 +36,7 @@ message Request {
   
   optional ExecuteCommandRequest execute_command = 300;
   optional ExecuteCommandOutputRequest execute_output = 301;
+  optional FileOperationRequest file_operation = 302;
 }
 
 message Response {

@@ -81,9 +81,8 @@ void LocalServerNode::executeCommand() {
       continue;
     }
 
-    if (cmds[0] == "exit" || cmds[0] == "q") {
-      willStop(this);
-        return;
+    if (handleInternalCommand(cmds)) {
+      break;
     }
     
     std::string myAddress = base::AddressHelper::MakeZMQTCPAddress(myIP, port);
@@ -103,6 +102,60 @@ void LocalServerNode::executeCommand() {
       this->handleExecuteCommandResponse(reply);
     }, 0);
     break;
+  }
+}
+
+bool LocalServerNode::handleInternalCommand(const std::vector<std::string>& cmds) {
+  if (cmds[0] == "exit" || cmds[0] == "q") {
+    willStop(this);
+    return true;
+  }
+  const int size = cmds.size();
+  LOG(INFO)<<size;
+  if (cmds[0] == "sf") {
+    if (cmds.size() == 1) {
+      printf("No file specified!\n");
+      willRunNextCommand(this);
+      return true;
+    }
+    for (int i = 1; i < size; ++i) {
+      if (!base::PathExists(base::FilePath(base::UTF8ToNative(cmds[i])))) {
+        printf("%s doesn't exist\n", cmds[i].c_str());
+        willRunNextCommand(this);
+        return true;
+      }
+    }
+
+    FileOperationRequest* foRequest = new FileOperationRequest();
+    foRequest->set_cmd("sf");
+    for (int i = 1; i < size; ++i) {
+      foRequest->add_args(cmds[i]);
+      std::string data;
+      if (!base::ReadFileToString(base::FilePath(base::UTF8ToNative(cmds[i])), &data)) {
+        printf("Cannot read %s\n", cmds[i].c_str());
+        willRunNextCommand(this);
+        return true;
+      }
+      foRequest->add_args(data);
+    }
+
+    msgSender = new MessageSender(targetAddress);
+    Request req;
+    req.set_allocated_file_operation(foRequest);
+    msgSender->sendRequest(req, [=](const Response& reply){
+      this->handleFileOperationResponse(req, reply);
+    }, 0);
+    return true;
+  }
+  return false;
+}
+
+void LocalServerNode::handleFileOperationResponse(const Request& req, const Response& reply) {
+  const auto& foRequest = req.file_operation();
+  if (foRequest.cmd() == "sf") {
+    printf(reply.error_code() == 0 ? "Succeed\n" : "failed\n");
+    willRunNextCommand(this);
+    return;
   }
 }
 

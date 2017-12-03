@@ -14,6 +14,7 @@ public:
   ~RemoteServerNode();
 
   void handleRequest(const Request& req, Response& reply);
+  void handleFileOperation(const FileOperationRequest& req, Response& reply);
 private:
   base::WeakPtrFactory<RemoteServerNode>                 weakptr_factory_;
 };

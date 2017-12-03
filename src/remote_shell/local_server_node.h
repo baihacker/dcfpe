@@ -17,9 +17,13 @@ public:
 
   void executeCommand();
 
+  bool handleInternalCommand(const std::vector<std::string>& cmds);
+
   void handleRequest(const Request& req, Response& reply);
   
   void handleExecuteCommandResponse(const Response& reply);
+  
+  void handleFileOperationResponse(const Request& req, const Response& reply);
 private:
   scoped_refptr<MessageSender> msgSender;
   std::string targetAddress;
