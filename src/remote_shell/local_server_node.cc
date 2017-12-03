@@ -65,6 +65,7 @@ void LocalServerNode::handleCreateSessionResponse(int32_t zmqError, const Respon
     return;
   }
   sessionId = reply.session_id();
+  msgSender = NULL;
 }
 
 static void runNextCommandImpl(LocalServerNode* node) {
@@ -131,8 +132,6 @@ void LocalServerNode::executeCommand() {
     cmds.erase(cmds.begin());
     for (auto& a: cmds) ecRequest->add_args(a);
     
-    msgSender = new MessageSender(executorAddress);
-    
     Request req;
     req.set_name("ExecuteCommand");
     req.set_session_id(sessionId);
@@ -145,6 +144,7 @@ void LocalServerNode::executeCommand() {
 }
 
 bool LocalServerNode::handleInternalCommand(const std::vector<std::string>& cmds) {
+  const int size = cmds.size();
   if (cmds[0] == "exit" || cmds[0] == "q") {
     DeleteSessionRequest* dsRequest = new DeleteSessionRequest();
     Request req;
@@ -152,14 +152,11 @@ bool LocalServerNode::handleInternalCommand(const std::vector<std::string>& cmds
     req.set_session_id(sessionId);
     req.set_allocated_delete_session(dsRequest);
     
-    msgSender = new MessageSender(executorAddress);
     runningRequestId = msgSender->sendRequest(req, 0);
 
     willStop(this);
     return true;
-  }
-  const int size = cmds.size();
-  if (cmds[0] == "fs") {
+  } else if (cmds[0] == "fs") {
     if (cmds.size() == 1) {
       printf("No file specified!\n");
       willRunNextCommand(this);
@@ -186,7 +183,6 @@ bool LocalServerNode::handleInternalCommand(const std::vector<std::string>& cmds
       foRequest->add_args(data);
     }
 
-    msgSender = new MessageSender(executorAddress);
     Request req;
     req.set_name("FileOperation");
     req.set_allocated_file_operation(foRequest);
@@ -235,20 +231,30 @@ void LocalServerNode::handleRequest(const Request& req, Response& reply)
       printf(detail.output().c_str());
     }
     reply.set_error_code(0);
-  } else if (req.has_execute_command_heart_beat()) {
-    const auto& detail = req.execute_command_heart_beat();
-    if (detail.original_request_id() == runningRequestId) {
-      reply.set_error_code(0);
-    } else {
-      reply.set_error_code(-1);
-    }
   } else if (req.has_create_session()) {
     const auto& detail = req.create_session();
     printf("Connected!\n");
     executorAddress = detail.address();
+    msgSender = new MessageSender(executorAddress);
     willRunNextCommand(this);
     reply.set_error_code(0);
   }
+}
+
+bool LocalServerNode::preHandleRequest(const Request& req, Response& reply) {
+  reply.set_session_id(sessionId);
+  reply.set_error_code(-1);
+
+  if (req.session_id() != sessionId) {
+    return true;
+  }
+
+  if (req.has_session_heart_beat()) {
+    const auto& detail = req.session_heart_beat();
+    reply.set_error_code(0);
+    return true;
+  }
+  return false;
 }
 
 void LocalServerNode::handleExecuteCommandResponse(int32_t zmqError, const Response& reply) {

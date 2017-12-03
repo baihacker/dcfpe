@@ -1,6 +1,5 @@
 #include "remote_shell/remote_server_node.h"
 #include "remote_shell/proto/rs.pb.h"
-#include "remote_shell/command_executor.h"
 
 namespace rs
 {
@@ -65,6 +64,40 @@ void RemoteServerNode::handleCreateSessionResponse(int32_t zmqError, const Respo
     willStop(this);
     return;
   }
+  scheduleHeartBeat();
+}
+
+void RemoteServerNode::scheduleHeartBeat() {
+  base::ThreadPool::PostDelayedTask(base::ThreadPool::UI, FROM_HERE,
+      base::Bind(&RemoteServerNode::checkHeartBeat, weakptr_factory_.GetWeakPtr()),
+      base::TimeDelta::FromMilliseconds(10000));
+}
+
+void RemoteServerNode::checkHeartBeat(base::WeakPtr<RemoteServerNode> self)
+{
+  if (RemoteServerNode* pThis = self.get())
+  {
+    self->checkHeartBeatImpl();
+  }
+}
+
+void RemoteServerNode::checkHeartBeatImpl()
+{
+  SessionHeartBeatRequest* shbRequest = new SessionHeartBeatRequest();
+  
+  Request req;
+  req.set_name("SessionHeartBeat");
+  req.set_session_id(sessionId);
+  req.set_allocated_session_heart_beat(shbRequest);
+  
+  msgSender->sendRequest(req, [=](int32_t zmqError, const Response& reply){
+    if (zmqError == 0 && reply.error_code() == 0) {
+      this->scheduleHeartBeat();
+    } else {
+      LOG(ERROR) << "Heart beat failed!";
+      willStop(this);
+    }
+  }, 10*1000);
 }
 
 void RemoteServerNode::handleRequest(const Request& req, Response& reply)
@@ -88,12 +121,12 @@ void RemoteServerNode::handleRequest(const Request& req, Response& reply)
     reply.set_allocated_execute_command(response);
     reply.set_error_code(0);
     
-    CommandExecutor* executor = new CommandExecutor(sessionId);
+    executor = new CommandExecutor(sessionId);
 
     std::string cmd = executor->execute(executeCommandRequest, req.request_id());
     if (cmd.empty()) {
       reply.set_error_code(-1);
-      delete executor;
+      executor = NULL;
     } else {
       reply.set_error_code(0);
       response->set_command(cmd);

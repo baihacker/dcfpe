@@ -18,17 +18,6 @@ CommandExecutor::CommandExecutor(int64_t sessionId):
 CommandExecutor::~CommandExecutor() {
 }
 
-static void deleteExecutorImpl(base::WeakPtr<CommandExecutor> executor) {
-  if (auto* who = executor.get()) {
-    delete who;
-  }
-}
-
-static void willDeleteExecutor(CommandExecutor* executor) {
-  base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
-    base::Bind(deleteExecutorImpl, executor->getWeakPtr()));
-}
-
 std::string CommandExecutor::execute(const ExecuteCommandRequest& command, int64_t originalRequestId) {
   this->originalRequestId = originalRequestId;
   msgSender = new MessageSender(command.address());
@@ -69,8 +58,6 @@ void CommandExecutor::OnStop(process::Process* p, process::ProcessContext* conte
   req.set_allocated_execute_output(ecoRequest);
 
   msgSender->sendRequest(req, 0);
-
-  willDeleteExecutor(this);
 }
 
 void CommandExecutor::sendBufferedOutput() {
@@ -86,15 +73,7 @@ void CommandExecutor::sendBufferedOutput() {
     req.set_session_id(sessionId);
     req.set_allocated_execute_output(ecoRequest);
 
-    msgSender->sendRequest(req, [=](int32_t zmqError, const Response& response) {
-      if (zmqError != 0 || response.error_code() != 0) {
-        if (this->process.get()) {
-          this->process->Stop();
-          this->process = NULL;
-        }
-        willDeleteExecutor(this);
-      }
-    }, 10*1000);
+    msgSender->sendRequest(req, 0);
     std::string().swap(bufferedOutput);
     lastSendTime = base::Time::Now().ToInternalValue();
   }

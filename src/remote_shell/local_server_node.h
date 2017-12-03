@@ -21,8 +21,9 @@ public:
 
   bool handleInternalCommand(const std::vector<std::string>& cmds);
 
-  void handleRequest(const Request& req, Response& reply);
-  
+  void handleRequest(const Request& req, Response& reply) override;
+  bool preHandleRequest(const Request& req, Response& reply) override;
+
   void handleExecuteCommandResponse(int32_t zmqError, const Response& reply);
   
   void handleFileOperationResponse(int32_t zmqError, const Request& req, const Response& reply);

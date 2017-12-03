@@ -378,21 +378,44 @@ void ZMQServer::ProcessEvent(const std::vector<void*>& signal_sockets)
     sockets[it] = std::move(data);
   }
 
+  int activeRequest = 0;
   {
     std::lock_guard<std::mutex> lock(context_mutex_);
     for (auto& it: context_)
     {
       if (sockets.count(it.zmq_socket_))
       {
+        ++activeRequest;
         it.state_ = STATE_PROCESSING;
         it.data_ = std::move(sockets[it.zmq_socket_]);
+        
+        ServerContext ctx;
+        ctx.channel_id_ = it.channel_id_;
+        ctx.zmq_socket_ = it.zmq_socket_;
+        ctx.handler_ = it.handler_;
+        ctx.address_ = it.address_;
+        ctx.state_ = it.state_;
+        ctx.data_ = it.data_;
+        
+        std::string reply;
+        if (ctx.handler_->pre_handle_request(ctx, reply)) {
+          --activeRequest;
+          if (reply.empty())
+          {
+            reply.append(4, '\0');
+          }
+          zmq_send(ctx.zmq_socket_, reply.c_str(), reply.size(), 0);
+          it.state_ = STATE_LISTENING;
+        }
       }
     }
   }
 
-  base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
-    base::Bind(&ZMQServer::ProcessRequest, weakptr_factory_.GetWeakPtr())
-    );
+  if (activeRequest > 0) {
+    base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
+      base::Bind(&ZMQServer::ProcessRequest, weakptr_factory_.GetWeakPtr())
+      );
+  }
 }
 
 void ZMQServer::ProcessRequest(base::WeakPtr<ZMQServer> server)

@@ -9,6 +9,9 @@ message CreateSessionRequest {
 message DeleteSessionRequest {
 }
 
+message SessionHeartBeatRequest {
+}
+
 message ExecuteCommandRequest {
   optional string address = 1;
   optional string cmd = 3;
@@ -28,10 +31,6 @@ message ExecuteCommandOutputRequest {
   optional string output = 5;
 }
 
-message ExecuteCommandHeartBeatRequest {
-  optional int64 original_request_id = 1;
-}
-
 message FileOperationRequest {
   optional string cmd = 1;
   repeated string args = 2;
@@ -47,11 +46,11 @@ message Request {
 
   optional CreateSessionRequest create_session = 200;
   optional DeleteSessionRequest delete_session = 201;
+  optional SessionHeartBeatRequest session_heart_beat = 202;
   
   optional ExecuteCommandRequest execute_command = 300;
   optional ExecuteCommandOutputRequest execute_output = 301;
   optional FileOperationRequest file_operation = 302;
-  optional ExecuteCommandHeartBeatRequest execute_command_heart_beat = 303;
 }
 
 message Response {

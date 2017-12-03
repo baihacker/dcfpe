@@ -143,6 +143,9 @@ class DPE_BASE_EXPORT RequestHandler
 public:
 virtual ~RequestHandler(){};
 virtual std::string handle_request(ServerContext& context) = 0;
+virtual bool pre_handle_request(ServerContext& context, std::string& result) {
+  return false;
+}
 };
 
 class DPE_BASE_EXPORT ZMQServer

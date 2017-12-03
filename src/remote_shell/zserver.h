@@ -9,6 +9,9 @@ namespace rs
 struct ZServerHandler
 {
   virtual void handleRequest(const Request& req, Response& reply) = 0;
+  virtual bool preHandleRequest(const Request& req, Response& reply) {
+    return false;
+  }
 };
 
 class ZServer : public base::RequestHandler, public base::RefCounted<ZServer>
@@ -33,6 +36,7 @@ private:
 
   bool Start(const std::string& address);
   std::string handle_request(base::ServerContext& context) override;
+  bool pre_handle_request(base::ServerContext& context, std::string& reply) override;
 
 public:
   // remote message handling: bind and receive and send
