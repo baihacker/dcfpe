@@ -1,6 +1,7 @@
 #include "remote_shell/local_server_node.h"
 #include "remote_shell/proto/rs.pb.h"
 #include "dpe_base/dpe_base.h"
+#include "remote_shell/listener_node.h"
 
 namespace rs
 {
@@ -8,6 +9,7 @@ LocalServerNode::LocalServerNode(
     const std::string& myIP):
     ServerNode(myIP),
     runningRequestId(-1),
+    sessionId(-1),
     weakptr_factory_(this)
   {
 
@@ -15,10 +17,6 @@ LocalServerNode::LocalServerNode(
 
 LocalServerNode::~LocalServerNode()
 {
-}
-
-void LocalServerNode::setTarget(std::string& targetIp, int targetPort) {
-  targetAddress = base::AddressHelper::MakeZMQTCPAddress(targetIp, targetPort);
 }
 
 static void stopImpl(LocalServerNode* node) {
@@ -29,6 +27,43 @@ static void stopImpl(LocalServerNode* node) {
 static void willStop(LocalServerNode* node) {
   base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
     base::Bind(stopImpl, node));
+}
+
+static const int kLocalServerStartPort = 3331;
+
+bool LocalServerNode::start() {
+  int offset = rand() % 1000;
+  for (int i = kLocalServerStartPort + offset; i < 5000; ++i) {
+    if (ServerNode::start(i)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+void LocalServerNode::connectToTarget(const std::string& target) {
+  targetAddress = base::AddressHelper::MakeZMQTCPAddress(target, kRSListenerPort);
+  CreateSessionRequest* csRequest = new CreateSessionRequest();
+  csRequest->set_address(zserver->GetServerAddress());
+  
+  Request req;
+  req.set_allocated_create_session(csRequest);
+
+  msgSender = new MessageSender(targetAddress);
+  printf("Connecting...\n");
+  runningRequestId = msgSender->sendRequest(req, [=](int32_t zmqError, const Response& reply){
+    this->handleCreateSessionResponse(zmqError, reply);
+  }, 10*1000);
+}
+
+void LocalServerNode::handleCreateSessionResponse(int32_t zmqError, const Response& reply) {
+  if (zmqError != 0 || reply.error_code() != 0) {
+    std::string info = "Cannot connect to " + targetAddress + "!\n";
+    printf(info.c_str());
+    willStop(this);
+    return;
+  }
+  sessionId = reply.session_id();
 }
 
 static void runNextCommandImpl(LocalServerNode* node) {
@@ -95,7 +130,7 @@ void LocalServerNode::executeCommand() {
     cmds.erase(cmds.begin());
     for (auto& a: cmds) ecRequest->add_args(a);
     
-    msgSender = new MessageSender(targetAddress);
+    msgSender = new MessageSender(executorAddress);
     
     Request req;
     req.set_allocated_execute_command(ecRequest);
@@ -140,7 +175,7 @@ bool LocalServerNode::handleInternalCommand(const std::vector<std::string>& cmds
       foRequest->add_args(data);
     }
 
-    msgSender = new MessageSender(targetAddress);
+    msgSender = new MessageSender(executorAddress);
     Request req;
     req.set_allocated_file_operation(foRequest);
     msgSender->sendRequest(req, [=](int32_t zmqError, const Response& reply){
@@ -153,7 +188,7 @@ bool LocalServerNode::handleInternalCommand(const std::vector<std::string>& cmds
 
 void LocalServerNode::handleFileOperationResponse(int32_t zmqError, const Request& req, const Response& reply) {
   if (zmqError != 0 || reply.error_code() != 0) {
-    printf("Failed!");
+    printf("Failed!\n");
     willRunNextCommand(this);
     return;
   }
@@ -170,6 +205,12 @@ void LocalServerNode::handleRequest(const Request& req, Response& reply)
   reply.set_error_code(-1);
 
   if (req.has_execute_output()) {
+    if (req.session_id() != sessionId) {
+      printf("Quit due to invalid session Id.\n");
+      willStop(this);
+      return;
+    }
+
     const auto& detail = req.execute_output();
     if (detail.original_request_id() != runningRequestId) {
       // Unexpected output request.
@@ -190,12 +231,23 @@ void LocalServerNode::handleRequest(const Request& req, Response& reply)
     } else {
       reply.set_error_code(-1);
     }
+  } else if (req.has_create_session()) {
+    if (req.session_id() != sessionId) {
+      printf("Quit due to invalid session Id.\n");
+      willStop(this);
+      return;
+    }
+    const auto& detail = req.create_session();
+    printf("Connected!\n");
+    executorAddress = detail.address();
+    willRunNextCommand(this);
+    reply.set_error_code(0);
   }
 }
 
 void LocalServerNode::handleExecuteCommandResponse(int32_t zmqError, const Response& reply) {
   if (zmqError != 0 || reply.error_code() != 0) {
-    printf("Failed to execute command remotely!");
+    printf("Failed to execute command remotely!\n");
     runningRequestId = -1;
     willRunNextCommand(this);
     return;

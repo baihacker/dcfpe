@@ -6,14 +6,16 @@
 #include "remote_shell/message_sender.h"
 namespace rs
 {
-static const int kLocalServerPort = 3331;
 class LocalServerNode : public ServerNode, public base::RefCounted<LocalServerNode>
 {
 public:
   LocalServerNode(const std::string& myIP);
   ~LocalServerNode();
   
-  void setTarget(std::string& targetIp, int targetPort);
+  bool start();
+
+  void connectToTarget(const std::string& target);
+  void handleCreateSessionResponse(int32_t zmqError, const Response& reply);
 
   void executeCommand();
 
@@ -29,7 +31,9 @@ public:
 private:
   scoped_refptr<MessageSender> msgSender;
   std::string targetAddress;
+  std::string executorAddress;
   int64_t runningRequestId;
+  int64_t sessionId;
   base::WeakPtrFactory<LocalServerNode>                 weakptr_factory_;
 };
 }

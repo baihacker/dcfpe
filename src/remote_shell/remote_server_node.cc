@@ -8,6 +8,8 @@ namespace rs
 RemoteServerNode::RemoteServerNode(
     const std::string& myIP):
     ServerNode(myIP),
+    runningRequestId(-1),
+    sessionId(-1),
     weakptr_factory_(this)
   {
 
@@ -17,8 +19,56 @@ RemoteServerNode::~RemoteServerNode()
 {
 }
 
+static void stopImpl(RemoteServerNode* node) {
+  node->stop();
+  base::will_quit_main_loop();
+}
+
+static void willStop(RemoteServerNode* node) {
+  base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
+    base::Bind(stopImpl, node));
+}
+
+static const int kRemoteServerStartPort = 3330;
+
+bool RemoteServerNode::start() {
+  int offset = rand() % 1000;
+  for (int i = kRemoteServerStartPort + offset; i < 5000; ++i) {
+    if (ServerNode::start(i)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+void RemoteServerNode::connectToHost(const std::string& host, int64_t sid) {
+  hostAddress = host;
+  sessionId = sid;
+  CreateSessionRequest* csRequest = new CreateSessionRequest();
+  csRequest->set_address(zserver->GetServerAddress());
+  
+  Request req;
+  req.set_session_id(sessionId);
+  req.set_allocated_create_session(csRequest);
+
+  msgSender = new MessageSender(hostAddress);
+  runningRequestId = msgSender->sendRequest(req, [=](int32_t zmqError, const Response& reply){
+    this->handleCreateSessionResponse(zmqError, reply);
+  }, 10*1000);
+}
+
+void RemoteServerNode::handleCreateSessionResponse(int32_t zmqError, const Response& reply) {
+  if (zmqError != 0 || reply.error_code() != 0) {
+    std::string info = "Cannot connect to " + hostAddress + "!\n";
+    printf(info.c_str());
+    willStop(this);
+    return;
+  }
+}
+
 void RemoteServerNode::handleRequest(const Request& req, Response& reply)
 {
+  reply.set_session_id(sessionId);
   reply.set_error_code(-1);
   if (req.has_execute_command()) {
     const auto& executeCommandRequest = req.execute_command();
@@ -30,7 +80,7 @@ void RemoteServerNode::handleRequest(const Request& req, Response& reply)
     reply.set_allocated_execute_command(response);
     reply.set_error_code(0);
     
-    CommandExecutor* executor = new CommandExecutor();
+    CommandExecutor* executor = new CommandExecutor(sessionId);
 
     std::string cmd = executor->execute(executeCommandRequest, req.request_id());
     if (cmd.empty()) {

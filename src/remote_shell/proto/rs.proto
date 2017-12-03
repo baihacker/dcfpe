@@ -2,6 +2,10 @@ syntax = "proto2";
 
 package rs;
 
+message CreateSessionRequest {
+  optional string address = 1;
+}
+
 message ExecuteCommandRequest {
   optional string address = 1;
   optional string cmd = 3;
@@ -32,10 +36,13 @@ message FileOperationRequest {
 
 message Request {
   optional string name = 1;
-  optional int64 request_id = 2 [default = 0]; // auto fill by message sender
-  optional int64 srv_uid = 3 [default = 0];
+  optional int64 session_id = 2 [default = 0];
+  optional int64 request_id = 3 [default = 0]; // auto fill by message sender
+  optional int64 srv_uid = 4 [default = 0];
 
   optional int64 timestamp = 100 [default = 0]; // auto fill by message sender
+
+  optional CreateSessionRequest create_session = 200;
   
   optional ExecuteCommandRequest execute_command = 300;
   optional ExecuteCommandOutputRequest execute_output = 301;
@@ -45,8 +52,9 @@ message Request {
 
 message Response {
   optional string name = 1; // auto fill from request
-  optional int64 error_code = 2;
-  optional int64 srv_uid = 3 [default = 0];
+  optional int64 session_id = 2 [default = 0];
+  optional int64 error_code = 3;
+  optional int64 srv_uid = 4 [default = 0];
 
   optional int64 timestamp = 100 [default = 0]; // auto fill from request
   

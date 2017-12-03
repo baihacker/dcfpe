@@ -9,6 +9,7 @@
 #include <Shlobj.h>
 #pragma comment(lib, "ws2_32")
 
+#include "remote_shell/listener_node.h"
 #include "remote_shell/remote_server_node.h"
 #include "remote_shell/local_server_node.h"
 #include "remote_shell/message_sender.h"
@@ -43,26 +44,46 @@ static inline void stopNetwork()
   ::WSACleanup();
 }
 
-int isRemote = 1;
+int isListener = 0;
+int sid = 0;
+std::string host;
 std::string target;
 
+scoped_refptr<rs::ListenerNode> listenerNode;
 scoped_refptr<rs::RemoteServerNode> remoteServerNode;
 scoped_refptr<rs::LocalServerNode> localServerNode;
 
 static void run()
 {
-  if (!target.empty()) {
-    isRemote = 0;
+  if (isListener) {
+    listenerNode = new rs::ListenerNode(get_iface_address());
+    if (!listenerNode->listen()) {
+      LOG(ERROR) << "Cannot start lisener node.";
+      listenerNode = NULL;
+      base::will_quit_main_loop();
+    }
   }
-
-  if (isRemote) {
+  else if (!host.empty()) {
     remoteServerNode = new rs::RemoteServerNode(get_iface_address());
-    remoteServerNode->start(rs::kRemoteServerPort);
-  } else {
+    if (!remoteServerNode->start()) {
+      LOG(ERROR) << "Cannot start remote server node.";
+      remoteServerNode = NULL;
+      base::will_quit_main_loop();
+    } else {
+      remoteServerNode->connectToHost(host, sid);
+    }
+  } else if (!target.empty()) {
     localServerNode = new rs::LocalServerNode(get_iface_address());
-    localServerNode->start(rs::kLocalServerPort);
-    localServerNode->setTarget(target, rs::kRemoteServerPort);
-    localServerNode->executeCommand();
+    if (!localServerNode->start()) {
+      LOG(ERROR) << "Cannot start local server node.";
+      localServerNode = NULL;
+      base::will_quit_main_loop();
+    } else {
+      localServerNode->connectToTarget(target);
+    }
+  } else {
+    LOG(ERROR) << "Cannot parse the arguments.";
+    base::will_quit_main_loop();
   }
 }
 
@@ -102,6 +123,36 @@ int main(int argc, char* argv[])
       }
       else {
         loggingLevel = atoi(value.c_str());
+        ++i;
+      }
+    }
+    else if (str == "b" || str == "bind")
+    {
+      isListener = 1;
+      ++i;
+    }
+    else if (str == "h" || str == "host")
+    {
+      if (idx == -1)
+      {
+        host = argv[i+1];
+        i += 2;
+      }
+      else
+      {
+        host = value;
+        ++i;
+      }
+    }
+    if (str == "s" || str == "sid")
+    {
+      if (idx == -1)
+      {
+        sid = atoi(argv[i+1]);
+        i += 2;
+      }
+      else {
+        sid = atoi(value.c_str());
         ++i;
       }
     }

@@ -60,6 +60,8 @@
           'remote_server_node.cc',
           'local_server_node.h',
           'local_server_node.cc',
+          'listener_node.h',
+          'listener_node.cc',
           'message_sender.h',
           'message_sender.cc',
           'proto/rs.pb.h',

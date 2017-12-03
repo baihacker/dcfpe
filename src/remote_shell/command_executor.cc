@@ -8,7 +8,11 @@ namespace rs
 {
 
 
-CommandExecutor::CommandExecutor(): weakptr_factory_(this), isStdout(1), lastSendTime(0) {
+CommandExecutor::CommandExecutor(int64_t sessionId):
+  isStdout(1),
+  lastSendTime(0),
+  sessionId(sessionId),
+  weakptr_factory_(this) {
 }
 
 CommandExecutor::~CommandExecutor() {
@@ -61,6 +65,7 @@ void CommandExecutor::OnStop(process::Process* p, process::ProcessContext* conte
 
   Request req;
   req.set_name("");
+  req.set_session_id(sessionId);
   req.set_allocated_execute_output(ecoRequest);
 
   msgSender->sendRequest(req, 0);
@@ -78,6 +83,7 @@ void CommandExecutor::sendBufferedOutput() {
 
     Request req;
     req.set_name("");
+    req.set_session_id(sessionId);
     req.set_allocated_execute_output(ecoRequest);
 
     msgSender->sendRequest(req, [=](int32_t zmqError, const Response& response) {

@@ -3,19 +3,26 @@
 
 #include "remote_shell/server_node.h"
 #include "remote_shell/proto/rs.pb.h"
+#include "remote_shell/message_sender.h"
 
 namespace rs
 {
-static const int kRemoteServerPort = 3330;
 class RemoteServerNode : public ServerNode, public base::RefCounted<RemoteServerNode>
 {
 public:
   RemoteServerNode(const std::string& myIP);
   ~RemoteServerNode();
 
+  bool start();
+  void connectToHost(const std::string& host, int64_t sid);
+  void handleCreateSessionResponse(int32_t zmqError, const Response& reply);
   void handleRequest(const Request& req, Response& reply);
   void handleFileOperation(const FileOperationRequest& req, Response& reply);
 private:
+  scoped_refptr<MessageSender> msgSender;
+  std::string hostAddress;
+  int64_t runningRequestId;
+  int64_t sessionId;
   base::WeakPtrFactory<RemoteServerNode>                 weakptr_factory_;
 };
 }

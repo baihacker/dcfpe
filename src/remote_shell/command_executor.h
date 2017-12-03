@@ -18,7 +18,7 @@ public:
     ZSERVER_RUNNING,
   };
 public:
-  CommandExecutor();
+  CommandExecutor(int64_t sessionId);
   ~CommandExecutor();
 
   std::string execute(const ExecuteCommandRequest& command, int64_t originalRequestId);
@@ -39,6 +39,7 @@ private:
   int64_t lastSendTime;
   
   int64_t originalRequestId;
+  int64_t sessionId;
   base::WeakPtrFactory<CommandExecutor>                 weakptr_factory_;
 };
 
