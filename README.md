@@ -5,25 +5,12 @@ Distributed Computation Framework for Project Euler
 
 It is a tool to make computer compute together.
 
-[Download releases](http://pan.baidu.com/s/1o8fqAqI) pwd:235f
+[Download DPE releases](http://pan.baidu.com/s/1o8fqAqI) pwd:235f
 
-Overview:
+Components Overview:
 ====================
-
-Updated Jun 12, 2017, [history version](https://github.com/baihacker/dcfpe/blob/master/docs/design_diary.txt).
-
-MasterNode:
-* Receives connection from workers. (duplex communication connection).
-* Uses a MasterTaskScheduler to maintain a task queue, schedule task to workers, handle request/connection error. SimpleMasterTaskScheduler uses a very simple strategy to schedule tasks.
-* MasterTaskScheduler uses a Solver to initialize the tasks (just holds the id of task), and tell the solver when a task is finished or all the tasks are completed.
-
-WorkerNode:
-* Connects to MasterNode.
-* Uses WorkerTaskExecuter to execute task. WorkerTaskExecuter will dispatch task to correct thread anc call the corresponding compute method provide by Solver.
-
-How to use:
-* Provides a .dll, .h and the client code can use it.
-* Support x86 and x64.
+* [dpe](https://github.com/baihacker/dcfpe/tree/master/src/dpe) A C++ library allows you to leverage distributed environment to compute.
+* [rs](https://github.com/baihacker/dcfpe/tree/master/src/remote_shell) A windows remote shell allows you to run command remotely.
 
 Other:
 ======
@@ -67,8 +54,9 @@ Updated:
 * 2014.09.22 Upload gyp (basic project management tool) and chromium/base (basic code, especially the thread model).
 * 2014.10.21 23:43:16 Compute the square of [1..10] by dpe model. 8225 lines, 213248 Bytes.
 * 2015.05.18 17:17:24 Compute the square of [1..100] by dpe model on two computers. 5011+5465+927=11403 lines, 131459+147496+25257=304212 Bytes.
-* 2017.06.11 A new compute framework called dpe. 1633 lines code. Compute 0^2 + 1^2 + 2^2 + ... + 9^2 = 285 in distributed environment.
+* 2017.06.11 A new compute framework called [dpe](https://github.com/baihacker/dcfpe/tree/master/src/dpe). 1633 lines code. Compute 0^2 + 1^2 + 2^2 + ... + 9^2 = 285 in distributed environment.
 * 2017.06.12 Succeeded in generating .dll .h for x86, x64.
 * 2017.06.18 Release dpe_1.0.0.0 and dpe_1.0.0.1.
 * 2017.06.25 Use baidu for [Releases](http://pan.baidu.com/s/1o8fqAqI) pwd:235f
 * 2017.06.25 Release dpe_1.1.0.0. Support Variants, Cache, UI.
+* 2017.12.03 Add [remote shell](https://github.com/baihacker/dcfpe/tree/master/src/remote_shell).
