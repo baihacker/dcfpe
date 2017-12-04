@@ -12,7 +12,7 @@ Components Overview:
 * [dpe](https://github.com/baihacker/dcfpe/tree/master/src/dpe) A C++ library allows you to leverage distributed environment to compute.
 * [rs](https://github.com/baihacker/dcfpe/tree/master/src/remote_shell) A windows remote shell allows you to run command remotely.
 
-Development Environment:
+Development:
 ========================
 ## windows
 * win7 64 or above
@@ -20,13 +20,13 @@ Development Environment:
 * vs2013 or above (or win_toolchain 2013e in chromium)
 * [win_toolchain_2013e download](http://yun.baidu.com/share/link?shareid=2799405881&uk=2684621311)
 
-### Build by vs2013
+#### Build by vs2013
 * Make sure os.environ['GYP_GENERATORS'] = 'msvs' and os.environ['GYP_MSVS_VERSION'] = '2013' in build.py
 * Run command: python build.py
 * Open zmq_demo\zmq_demo.sln by vs2013
 * Build solution by vs2013
 
-### Build by ninja with win_toolchain
+#### Build by ninja with win_toolchain
 * Config win_toolchain, modify src\build\win_toolchain.json
 * Make sure os.environ['GYP_GENERATORS'] = 'ninja' in build.py.(ignore os.environ['GYP_MSVS_VERSION'])
 * Run command: python build.py
@@ -35,7 +35,7 @@ Development Environment:
 ## linux
 * ubuntu 14.04 x86
 
-### Build
+#### Build
 * Make sure os.environ['GYP_GENERATORS'] = 'ninja' in build.py.(ignore os.environ['GYP_MSVS_VERSION'])
 * Run command: python build.py
 * Run command: ninja -C output\Release
