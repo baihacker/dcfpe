@@ -26,13 +26,13 @@ Development:
 * Open zmq_demo\zmq_demo.sln by vs2013
 * Build solution by vs2013
 
-#### Build by ninja with win_toolchain
+#### Build by ninja with win_toolchain (Recommended)
 * Config win_toolchain, modify src\build\win_toolchain.json
 * Make sure os.environ['GYP_GENERATORS'] = 'ninja' in build.py.(ignore os.environ['GYP_MSVS_VERSION'])
 * Run command: python build.py
 * Run command: ninja -C output\Release
 
-## linux
+## linux (Not tested, I believe it won't work)
 * ubuntu 14.04 x86
 
 #### Build
