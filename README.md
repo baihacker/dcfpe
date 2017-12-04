@@ -5,20 +5,12 @@ Distributed Computation Framework for Project Euler
 
 It is a tool to make computer compute together.
 
-[Download DPE releases](http://pan.baidu.com/s/1o8fqAqI) pwd:235f
+[DPE releases](http://pan.baidu.com/s/1o8fqAqI) pwd:235f
 
 Components Overview:
 ====================
 * [dpe](https://github.com/baihacker/dcfpe/tree/master/src/dpe) A C++ library allows you to leverage distributed environment to compute.
 * [rs](https://github.com/baihacker/dcfpe/tree/master/src/remote_shell) A windows remote shell allows you to run command remotely.
-
-Other:
-======
-
-* Main language is C++11. It is possible to use python, lua, php, javascript.
-* Basic network libary: ZMQ
-* Worker will protect the W process. (sandbox)
-* Trust mechanism between Host and Worker. (It is possible that the worker will receive a virus from Host).
 
 Development Environment:
 ========================
