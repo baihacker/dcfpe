@@ -15,9 +15,16 @@ WorkerNode:
 * Connects to MasterNode.
 * Uses WorkerTaskExecuter to execute task. WorkerTaskExecuter will dispatch task to correct thread anc call the corresponding compute method provide by Solver.
 
-How to use:
+Usage design:
 * Provides a .dll, .h and the client code can use it.
 * Support x86 and x64.
+
+Other:
+======
+* Main language is C++11. It is possible to use python, lua, php, javascript.
+* Basic network libary: ZMQ
+* Worker will protect the W process. (sandbox)
+* Trust mechanism between Host and Worker. (It is possible that the worker will receive a virus from Host).
 
 Usage
 =====
