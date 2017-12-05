@@ -11,10 +11,10 @@
 
 #include "remote_shell/listener_node.h"
 #include "remote_shell/remote_server_node.h"
-#include "remote_shell/local_server_node.h"
+#include "remote_shell/local_shell.h"
 #include "remote_shell/message_sender.h"
 
-static inline std::string get_iface_address()
+std::string get_iface_address()
 {
   char hostname[128];
   char localHost[128][32]={{0}};
@@ -51,7 +51,7 @@ std::string target;
 
 scoped_refptr<rs::ListenerNode> listenerNode;
 scoped_refptr<rs::RemoteServerNode> remoteServerNode;
-scoped_refptr<rs::LocalServerNode> localServerNode;
+rs::LocalShell* localShell;
 
 static void run()
 {
@@ -73,14 +73,8 @@ static void run()
       remoteServerNode->connectToHost(host, sid);
     }
   } else if (!target.empty()) {
-    localServerNode = new rs::LocalServerNode(get_iface_address());
-    if (!localServerNode->start()) {
-      LOG(ERROR) << "Cannot start local server node.";
-      localServerNode = NULL;
-      base::will_quit_main_loop();
-    } else {
-      localServerNode->connectToTarget(target);
-    }
+    localShell = new rs::LocalShell();
+    localShell->start(target);
   } else {
     LOG(ERROR) << "Cannot parse the arguments.";
     base::will_quit_main_loop();

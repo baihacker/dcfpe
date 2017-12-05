@@ -64,6 +64,8 @@
           'listener_node.cc',
           'message_sender.h',
           'message_sender.cc',
+          'local_shell.h',
+          'local_shell.cc',
           'proto/rs.pb.h',
           'proto/rs.pb.cc',
         ],

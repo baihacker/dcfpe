@@ -6,10 +6,13 @@
 namespace rs
 {
 LocalServerNode::LocalServerNode(
+    LocalServerHost* host,
     const std::string& myIP):
+    host(host),
     ServerNode(myIP),
     runningRequestId(-1),
     sessionId(-1),
+    shoudExit(false),
     weakptr_factory_(this)
   {
 
@@ -17,16 +20,6 @@ LocalServerNode::LocalServerNode(
 
 LocalServerNode::~LocalServerNode()
 {
-}
-
-static void stopImpl(LocalServerNode* node) {
-  node->stop();
-  base::will_quit_main_loop();
-}
-
-static void willStop(LocalServerNode* node) {
-  base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
-    base::Bind(stopImpl, node));
 }
 
 static const int kLocalServerStartPort = 3331;
@@ -51,99 +44,85 @@ void LocalServerNode::connectToTarget(const std::string& target) {
   req.set_allocated_create_session(csRequest);
 
   msgSender = new MessageSender(targetAddress);
-  printf("Connecting...\n");
   runningRequestId = msgSender->sendRequest(req, [=](int32_t zmqError, const Response& reply){
     this->handleCreateSessionResponse(zmqError, reply);
   }, 10*1000);
 }
 
 void LocalServerNode::handleCreateSessionResponse(int32_t zmqError, const Response& reply) {
-  if (zmqError != 0 || reply.error_code() != 0) {
-    std::string info = "Cannot connect to " + targetAddress + "!\n";
-    printf(info.c_str());
-    willStop(this);
-    return;
-  }
-  sessionId = reply.session_id();
   msgSender = NULL;
+  if (zmqError == base::ZMQResponse::ZMQ_REP_TIME_OUT) {
+    host->onConnectStatusChanged(ServerStatus::TIMEOUT);
+  } else if (zmqError != 0 || reply.error_code() != 0) {
+    host->onConnectStatusChanged(ServerStatus::FAILED);
+  } else {
+    sessionId = reply.session_id();
+    host->onConnectStatusChanged(ServerStatus::ACCEPTED);
+  }
 }
 
-static void runNextCommandImpl(LocalServerNode* node) {
-  node->executeCommand();
-}
-
-static void willRunNextCommand(LocalServerNode* node) {
-  base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
-    base::Bind(runNextCommandImpl, node));
-}
-
-char line[1<<16];
-void LocalServerNode::executeCommand() {
-  for (;;) {
-    printf("rs>");
-    gets(line);
-    std::vector<std::string> cmds;
-    int now = 0;
-    const int n = strlen(line);
-    while (now < n) {
-      while (now < n && line[now] == ' ') ++now;
-      if (now == n) break;
-      
-      if (line[now] == '"') {
-        std::string token;
-        ++now;
-        for (;now < n;) {
-          if (line[now] == '"') {
-            ++now;
-            cmds.push_back(token);
-            break;
-          } else if (now == '\\') {
-            token += line[now++];
-            if (now < n) {
-              token += line[now++];
-            }
-          } else {
+bool LocalServerNode::executeCommandRemotely(const std::string& line) {
+  std::vector<std::string> cmds;
+  int now = 0;
+  const int n = line.size();
+  while (now < n) {
+    while (now < n && line[now] == ' ') ++now;
+    if (now == n) break;
+    
+    if (line[now] == '"') {
+      std::string token;
+      ++now;
+      for (;now < n;) {
+        if (line[now] == '"') {
+          ++now;
+          cmds.push_back(token);
+          break;
+        } else if (now == '\\') {
+          token += line[now++];
+          if (now < n) {
             token += line[now++];
           }
-        }
-      } else {
-        std::string token;
-        while (now < n && line[now] != ' ') {
+        } else {
           token += line[now++];
         }
-        cmds.push_back(token);
       }
+    } else {
+      std::string token;
+      while (now < n && line[now] != ' ') {
+        token += line[now++];
+      }
+      cmds.push_back(token);
     }
-    if (cmds.empty()) {
-      printf("Command is empty!\n");
-      continue;
-    }
-
-    if (handleInternalCommand(cmds)) {
-      break;
-    }
-    
-    std::string myAddress = base::AddressHelper::MakeZMQTCPAddress(myIP, port);
-
-    ExecuteCommandRequest* ecRequest = new ExecuteCommandRequest();
-    ecRequest->set_address(myAddress);
-    
-    ecRequest->set_cmd(cmds[0]);
-    cmds.erase(cmds.begin());
-    for (auto& a: cmds) ecRequest->add_args(a);
-    
-    Request req;
-    req.set_name("ExecuteCommand");
-    req.set_session_id(sessionId);
-    req.set_allocated_execute_command(ecRequest);
-    runningRequestId = msgSender->sendRequest(req, [=](int32_t zmqError, const Response& reply){
-      this->handleExecuteCommandResponse(zmqError, reply);
-    }, 10*1000);
-    break;
   }
+  if (cmds.empty()) {
+    printf("Command is empty!\n");
+    return false;
+  }
+
+  if (handleInternalCommand(line, cmds)) {
+    return true;
+  }
+  
+  std::string myAddress = base::AddressHelper::MakeZMQTCPAddress(myIP, port);
+
+  ExecuteCommandRequest* ecRequest = new ExecuteCommandRequest();
+  ecRequest->set_address(myAddress);
+  
+  ecRequest->set_cmd(cmds[0]);
+  cmds.erase(cmds.begin());
+  for (auto& a: cmds) ecRequest->add_args(a);
+  
+  Request req;
+  req.set_name("ExecuteCommand");
+  req.set_session_id(sessionId);
+  req.set_allocated_execute_command(ecRequest);
+  runningRequestId = msgSender->sendRequest(req, [=](int32_t zmqError, const Response& reply){
+    this->handleExecuteCommandResponse(zmqError, reply);
+  }, 10*1000);
+  return true;
 }
 
-bool LocalServerNode::handleInternalCommand(const std::vector<std::string>& cmds) {
+bool LocalServerNode::handleInternalCommand(const std::string& line, const std::vector<std::string>& cmds) {
   const int size = cmds.size();
   if (cmds[0] == "exit" || cmds[0] == "q") {
     DeleteSessionRequest* dsRequest = new DeleteSessionRequest();
@@ -151,28 +130,27 @@ bool LocalServerNode::handleInternalCommand(const std::vector<std::string>& cmds
     req.set_name("DeleteSession");
     req.set_session_id(sessionId);
     req.set_allocated_delete_session(dsRequest);
-    
     runningRequestId = msgSender->sendRequest(req, 0);
 
-    willStop(this);
+    shoudExit = true;
     return true;
   } else if (cmds[0] == "l") {
     int now = 0;
     while (line[now] != 'l') ++now;
     ++now;
-    system(line + now);
-    willRunNextCommand(this);
+    system(&line[now]);
+    willNotifyCommandExecuteStatusImpl(ServerStatus::SUCCEED);
     return true;
   } else if (cmds[0] == "fs") {
     if (cmds.size() == 1) {
       printf("No file specified!\n");
-      willRunNextCommand(this);
+      willNotifyCommandExecuteStatusImpl(ServerStatus::FAILED);
       return true;
     }
     for (int i = 1; i < size; ++i) {
       if (!base::PathExists(base::FilePath(base::UTF8ToNative(cmds[i])))) {
         printf("%s doesn't exist\n", cmds[i].c_str());
-        willRunNextCommand(this);
+        willNotifyCommandExecuteStatusImpl(ServerStatus::FAILED);
         return true;
       }
     }
@@ -184,7 +162,7 @@ bool LocalServerNode::handleInternalCommand(const std::vector<std::string>& cmds
       std::string data;
       if (!base::ReadFileToString(base::FilePath(base::UTF8ToNative(cmds[i])), &data)) {
         printf("Cannot read %s\n", cmds[i].c_str());
-        willRunNextCommand(this);
+        willNotifyCommandExecuteStatusImpl(ServerStatus::FAILED);
         return true;
       }
       foRequest->add_args(data);
@@ -192,6 +170,7 @@ bool LocalServerNode::handleInternalCommand(const std::vector<std::string>& cmds
 
     Request req;
     req.set_name("FileOperation");
+    req.set_session_id(sessionId);
     req.set_allocated_file_operation(foRequest);
     msgSender->sendRequest(req, [=](int32_t zmqError, const Response& reply){
       this->handleFileOperationResponse(zmqError, req, reply);
@@ -200,7 +179,7 @@ bool LocalServerNode::handleInternalCommand(const std::vector<std::string>& cmds
   } else if (cmds[0] == "fg") {
     if (cmds.size() == 1) {
       printf("No file specified!\n");
-      willRunNextCommand(this);
+      willNotifyCommandExecuteStatusImpl(ServerStatus::FAILED);
       return true;
     }
 
@@ -212,6 +191,7 @@ bool LocalServerNode::handleInternalCommand(const std::vector<std::string>& cmds
 
     Request req;
     req.set_name("FileOperation");
+    req.set_session_id(sessionId);
     req.set_allocated_file_operation(foRequest);
     msgSender->sendRequest(req, [=](int32_t zmqError, const Response& reply){
       this->handleFileOperationResponse(zmqError, req, reply);
@@ -222,16 +202,17 @@ bool LocalServerNode::handleInternalCommand(const std::vector<std::string>& cmds
 }
 
 void LocalServerNode::handleFileOperationResponse(int32_t zmqError, const Request& req, const Response& reply) {
-  if (zmqError != 0 || reply.error_code() != 0) {
-    printf("Failed!\n");
-    willRunNextCommand(this);
+  if (zmqError == base::ZMQResponse::ZMQ_REP_TIME_OUT) {
+    willNotifyCommandExecuteStatusImpl(ServerStatus::TIMEOUT);
+  } else if (zmqError != 0 || reply.error_code() != 0) {
+    willNotifyCommandExecuteStatusImpl(ServerStatus::FAILED);
     return;
   }
+
   const auto& foRequest = req.file_operation();
   const auto& detail = reply.file_operation();
   if (foRequest.cmd() == "fs") {
-    printf(reply.error_code() == 0 ? "Succeed\n" : "Failed\n");
-    willRunNextCommand(this);
+    willNotifyCommandExecuteStatusImpl(ServerStatus::SUCCEED);
   } else if (foRequest.cmd() == "fg") {
     const auto& args = detail.args();
     const int size = args.size();
@@ -239,12 +220,27 @@ void LocalServerNode::handleFileOperationResponse(int32_t zmqError, const Reques
       auto path = base::FilePath(base::UTF8ToNative(args[i]));
       auto dest = path.BaseName();
       if (base::WriteFile(dest, args[i+1].c_str(), args[i+1].size()) == -1) {
-        willRunNextCommand(this);
+        willNotifyCommandExecuteStatusImpl(ServerStatus::FAILED);
         return;
       }
     }
-    willRunNextCommand(this);
+    willNotifyCommandExecuteStatusImpl(ServerStatus::SUCCEED);
   }
+}
+
+void LocalServerNode::notifyCommandExecuteStatus(base::WeakPtr<LocalServerNode> pThis, int32_t newStatus) {
+  if (auto* self = pThis.get()) {
+    self->notifyCommandExecuteStatusImpl(newStatus);
+  }
+}
+
+void LocalServerNode::willNotifyCommandExecuteStatusImpl(int32_t newStatus) {
+  base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
+    base::Bind(&LocalServerNode::notifyCommandExecuteStatus, getWeakPtr(), newStatus));
+}
+
+void LocalServerNode::notifyCommandExecuteStatusImpl(int32_t newStatus) {
+  host->onCommandStatusChanged(newStatus);
 }
 
 void LocalServerNode::handleRequest(const Request& req, Response& reply)
@@ -265,18 +261,17 @@ void LocalServerNode::handleRequest(const Request& req, Response& reply)
 
     if (detail.is_exit()) {
       printf("exit code: %d\n", detail.exit_code());
-      willRunNextCommand(this);
+      willNotifyCommandExecuteStatusImpl(ServerStatus::SUCCEED);
     } else {
       printf(detail.output().c_str());
     }
     reply.set_error_code(0);
   } else if (req.has_create_session()) {
     const auto& detail = req.create_session();
-    printf("Connected!\n");
     executorAddress = detail.address();
     msgSender = new MessageSender(executorAddress);
-    willRunNextCommand(this);
     reply.set_error_code(0);
+    host->onConnectStatusChanged(ServerStatus::CONNECTED);
   }
 }
 
@@ -297,10 +292,11 @@ bool LocalServerNode::preHandleRequest(const Request& req, Response& reply) {
 }
 
 void LocalServerNode::handleExecuteCommandResponse(int32_t zmqError, const Response& reply) {
-  if (zmqError != 0 || reply.error_code() != 0) {
-    printf("Failed to execute command remotely!\n");
+  if (zmqError == base::ZMQResponse::ZMQ_REP_TIME_OUT) {
+    willNotifyCommandExecuteStatusImpl(ServerStatus::TIMEOUT);
+  } if (zmqError != 0 || reply.error_code() != 0) {
     runningRequestId = -1;
-    willRunNextCommand(this);
+    willNotifyCommandExecuteStatusImpl(ServerStatus::FAILED);
     return;
   }
   printf("Command: %s\n", reply.execute_command().command().c_str());
