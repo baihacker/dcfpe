@@ -63,9 +63,8 @@ void LocalServerNode::handleCreateSessionResponse(int32_t zmqError, const Respon
 
 bool LocalServerNode::executeCommandRemotely(const std::string& line) {
   std::vector<std::string> cmds;
-  int now = 0;
   const int n = line.size();
-  while (now < n) {
+  for (int now = 0; now < n;) {
     while (now < n && line[now] == ' ') ++now;
     if (now == n) break;
     
@@ -142,11 +141,12 @@ bool LocalServerNode::handleInternalCommand(const std::string& line, const std::
     willNotifyCommandExecuteStatusImpl(ServerStatus::SUCCEED);
     return true;
   } else if (cmds[0] == "fs") {
-    if (cmds.size() == 1) {
+    if (size == 1) {
       printf("No file specified!\n");
       willNotifyCommandExecuteStatusImpl(ServerStatus::FAILED);
       return true;
     }
+
     for (int i = 1; i < size; ++i) {
       if (!base::PathExists(base::FilePath(base::UTF8ToNative(cmds[i])))) {
         printf("%s doesn't exist\n", cmds[i].c_str());
@@ -177,7 +177,7 @@ bool LocalServerNode::handleInternalCommand(const std::string& line, const std::
     }, 0);
     return true;
   } else if (cmds[0] == "fg") {
-    if (cmds.size() == 1) {
+    if (size == 1) {
       printf("No file specified!\n");
       willNotifyCommandExecuteStatusImpl(ServerStatus::FAILED);
       return true;
@@ -243,8 +243,7 @@ void LocalServerNode::notifyCommandExecuteStatusImpl(int32_t newStatus) {
   host->onCommandStatusChanged(newStatus);
 }
 
-void LocalServerNode::handleRequest(const Request& req, Response& reply)
-{
+void LocalServerNode::handleRequest(const Request& req, Response& reply) {
   reply.set_session_id(sessionId);
   reply.set_error_code(-1);
 
@@ -263,7 +262,12 @@ void LocalServerNode::handleRequest(const Request& req, Response& reply)
       printf("exit code: %d\n", detail.exit_code());
       willNotifyCommandExecuteStatusImpl(ServerStatus::SUCCEED);
     } else {
-      printf(detail.output().c_str());
+      // TODO(baihacker): escape %s.
+      if (detail.is_error_output()) {
+        fprintf(stderr, detail.output().c_str());
+      } else {
+        printf(detail.output().c_str());
+      }
     }
     reply.set_error_code(0);
   } else if (req.has_create_session()) {

@@ -9,6 +9,7 @@ class LocalShell : public LocalServerHost, public base::RefCounted<LocalShell> {
 public:
   LocalShell();
   ~LocalShell();
+
   void start(const std::string& target);
   void executeCommand();
   
@@ -18,6 +19,5 @@ private:
   scoped_refptr<LocalServerNode> serverNode;
   base::WeakPtrFactory<LocalShell>                 weakptr_factory_;
 };
-
 }
 #endif

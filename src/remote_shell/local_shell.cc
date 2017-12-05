@@ -10,6 +10,7 @@ LocalShell::LocalShell(): weakptr_factory_(this) {
 }
 
 LocalShell::~LocalShell() {
+  serverNode = NULL;
 }
 
 static void stopImpl(LocalShell* node) {
@@ -36,9 +37,9 @@ void LocalShell::start(const std::string& target) {
   if (!serverNode->start()) {
     LOG(ERROR) << "Cannot start local server node.";
     serverNode = NULL;
-    base::will_quit_main_loop();
+    willStop(this);
   } else {
-    printf("Connecting...\n");
+    printf("Connecting to %s \n", target.c_str());
     serverNode->connectToTarget(target);
   }
 }
@@ -48,8 +49,7 @@ void LocalShell::onConnectStatusChanged(int newStatus) {
     printf("Time out!");
     willStop(this);
   } else if (newStatus == ServerStatus::FAILED) {
-    std::string info = "Cannot connect to " + serverNode->target() + "!\n";
-    printf(info.c_str());
+    printf("Cannot connect to %s!\n", serverNode->target().c_str());
     willStop(this);
   } else if (newStatus == ServerStatus::CONNECTED) {
     printf("Connected!\n");
@@ -59,9 +59,9 @@ void LocalShell::onConnectStatusChanged(int newStatus) {
 
 void LocalShell::onCommandStatusChanged(int newStatus) {
   if (newStatus == ServerStatus::TIMEOUT) {
-    printf("Time out!\n");
+    printf("Command time out!\n");
   } else if (newStatus == ServerStatus::FAILED) {
-    printf("Failed!\n");
+    printf("Command failed!\n");
   }
 
   willRunNextCommand(this);
