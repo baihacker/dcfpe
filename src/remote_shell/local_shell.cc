@@ -13,14 +13,14 @@ LocalShell::~LocalShell() {
   serverNode = NULL;
 }
 
-static void stopImpl(LocalShell* node) {
+static void exitImpl(LocalShell* node) {
   delete node;
   base::will_quit_main_loop();
 }
 
-static void willStop(LocalShell* shell) {
+static void willExit(LocalShell* shell) {
   base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
-    base::Bind(stopImpl, shell));
+    base::Bind(exitImpl, shell));
 }
 
 static void runNextCommandImpl(LocalShell* shell) {
@@ -37,7 +37,7 @@ void LocalShell::start(const std::string& target) {
   if (!serverNode->start()) {
     LOG(ERROR) << "Cannot start local server node.";
     serverNode = NULL;
-    willStop(this);
+    willExit(this);
   } else {
     printf("Connecting to %s \n", target.c_str());
     serverNode->connectToTarget(target);
@@ -46,11 +46,11 @@ void LocalShell::start(const std::string& target) {
 
 void LocalShell::onConnectStatusChanged(int newStatus) {
   if (newStatus == ServerStatus::TIMEOUT) {
-    printf("Time out!");
-    willStop(this);
+    printf("Time out!\n");
+    willExit(this);
   } else if (newStatus == ServerStatus::FAILED) {
     printf("Cannot connect to %s!\n", serverNode->target().c_str());
-    willStop(this);
+    willExit(this);
   } else if (newStatus == ServerStatus::CONNECTED) {
     printf("Connected!\n");
     willRunNextCommand(this);
@@ -75,7 +75,7 @@ void LocalShell::executeCommand() {
     if (serverNode->executeCommandRemotely(line)) {
       // An "exit" or "q" command is executed.
       if (serverNode->canExitNow()) {
-        willStop(this);
+        willExit(this);
       }
       break;
     }

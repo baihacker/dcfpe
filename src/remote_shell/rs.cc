@@ -12,6 +12,7 @@
 #include "remote_shell/listener_node.h"
 #include "remote_shell/remote_server_node.h"
 #include "remote_shell/local_shell.h"
+#include "remote_shell/script_engine.h"
 #include "remote_shell/message_sender.h"
 
 std::string get_iface_address()
@@ -48,10 +49,12 @@ int isListener = 0;
 int sid = 0;
 std::string host;
 std::string target;
+std::string scriptFile;
 
 scoped_refptr<rs::ListenerNode> listenerNode;
 scoped_refptr<rs::RemoteServerNode> remoteServerNode;
 rs::LocalShell* localShell;
+rs::ScriptEngine* scriptEngine;
 
 static void run()
 {
@@ -62,8 +65,7 @@ static void run()
       listenerNode = NULL;
       base::will_quit_main_loop();
     }
-  }
-  else if (!host.empty()) {
+  } else if (!host.empty()) {
     remoteServerNode = new rs::RemoteServerNode(get_iface_address());
     if (!remoteServerNode->start()) {
       LOG(ERROR) << "Cannot start remote server node.";
@@ -75,6 +77,9 @@ static void run()
   } else if (!target.empty()) {
     localShell = new rs::LocalShell();
     localShell->start(target);
+  } else if (!scriptFile.empty()) {
+    scriptEngine = new rs::ScriptEngine();
+    scriptEngine->executeCommand("192.168.137.128", {"dir", "ls"});
   } else {
     LOG(ERROR) << "Cannot parse the arguments.";
     base::will_quit_main_loop();
@@ -119,14 +124,10 @@ int main(int argc, char* argv[])
         loggingLevel = atoi(value.c_str());
         ++i;
       }
-    }
-    else if (str == "b" || str == "bind")
-    {
+    } else if (str == "b" || str == "bind") {
       isListener = 1;
       ++i;
-    }
-    else if (str == "h" || str == "host")
-    {
+    } else if (str == "h" || str == "host") {
       if (idx == -1)
       {
         host = argv[i+1];
@@ -137,9 +138,7 @@ int main(int argc, char* argv[])
         host = value;
         ++i;
       }
-    }
-    if (str == "s" || str == "sid")
-    {
+    } else if (str == "s" || str == "sid") {
       if (idx == -1)
       {
         sid = atoi(argv[i+1]);
@@ -149,9 +148,7 @@ int main(int argc, char* argv[])
         sid = atoi(value.c_str());
         ++i;
       }
-    }
-    else if (str == "t" || str == "target")
-    {
+    } else if (str == "t" || str == "target") {
       if (idx == -1)
       {
         target = argv[i+1];
@@ -162,6 +159,20 @@ int main(int argc, char* argv[])
         target = value;
         ++i;
       }
+    } else if (str == "f" || str == "file") {
+      if (idx == -1)
+      {
+        scriptFile = argv[i+1];
+        i += 2;
+      }
+      else
+      {
+        scriptFile = value;
+        ++i;
+      }
+    } else {
+      fprintf(stderr, "Unknown arguments.\n");
+      exit(-1);
     }
   }
 
