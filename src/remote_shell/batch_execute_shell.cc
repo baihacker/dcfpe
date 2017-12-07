@@ -6,8 +6,13 @@ extern std::string get_iface_address();
 
 namespace rs
 {
-BatchExecuteShell::BatchExecuteShell(BatchExecuteShellHost* host)
-  : host(host), nextCommandIndex(0), showPrompt(false), weakptr_factory_(this) {
+BatchExecuteShell::BatchExecuteShell(BatchExecuteShellHost* host):
+  host(host),
+  nextCommandIndex(0),
+  showPrompt(false),
+  showCommandOutput(true),
+  showCommandErrorOutput(true),
+  weakptr_factory_(this) {
 }
 
 BatchExecuteShell::~BatchExecuteShell() {
@@ -19,6 +24,8 @@ void BatchExecuteShell::start(const std::string& target, const std::vector<std::
   nextCommandIndex = 0;
   serverNode = new rs::LocalServerNode(this, get_iface_address());
 
+  serverNode->setShowCommandOutput(showCommandOutput);
+  serverNode->setShowCommandErrorOutput(showCommandErrorOutput);
   if (!serverNode->start()) {
     outputPrompt("Cannot start local server.\n");
     willStop(false);

@@ -34,8 +34,17 @@ public:
     }
   }
   
-  void setShowPrompt(bool showPrompt) {
+  BatchExecuteShell& setShowPrompt(bool showPrompt) {
     this->showPrompt = showPrompt;
+    return *this;
+  }
+  BatchExecuteShell& setShowCommandOutput(bool show) {
+    showCommandOutput = show;
+    return *this;
+  }
+  BatchExecuteShell& setShowCommandErrorOutput(bool show) {
+    showCommandErrorOutput = show;
+    return *this;
   }
 private:
   scoped_refptr<LocalServerNode> serverNode;
@@ -43,6 +52,8 @@ private:
   std::vector<std::string> cmdLines;
   int nextCommandIndex;
   bool showPrompt;
+  bool showCommandOutput;
+  bool showCommandErrorOutput;
   base::WeakPtrFactory<BatchExecuteShell>                 weakptr_factory_;
 };
 }

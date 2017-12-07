@@ -13,6 +13,8 @@ LocalServerNode::LocalServerNode(
     runningRequestId(-1),
     sessionId(-1),
     shoudExit(false),
+    showCommandOutput(true),
+    showCommandErrorOutput(true),
     weakptr_factory_(this)
   {
 
@@ -263,9 +265,10 @@ void LocalServerNode::handleRequest(const Request& req, Response& reply) {
       willNotifyCommandExecuteStatusImpl(ServerStatus::SUCCEED);
     } else {
       // TODO(baihacker): escape %s.
-      if (detail.is_error_output()) {
+      if (detail.is_error_output() && showCommandErrorOutput) {
         fprintf(stderr, detail.output().c_str());
-      } else {
+      } 
+      if (!detail.is_error_output() && showCommandOutput) {
         printf(detail.output().c_str());
       }
     }
@@ -298,11 +301,12 @@ bool LocalServerNode::preHandleRequest(const Request& req, Response& reply) {
 void LocalServerNode::handleExecuteCommandResponse(int32_t zmqError, const Response& reply) {
   if (zmqError == base::ZMQResponse::ZMQ_REP_TIME_OUT) {
     willNotifyCommandExecuteStatusImpl(ServerStatus::TIMEOUT);
+    return;
   } if (zmqError != 0 || reply.error_code() != 0) {
     runningRequestId = -1;
     willNotifyCommandExecuteStatusImpl(ServerStatus::FAILED);
     return;
   }
-  printf("Command: %s\n", reply.execute_command().command().c_str());
+  printf("Remote command: %s\n", reply.execute_command().command().c_str());
 }
 }

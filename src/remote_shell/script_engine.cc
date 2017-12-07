@@ -26,6 +26,8 @@ static void willExit(ScriptEngine* engine) {
 void ScriptEngine::executeCommand(const std::string& target, const std::vector<std::string>& cmdLines) {
   shell = new BatchExecuteShell(this);
   shell->setShowPrompt(true);
+  shell->setShowCommandOutput(false);
+  shell->setShowCommandErrorOutput(false);
   shell->start(target, cmdLines);
 }
 

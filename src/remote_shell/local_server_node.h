@@ -48,6 +48,15 @@ public:
 
   std::string target() const {return targetAddress;}
   bool canExitNow() const {return shoudExit;}
+  
+  LocalServerNode& setShowCommandOutput(bool show) {
+    showCommandOutput = show;
+    return *this;
+  }
+  LocalServerNode& setShowCommandErrorOutput(bool show) {
+    showCommandErrorOutput = show;
+    return *this;
+  }
 private:
   scoped_refptr<MessageSender> msgSender;
   LocalServerHost* host;
@@ -56,6 +65,8 @@ private:
   int64_t runningRequestId;
   int64_t sessionId;
   bool shoudExit;
+  bool showCommandOutput;
+  bool showCommandErrorOutput;
   base::WeakPtrFactory<LocalServerNode>                 weakptr_factory_;
 };
 }
