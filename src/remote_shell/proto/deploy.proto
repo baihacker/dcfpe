@@ -1,0 +1,21 @@
+syntax = "proto2";
+
+package rs;
+
+message Resource {
+  optional string local_dir = 1;
+  repeated string files = 2;
+}
+
+message RemoteCommands {
+  repeated string hosts = 1;
+  optional string target_dir = 2;
+  repeated string deploy = 3;
+  repeated string stop = 4;
+}
+
+message AppPackage {
+  optional string name = 1;
+  optional Resource resource = 2;
+  repeated RemoteCommands deploys = 3;
+}

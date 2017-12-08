@@ -199,6 +199,38 @@ bool LocalServerNode::handleInternalCommand(const std::string& line, const std::
       this->handleFileOperationResponse(zmqError, req, reply);
     }, 0);
     return true;
+  } else if (cmds[0] == "fst") {
+    if (size != 3) {
+      printf("fst needs two arguments!\n");
+      willNotifyCommandExecuteStatusImpl(ServerStatus::FAILED);
+      return true;
+    }
+
+    if (!base::PathExists(base::FilePath(base::UTF8ToNative(cmds[1])))) {
+      printf("%s doesn't exist\n", cmds[1].c_str());
+      willNotifyCommandExecuteStatusImpl(ServerStatus::FAILED);
+      return true;
+    }
+
+    FileOperationRequest* foRequest = new FileOperationRequest();
+    foRequest->set_cmd("fst");
+    foRequest->add_args(cmds[2]);
+    std::string data;
+    if (!base::ReadFileToString(base::FilePath(base::UTF8ToNative(cmds[1])), &data)) {
+      printf("Cannot read %s\n", cmds[1].c_str());
+      willNotifyCommandExecuteStatusImpl(ServerStatus::FAILED);
+      return true;
+    }
+    foRequest->add_args(data);
+
+    Request req;
+    req.set_name("FileOperation");
+    req.set_session_id(sessionId);
+    req.set_allocated_file_operation(foRequest);
+    msgSender->sendRequest(req, [=](int32_t zmqError, const Response& reply){
+      this->handleFileOperationResponse(zmqError, req, reply);
+    }, 0);
+    return true;
   }
   return false;
 }
@@ -213,7 +245,7 @@ void LocalServerNode::handleFileOperationResponse(int32_t zmqError, const Reques
 
   const auto& foRequest = req.file_operation();
   const auto& detail = reply.file_operation();
-  if (foRequest.cmd() == "fs") {
+  if (foRequest.cmd() == "fs" || foRequest.cmd() == "fst") {
     willNotifyCommandExecuteStatusImpl(ServerStatus::SUCCEED);
   } else if (foRequest.cmd() == "fg") {
     const auto& args = detail.args();

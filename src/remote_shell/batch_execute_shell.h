@@ -26,7 +26,7 @@ public:
   
   void willRunNextCommand();
   static void runNextCommand(base::WeakPtr<BatchExecuteShell> pThis);
-  void runNextComandImpl();
+  void runNextCommandImpl();
   
   void outputPrompt(const std::string& info) {
     if (showPrompt) {

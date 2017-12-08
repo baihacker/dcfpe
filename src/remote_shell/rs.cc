@@ -50,6 +50,7 @@ int sid = 0;
 std::string host;
 std::string target;
 std::string scriptFile;
+std::string action;
 
 scoped_refptr<rs::ListenerNode> listenerNode;
 scoped_refptr<rs::RemoteServerNode> remoteServerNode;
@@ -79,7 +80,7 @@ static void run()
     localShell->start(target);
   } else if (!scriptFile.empty()) {
     scriptEngine = new rs::ScriptEngine();
-    scriptEngine->executeCommand("192.168.137.128", {"dir", "ls"});
+    scriptEngine->runScript(scriptFile, action);
   } else {
     LOG(ERROR) << "Cannot parse the arguments.";
     base::will_quit_main_loop();
@@ -168,6 +169,17 @@ int main(int argc, char* argv[])
       else
       {
         scriptFile = value;
+        ++i;
+      }
+    } else if (str == "a" || str == "action") {
+      if (idx == -1)
+      {
+        action = argv[i+1];
+        i += 2;
+      }
+      else
+      {
+        action = value;
         ++i;
       }
     } else {

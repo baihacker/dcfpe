@@ -169,6 +169,25 @@ void RemoteServerNode::handleFileOperation(const FileOperationRequest& req, Resp
     foResponse->set_cmd("fg");
     reply.set_allocated_file_operation(foResponse);
     reply.set_error_code(0);
+  } if (req.cmd() == "fst") {
+    const auto& args = req.args();
+    const int size = args.size();
+    
+    if (size != 2) {
+      reply.set_error_code(-1);
+      return;
+    }
+
+    auto path = base::FilePath(base::UTF8ToNative(args[0]));
+    if (base::WriteFile(path, args[1].c_str(), args[1].size()) == -1) {
+      reply.set_error_code(-1);
+      return;
+    }
+    
+    FileOperationResponse* foResponse = new FileOperationResponse();
+    foResponse->set_cmd("fst");
+    reply.set_allocated_file_operation(foResponse);
+    reply.set_error_code(0);
   }
 }
 }

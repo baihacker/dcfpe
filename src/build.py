@@ -28,6 +28,11 @@ def build_dependencies():
   filePath = os.path.join(ENV_SOLUTION_DIRECTORY, r'remote_shell\proto\rs.proto')
   outputPath = os.path.join(ENV_SOLUTION_DIRECTORY, r'remote_shell\proto')
   os.system(r'tools\protoc-3.3.0-win32\bin\protoc.exe --proto_path=%s --proto_path=%s %s --cpp_out=%s'%(includePath1, includePath2, filePath, outputPath))
+  
+  includePath2 = os.path.join(ENV_SOLUTION_DIRECTORY, r'remote_shell\proto')
+  filePath = os.path.join(ENV_SOLUTION_DIRECTORY, r'remote_shell\proto\deploy.proto')
+  outputPath = os.path.join(ENV_SOLUTION_DIRECTORY, r'remote_shell\proto')
+  os.system(r'tools\protoc-3.3.0-win32\bin\protoc.exe --proto_path=%s --proto_path=%s %s --cpp_out=%s'%(includePath1, includePath2, filePath, outputPath))
 
 def prepare_path():
   if os.environ['GYP_GENERATORS'] == 'ninja':

@@ -57,11 +57,11 @@ void BatchExecuteShell::willRunNextCommand() {
 
 void BatchExecuteShell::runNextCommand(base::WeakPtr<BatchExecuteShell> pThis) {
   if (auto* self = pThis.get()) {
-    self->runNextComandImpl();
+    self->runNextCommandImpl();
   }
 }
 
-void BatchExecuteShell::runNextComandImpl() {
+void BatchExecuteShell::runNextCommandImpl() {
   if (nextCommandIndex == cmdLines.size()) {
     outputPrompt("Finished!\n");
     willStop(true);
@@ -69,7 +69,7 @@ void BatchExecuteShell::runNextComandImpl() {
     const std::string& cmd = cmdLines[nextCommandIndex++];
     if (serverNode->executeCommandRemotely(cmd)) {
       // An "exit" or "q" command is executed.
-      outputPrompt("Executing " + cmd + "\n");
+      outputPrompt("\nExecuting " + cmd + "\n");
       if (serverNode->canExitNow()) {
         outputPrompt("Finished!\n");
         willStop(true);

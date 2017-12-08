@@ -72,6 +72,8 @@
           'script_engine.cc',
           'proto/rs.pb.h',
           'proto/rs.pb.cc',
+          'proto/deploy.pb.h',
+          'proto/deploy.pb.cc',
         ],
       'dependencies':[
           '<(DEPTH)/dpe_base/dpe_base.gyp:dpe_base',
