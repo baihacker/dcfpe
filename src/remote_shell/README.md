@@ -27,6 +27,7 @@ All dos command is supported, please enter it directly.
 
 ## File operation
 * fs \<local file path 1\> \<local file path 2\> ...: send the files to remote computer. The target dir is the current dir of remote prodcess.
+* fst \<local file path\> \<remote file path\>: send one file to remote computer while the remote path is specified.
 * fg \<remote file path 1\> \<remote file path 2\> ...: get the files from remote computer.
 
 ## Exit remote shell
