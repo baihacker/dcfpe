@@ -53,7 +53,7 @@ struct DeployScriptCompiler : public ScriptCompiler {
         if (!targetDir.empty()) {
           cmds.push_back("mkdir " + targetDir);
         }
-        if (!targetDir.empty() && !EndsWith(resourceDir, "/", false)) {
+        if (!targetDir.empty() && !EndsWith(targetDir, "/", false)) {
           targetDir += "/";
         }
         for (const auto& iter: resource.files()) {
