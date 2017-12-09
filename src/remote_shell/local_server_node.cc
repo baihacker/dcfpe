@@ -142,32 +142,63 @@ bool LocalServerNode::handleInternalCommand(const std::string& line, const std::
     system(&line[now]);
     willNotifyCommandExecuteStatusImpl(ServerStatus::SUCCEED);
     return true;
-  } else if (cmds[0] == "fs") {
+  } else if (cmds[0] == "fs" || cmds[0] == "fst") {
     if (size == 1) {
       printf("No file specified!\n");
       willNotifyCommandExecuteStatusImpl(ServerStatus::FAILED);
       return true;
     }
-
-    for (int i = 1; i < size; ++i) {
-      if (!base::PathExists(base::FilePath(base::UTF8ToNative(cmds[i])))) {
-        printf("%s doesn't exist\n", cmds[i].c_str());
+    
+    if (cmds[0] == "fst") {
+      if (size % 2 == 0) {
+        printf("Wrong number of arguments.\n");
         willNotifyCommandExecuteStatusImpl(ServerStatus::FAILED);
         return true;
       }
     }
 
-    FileOperationRequest* foRequest = new FileOperationRequest();
-    foRequest->set_cmd("fs");
-    for (int i = 1; i < size; ++i) {
-      foRequest->add_args(cmds[i]);
-      std::string data;
-      if (!base::ReadFileToString(base::FilePath(base::UTF8ToNative(cmds[i])), &data)) {
-        printf("Cannot read %s\n", cmds[i].c_str());
-        willNotifyCommandExecuteStatusImpl(ServerStatus::FAILED);
-        return true;
+    if (cmds[0] == "fs") {
+      for (int i = 1; i < size; ++i) {
+        if (!base::PathExists(base::FilePath(base::UTF8ToNative(cmds[i])))) {
+          printf("%s doesn't exist\n", cmds[i].c_str());
+          willNotifyCommandExecuteStatusImpl(ServerStatus::FAILED);
+          return true;
+        }
       }
-      foRequest->add_args(data);
+    } else {
+      for (int i = 1; i + 1 < size; i += 2) {
+        if (!base::PathExists(base::FilePath(base::UTF8ToNative(cmds[i])))) {
+          printf("%s doesn't exist\n", cmds[i].c_str());
+          willNotifyCommandExecuteStatusImpl(ServerStatus::FAILED);
+          return true;
+        }
+      }
+    }
+
+    FileOperationRequest* foRequest = new FileOperationRequest();
+    foRequest->set_cmd(cmds[0]);
+    if (cmds[0] == "fs") {
+      for (int i = 1; i < size; ++i) {
+        foRequest->add_args(cmds[i]);
+        std::string data;
+        if (!base::ReadFileToString(base::FilePath(base::UTF8ToNative(cmds[i])), &data)) {
+          printf("Cannot read %s\n", cmds[i].c_str());
+          willNotifyCommandExecuteStatusImpl(ServerStatus::FAILED);
+          return true;
+        }
+        foRequest->add_args(data);
+      }
+    } else {
+      for (int i = 1; i < size; i += 2) {
+        foRequest->add_args(cmds[i+1]);
+        std::string data;
+        if (!base::ReadFileToString(base::FilePath(base::UTF8ToNative(cmds[i])), &data)) {
+          printf("Cannot read %s\n", cmds[i].c_str());
+          willNotifyCommandExecuteStatusImpl(ServerStatus::FAILED);
+          return true;
+        }
+        foRequest->add_args(data);
+      }
     }
 
     Request req;
@@ -178,50 +209,26 @@ bool LocalServerNode::handleInternalCommand(const std::string& line, const std::
       this->handleFileOperationResponse(zmqError, req, reply);
     }, 0);
     return true;
-  } else if (cmds[0] == "fg") {
+  } else if (cmds[0] == "fg" || cmds[0] == "fgt") {
     if (size == 1) {
       printf("No file specified!\n");
       willNotifyCommandExecuteStatusImpl(ServerStatus::FAILED);
       return true;
     }
 
+    if (cmds[0] == "fgt") {
+      if (size % 2 == 0) {
+        printf("Wrong number of arguments.\n");
+        willNotifyCommandExecuteStatusImpl(ServerStatus::FAILED);
+        return true;
+      }
+    }
+
     FileOperationRequest* foRequest = new FileOperationRequest();
-    foRequest->set_cmd("fg");
+    foRequest->set_cmd(cmds[0]);
     for (int i = 1; i < size; ++i) {
       foRequest->add_args(cmds[i]);
     }
-
-    Request req;
-    req.set_name("FileOperation");
-    req.set_session_id(sessionId);
-    req.set_allocated_file_operation(foRequest);
-    msgSender->sendRequest(req, [=](int32_t zmqError, const Response& reply){
-      this->handleFileOperationResponse(zmqError, req, reply);
-    }, 0);
-    return true;
-  } else if (cmds[0] == "fst") {
-    if (size != 3) {
-      printf("fst needs two arguments!\n");
-      willNotifyCommandExecuteStatusImpl(ServerStatus::FAILED);
-      return true;
-    }
-
-    if (!base::PathExists(base::FilePath(base::UTF8ToNative(cmds[1])))) {
-      printf("%s doesn't exist\n", cmds[1].c_str());
-      willNotifyCommandExecuteStatusImpl(ServerStatus::FAILED);
-      return true;
-    }
-
-    FileOperationRequest* foRequest = new FileOperationRequest();
-    foRequest->set_cmd("fst");
-    foRequest->add_args(cmds[2]);
-    std::string data;
-    if (!base::ReadFileToString(base::FilePath(base::UTF8ToNative(cmds[1])), &data)) {
-      printf("Cannot read %s\n", cmds[1].c_str());
-      willNotifyCommandExecuteStatusImpl(ServerStatus::FAILED);
-      return true;
-    }
-    foRequest->add_args(data);
 
     Request req;
     req.set_name("FileOperation");
@@ -247,7 +254,7 @@ void LocalServerNode::handleFileOperationResponse(int32_t zmqError, const Reques
   const auto& detail = reply.file_operation();
   if (foRequest.cmd() == "fs" || foRequest.cmd() == "fst") {
     willNotifyCommandExecuteStatusImpl(ServerStatus::SUCCEED);
-  } else if (foRequest.cmd() == "fg") {
+  } else if (foRequest.cmd() == "fg" || foRequest.cmd() == "fgt") {
     const auto& args = detail.args();
     const int size = args.size();
     for (int i = 0; i + 1 < size; i += 2) {

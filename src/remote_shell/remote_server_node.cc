@@ -136,56 +136,52 @@ void RemoteServerNode::handleRequest(const Request& req, Response& reply)
 }
 
 void RemoteServerNode::handleFileOperation(const FileOperationRequest& req, Response& reply) {
-  if (req.cmd() == "fs") {
+  if (req.cmd() == "fs" || req.cmd() == "fst") {
     const auto& args = req.args();
     const int size = args.size();
     for (int i = 0; i + 1 < size; i += 2) {
       auto path = base::FilePath(base::UTF8ToNative(args[i]));
-      auto dest = path.BaseName();
-      if (base::WriteFile(dest, args[i+1].c_str(), args[i+1].size()) == -1) {
+      if (req.cmd() == "fs") {
+        path = path.BaseName();
+      }
+      if (base::WriteFile(path, args[i+1].c_str(), args[i+1].size()) == -1) {
         reply.set_error_code(-1);
         return;
       }
     }
     
     FileOperationResponse* foResponse = new FileOperationResponse();
-    foResponse->set_cmd("fs");
+    foResponse->set_cmd(req.cmd());
     reply.set_allocated_file_operation(foResponse);
     reply.set_error_code(0);
-  } else if (req.cmd() == "fg") {
+  } else if (req.cmd() == "fg" || req.cmd() == "fgt") {
     const auto& args = req.args();
     const int size = args.size();
     FileOperationResponse* foResponse = new FileOperationResponse();
-    for (int i = 0; i < size; ++i) {
-      auto path = base::FilePath(base::UTF8ToNative(args[i]));
-      std::string data;
-      if (!base::ReadFileToString(path, &data)) {
-        reply.set_error_code(-1);
-        return;
+    if (req.cmd() == "fg") {
+      for (int i = 0; i < size; ++i) {
+        auto path = base::FilePath(base::UTF8ToNative(args[i]));
+        std::string data;
+        if (!base::ReadFileToString(path, &data)) {
+          reply.set_error_code(-1);
+          return;
+        }
+        foResponse->add_args(args[i]);
+        foResponse->add_args(data);
       }
-      foResponse->add_args(args[i]);
-      foResponse->add_args(data);
+    } else {
+      for (int i = 0; i + 1 < size; i += 2) {
+        auto path = base::FilePath(base::UTF8ToNative(args[i]));
+        std::string data;
+        if (!base::ReadFileToString(path, &data)) {
+          reply.set_error_code(-1);
+          return;
+        }
+        foResponse->add_args(args[i+1]);
+        foResponse->add_args(data);
+      }
     }
-    foResponse->set_cmd("fg");
-    reply.set_allocated_file_operation(foResponse);
-    reply.set_error_code(0);
-  } if (req.cmd() == "fst") {
-    const auto& args = req.args();
-    const int size = args.size();
-    
-    if (size != 2) {
-      reply.set_error_code(-1);
-      return;
-    }
-
-    auto path = base::FilePath(base::UTF8ToNative(args[0]));
-    if (base::WriteFile(path, args[1].c_str(), args[1].size()) == -1) {
-      reply.set_error_code(-1);
-      return;
-    }
-    
-    FileOperationResponse* foResponse = new FileOperationResponse();
-    foResponse->set_cmd("fst");
+    foResponse->set_cmd(req.cmd());
     reply.set_allocated_file_operation(foResponse);
     reply.set_error_code(0);
   }

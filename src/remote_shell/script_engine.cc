@@ -123,9 +123,21 @@ void ScriptEngine::runAppPackage(const rs::AppPackage& package, const std::strin
 
     willRunOnNextTarget();
   } else if (action == "stop") {
-    // TODO(baihacker): implement it
+    for (const auto& deploy: package.deploys()) {
+      std::vector<std::string> cmds;
+      for (const auto& iter: deploy.stop()) {
+        cmds.push_back(iter);
+      }
+      
+      for (const auto& host: deploy.hosts()) {
+        targets.push_back(host);
+        commands.push_back(cmds);
+      }
+    }
+    willRunOnNextTarget();
   } else {
     printf("Unknown action!\n");
+    willExit(this);
   }
 }
 
