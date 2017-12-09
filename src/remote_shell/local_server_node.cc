@@ -22,6 +22,14 @@ LocalServerNode::LocalServerNode(
 
 LocalServerNode::~LocalServerNode()
 {
+  if (sessionId != -1 && msgSender != NULL && !executorAddress.empty()) {
+    DeleteSessionRequest* dsRequest = new DeleteSessionRequest();
+    Request req;
+    req.set_name("DeleteSession");
+    req.set_session_id(sessionId);
+    req.set_allocated_delete_session(dsRequest);
+    runningRequestId = msgSender->sendRequest(req, 0);
+  }
 }
 
 static const int kLocalServerStartPort = 3331;
