@@ -18,7 +18,7 @@ Usage
 * Note3: It is supported to start another session to the same remote computer.
 #### Execute script
 * Command: rs -f=<script file name> -action=<action parameter of the script>
-  Script example:
+* Script example:
 ```proto
 name: "test_deploy"
 resource {
