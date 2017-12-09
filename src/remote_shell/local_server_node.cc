@@ -300,7 +300,7 @@ void LocalServerNode::handleRequest(const Request& req, Response& reply) {
     }
 
     if (detail.is_exit()) {
-      printf("exit code: %d\n", detail.exit_code());
+      printf("Exit code: %d\n", detail.exit_code());
       willNotifyCommandExecuteStatusImpl(ServerStatus::SUCCEED);
     } else {
       // TODO(baihacker): escape %s.

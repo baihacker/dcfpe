@@ -63,7 +63,6 @@ void BatchExecuteShell::runNextCommand(base::WeakPtr<BatchExecuteShell> pThis) {
 
 void BatchExecuteShell::runNextCommandImpl() {
   if (nextCommandIndex == cmdLines.size()) {
-    outputPrompt("Finished!\n");
     willStop(true);
   } else {
     const std::string& cmd = cmdLines[nextCommandIndex++];
@@ -71,7 +70,6 @@ void BatchExecuteShell::runNextCommandImpl() {
       // An "exit" or "q" command is executed.
       outputPrompt("\nExecuting " + cmd + "\n");
       if (serverNode->canExitNow()) {
-        outputPrompt("Finished!\n");
         willStop(true);
       }
     } else {

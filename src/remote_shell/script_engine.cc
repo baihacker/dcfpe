@@ -7,11 +7,114 @@ extern std::string get_iface_address();
 
 namespace rs
 {
-ScriptEngine::ScriptEngine(): nextTargetIndex(0), weakptr_factory_(this) {
+struct DeployScriptCompiler : public ScriptCompiler {
+  DeployScriptCompiler(){}
+  ~DeployScriptCompiler(){}
+  bool accept(const std::string& data) {
+    if (google::protobuf::TextFormat::ParseFromString(data, &package)) {
+      printf("Found app package.\n");
+      return true;
+    }
+    return false;
+  }
+  bool compile(const std::string& action, std::vector<BatchOperation>& result) {
+    std::vector<BatchOperation>().swap(result);
+
+    const std::string name = package.name();
+    if (name.empty()) {
+      printf("The name is empty!");
+      return false;
+    }
+
+    const Resource& resource = package.resource();
+    std::string resourceDir = resource.local_dir();
+    if (!resourceDir.empty() && !EndsWith(resourceDir, "/", false)) {
+      resourceDir += "/";
+    }
+
+    if (!resourceDir.empty() && !base::PathExists(base::FilePath(base::UTF8ToNative(resourceDir)))) {
+      printf("%s doesn't exist!", resourceDir.c_str());
+      return false;
+    }
+
+    for (auto& iter: resource.files()) {
+      const std::string path = resourceDir + iter;
+      if (!base::PathExists(base::FilePath(base::UTF8ToNative(path)))) {
+        printf("%s doesn't exist!", iter.c_str());
+        return false;
+      }
+    }
+
+    int nextId = 0;
+    if (action == "deploy") {
+      for (const auto& deploy: package.deploys()) {
+        std::vector<std::string> cmds;
+        std::string targetDir = deploy.target_dir();
+        if (!targetDir.empty()) {
+          cmds.push_back("mkdir " + targetDir);
+        }
+        if (!targetDir.empty() && !EndsWith(resourceDir, "/", false)) {
+          targetDir += "/";
+        }
+        for (const auto& iter: resource.files()) {
+          const std::string srcPath = resourceDir + iter;
+          const std::string destPath = targetDir + iter;
+          cmds.push_back("fst " + srcPath + " " + destPath);
+        }
+
+        for (const auto& iter: deploy.deploy()) {
+          cmds.push_back(iter);
+        }
+
+        for (const auto& host: deploy.hosts()) {
+          BatchOperation t;
+          t.id = nextId++;
+          t.target = host;
+          t.commands = cmds;
+          t.onSucceed = nextId;
+          t.onFailed = InternalOperation::EXIT;
+          result.push_back(t);
+        }
+      }
+      result.back().onSucceed = EXIT;
+      return true;
+    } else if (action == "stop") {
+      for (const auto& deploy: package.deploys()) {
+        std::vector<std::string> cmds;
+        for (const auto& iter: deploy.stop()) {
+          cmds.push_back(iter);
+        }
+
+        for (const auto& host: deploy.hosts()) {
+          BatchOperation t;
+          t.id = nextId++;
+          t.target = host;
+          t.commands = cmds;
+          t.onSucceed = InternalOperation::EXIT;
+          t.onFailed = InternalOperation::EXIT;
+          result.push_back(t);
+        }
+      }
+      result.back().onSucceed = EXIT;
+      return true;
+    } else {
+      printf("Unknown action!\n");
+      return false;
+    }
+  }
+private:
+  rs::DeployPackage package;
+};
+
+ScriptEngine::ScriptEngine(): nextOperationId(0), weakptr_factory_(this) {
+  compilers.push_back(new DeployScriptCompiler);
 }
 
 ScriptEngine::~ScriptEngine() {
   shell = NULL;
+  for (auto* compiler: compilers) {
+    delete compiler;
+  }
 }
 
 static void exitImpl(ScriptEngine* engine) {
@@ -25,19 +128,29 @@ static void willExit(ScriptEngine* engine) {
 }
 
 void ScriptEngine::executeCommand(const std::string& target, const std::vector<std::string>& cmdLines) {
-  targets.push_back(target);
-  commands.push_back(cmdLines);
+  std::vector<BatchOperation>().swap(scriptOperations);
 
-  willRunOnNextTarget();
+  BatchOperation t;
+  t.id = 0;
+  t.target = target;
+  t.commands = cmdLines;
+  t.onSucceed = 1;
+  t.onFailed = 1;
+  scriptOperations.push_back(t);
+
+  nextOperationId = scriptOperations[0].id;
+  willExecuteNextOperation();
 }
 
 void ScriptEngine::onStop(bool succeed) {
-  printf("stoped\n");
   if (succeed) {
-    willRunOnNextTarget();
+    printf("Operation succeeds, id = %d.\n", nextOperationId);
+    nextOperationId = scriptOperations[runningOperationIdx].onSucceed;
+    willExecuteNextOperation();
   } else {
-    printf("Failed\n");
-    willExit(this);
+    printf("Operation failed, id = %d.\n", nextOperationId);
+    nextOperationId = scriptOperations[runningOperationIdx].onFailed;
+    willExecuteNextOperation();
   }
 }
 
@@ -55,115 +168,71 @@ void ScriptEngine::runScript(const std::string& filePath, const std::string& act
     return;
   }
 
-  rs::AppPackage package;
-  if (google::protobuf::TextFormat::ParseFromString(data, &package)) {
-    printf("Found app package.\n");
-    runAppPackage(package, action);
-    return;
-  }
+  for (auto* compiler: compilers) {
+    std::vector<BatchOperation> result;
+    if (compiler->accept(data)) {
+      if (compiler->compile(action, result)) {
+        printf("Script compiled.\n");
+        scriptOperations = std::move(result);
 
-  printf("Unknown script.\n");
-}
-
-void ScriptEngine::runAppPackage(const rs::AppPackage& package, const std::string& action) {
-  const std::string name = package.name();
-  if (name.empty()) {
-    printf("The name is empty!");
-    willExit(this);
-    return;
-  }
-
-  const Resource& resource = package.resource();
-  std::string resourceDir = resource.local_dir();
-  if (!resourceDir.empty() && !EndsWith(resourceDir, "/", false)) {
-    resourceDir += "/";
-  }
-
-  if (!resourceDir.empty() && !base::PathExists(base::FilePath(base::UTF8ToNative(resourceDir)))) {
-    printf("%s doesn't exist!", resourceDir.c_str());
-    willExit(this);
-    return;
-  }
-
-
-  for (auto& iter: resource.files()) {
-    const std::string path = resourceDir + iter;
-    if (!base::PathExists(base::FilePath(base::UTF8ToNative(path)))) {
-      printf("%s doesn't exist!", iter.c_str());
-      willExit(this);
+        if (scriptOperations.empty()) {
+          printf("Finish executing script!\n");
+          willExit(this);
+        } else {
+          printf("Start executing script!\n");
+          nextOperationId = scriptOperations[0].id;
+          willExecuteNextOperation();
+        }
+      } else {
+        printf("Failed to compile this script.");
+        willExit(this);
+      }
       return;
     }
   }
 
-  if (action == "deploy") {
-    for (const auto& deploy: package.deploys()) {
-      std::vector<std::string> cmds;
-      std::string targetDir = deploy.target_dir();
-      if (!targetDir.empty()) {
-        cmds.push_back("mkdir " + targetDir);
-      }
-      if (!targetDir.empty() && !EndsWith(resourceDir, "/", false)) {
-        targetDir += "/";
-      }
-      for (const auto& iter: resource.files()) {
-        const std::string srcPath = resourceDir + iter;
-        const std::string destPath = targetDir + iter;
-        cmds.push_back("fst " + srcPath + " " + destPath);
-      }
-
-      for (const auto& iter: deploy.deploy()) {
-        cmds.push_back(iter);
-      }
-      
-      for (const auto& host: deploy.hosts()) {
-        targets.push_back(host);
-        commands.push_back(cmds);
-      }
-    }
-
-    willRunOnNextTarget();
-  } else if (action == "stop") {
-    for (const auto& deploy: package.deploys()) {
-      std::vector<std::string> cmds;
-      for (const auto& iter: deploy.stop()) {
-        cmds.push_back(iter);
-      }
-      
-      for (const auto& host: deploy.hosts()) {
-        targets.push_back(host);
-        commands.push_back(cmds);
-      }
-    }
-    willRunOnNextTarget();
-  } else {
-    printf("Unknown action!\n");
-    willExit(this);
-  }
+  printf("Unknown script.\n");
+  willExit(this);
 }
 
-void ScriptEngine::willRunOnNextTarget() {
+void ScriptEngine::willExecuteNextOperation() {
   base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
-    base::Bind(ScriptEngine::runOnNextTarget, weakptr_factory_.GetWeakPtr()));
+    base::Bind(ScriptEngine::executeNextOperation, weakptr_factory_.GetWeakPtr()));
 }
 
-void ScriptEngine::runOnNextTarget(base::WeakPtr<ScriptEngine> pThis) {
+void ScriptEngine::executeNextOperation(base::WeakPtr<ScriptEngine> pThis) {
   if (auto* self = pThis.get()) {
-    self->runOnNextTargetImpl();
+    self->executeNextOperationImpl();
   }
 }
 
-void ScriptEngine::runOnNextTargetImpl() {
-  if (nextTargetIndex == targets.size()) {
-    printf("Script finished!\n");
+void ScriptEngine::executeNextOperationImpl() {
+  if (nextOperationId == InternalOperation::EXIT) {
+    printf("\nFinish executing script!\n");
     willExit(this);
   } else {
+    printf("\n***********************************\n");
+    printf("Execute operation, id = %d.\n", nextOperationId);
+    runningOperationIdx = -1;
+    const int size = scriptOperations.size();
+    for (int i = 0; i < size; ++i) {
+      if (scriptOperations[i].id == nextOperationId) {
+        runningOperationIdx = i;
+        break;
+      }
+    }
+    if (runningOperationIdx == -1) {
+      printf("Unknown operation, id = %d!\n", nextOperationId);
+      printf("\nFinish executing script!\n");
+      willExit(this);
+      return;
+    }
     shell = new BatchExecuteShell(this);
     shell->setShowPrompt(true);
     shell->setShowCommandOutput(false);
     shell->setShowCommandErrorOutput(false);
-    const int id = nextTargetIndex++;
-    printf("\nRun script on target: %s\n", targets[id].c_str());
-    shell->start(targets[id], commands[id]);
+    printf("Running on target: %s\n", scriptOperations[runningOperationIdx].target.c_str());
+    shell->start(scriptOperations[runningOperationIdx].target, scriptOperations[runningOperationIdx].commands);
   }
 }
 }

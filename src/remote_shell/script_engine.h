@@ -5,6 +5,24 @@
 #include "remote_shell/proto/deploy.pb.h"
 namespace rs
 {
+enum InternalOperation {
+  EXIT = -1,
+};
+
+struct BatchOperation {
+  int id;
+  std::string target;
+  std::vector<std::string> commands;
+  int onSucceed;
+  int onFailed;
+};
+
+struct ScriptCompiler {
+  virtual ~ScriptCompiler() {}
+  virtual bool accept(const std::string& data) = 0;
+  virtual bool compile(const std::string& action, std::vector<BatchOperation>& result) = 0;
+};
+
 class ScriptEngine : public BatchExecuteShellHost, public base::RefCounted<ScriptEngine> {
 public:
   ScriptEngine();
@@ -15,16 +33,17 @@ public:
   void onStop(bool succeed);
   
 private:
-  void runAppPackage(const rs::AppPackage& package, const std::string& action);
-  
-  void willRunOnNextTarget();
-  static void runOnNextTarget(base::WeakPtr<ScriptEngine> pThis);
-  void runOnNextTargetImpl();
+  void willExecuteNextOperation();
+  static void executeNextOperation(base::WeakPtr<ScriptEngine> pThis);
+  void executeNextOperationImpl();
 private:
   scoped_refptr<BatchExecuteShell> shell;
-  std::vector<std::string> targets;
-  std::vector<std::vector<std::string>> commands;
-  int nextTargetIndex;
+
+  std::vector<ScriptCompiler*> compilers;
+  std::vector<BatchOperation> scriptOperations;
+  
+  int nextOperationId;
+  int runningOperationIdx;
   base::WeakPtrFactory<ScriptEngine>                 weakptr_factory_;
 };
 }

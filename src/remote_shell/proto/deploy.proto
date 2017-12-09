@@ -14,7 +14,7 @@ message RemoteCommands {
   repeated string stop = 4;
 }
 
-message AppPackage {
+message DeployPackage {
   optional string name = 1;
   optional Resource resource = 2;
   repeated RemoteCommands deploys = 3;
