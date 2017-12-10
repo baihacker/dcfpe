@@ -16,34 +16,36 @@ public:
   ~BatchExecuteShell();
 
   void start(const std::string& target, const std::vector<std::string>& cmdLines);
-  
+
   void onConnectStatusChanged(int newStatus);
   void onCommandStatusChanged(int newStatus);
-  
+
   void willStop(bool succeed);
   static void stop(base::WeakPtr<BatchExecuteShell> pThis, bool succeed);
   void stopImpl(bool succeed);
-  
+
   void willRunNextCommand();
   static void runNextCommand(base::WeakPtr<BatchExecuteShell> pThis);
   void runNextCommandImpl();
-  
+
+  BatchExecuteShell& setShowPrompt(bool showPrompt) {
+    this->showPrompt = showPrompt;
+    return *this;
+  }
+
   void outputPrompt(const std::string& info) {
     if (showPrompt) {
       printf("%s", info.c_str());
     }
   }
-  
-  BatchExecuteShell& setShowPrompt(bool showPrompt) {
-    this->showPrompt = showPrompt;
-    return *this;
-  }
 private:
   scoped_refptr<LocalServerNode> serverNode;
   BatchExecuteShellHost* host;
+
   std::vector<std::string> cmdLines;
   int nextCommandIndex;
   bool showPrompt;
+
   base::WeakPtrFactory<BatchExecuteShell>                 weakptr_factory_;
 };
 }

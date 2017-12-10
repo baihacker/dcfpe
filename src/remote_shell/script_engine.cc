@@ -9,7 +9,9 @@ namespace rs
 {
 struct DeployScriptCompiler : public ScriptCompiler {
   DeployScriptCompiler(){}
+
   ~DeployScriptCompiler(){}
+
   bool accept(const std::string& data) {
     if (google::protobuf::TextFormat::ParseFromString(data, &package)) {
       printf("Found app package.\n");
@@ -17,6 +19,7 @@ struct DeployScriptCompiler : public ScriptCompiler {
     }
     return false;
   }
+
   bool compile(const std::string& action, std::vector<BatchOperation>& result) {
     std::vector<BatchOperation>().swap(result);
 
@@ -229,8 +232,10 @@ void ScriptEngine::executeNextOperationImpl() {
     }
     shell = new BatchExecuteShell(this);
     shell->setShowPrompt(true);
-    printf("Running on target: %s\n", scriptOperations[runningOperationIdx].target.c_str());
-    shell->start(scriptOperations[runningOperationIdx].target, scriptOperations[runningOperationIdx].commands);
+
+    const int id = runningOperationIdx;
+    printf("Running on target: %s\n", scriptOperations[id].target.c_str());
+    shell->start(scriptOperations[id].target, scriptOperations[id].commands);
   }
 }
 }

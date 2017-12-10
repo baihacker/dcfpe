@@ -31,19 +31,21 @@ public:
   void executeCommand(const std::string& target, const std::vector<std::string>& cmdLines);
   void runScript(const std::string& filePath, const std::string& action);
   void onStop(bool succeed);
-  
+
 private:
   void willExecuteNextOperation();
   static void executeNextOperation(base::WeakPtr<ScriptEngine> pThis);
   void executeNextOperationImpl();
+
 private:
   scoped_refptr<BatchExecuteShell> shell;
 
   std::vector<ScriptCompiler*> compilers;
+
   std::vector<BatchOperation> scriptOperations;
-  
   int nextOperationId;
   int runningOperationIdx;
+
   base::WeakPtrFactory<ScriptEngine>                 weakptr_factory_;
 };
 }
