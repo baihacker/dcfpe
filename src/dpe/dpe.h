@@ -30,6 +30,9 @@
 #include <cstdint>
 typedef std::int64_t int64;
 
+// *Stub is required to solve the binary compatibility issue.
+// It is assumed that the layout of *Stub object are the same
+// for different compiler.
 struct VariantsReaderStub {
   int (*getVariantsSize)(void* opaque);
   int64 (*getInt64Value)(void* opaque, int idx);
@@ -53,8 +56,7 @@ struct CacheReaderStub
 
 class VariantsBuilder;
 
-struct CacheWriterStub
-{
+struct CacheWriterStub {
   void (*addRef)(void* opaque);
   void (*release)(void* opaque);
   void (*append)(void* opaque, int64 taskId, VariantsBuilder* result);
@@ -63,8 +65,7 @@ struct CacheWriterStub
 };
 
 class Solver;
-struct DpeStub
-{
+struct DpeStub {
   void* (*newCacheReader)(const char* path);
   void* (*newCacheWriter)(const char* path, bool reset);
   void* (*newDefaultCacheReader)();
@@ -81,8 +82,7 @@ struct DpeStub
 
 DPE_EXPORT DpeStub* get_stub();
 
-class VariantsReader
-{
+class VariantsReader {
 public:
   VariantsReader(void* opaque): opaque(opaque) {
     stub = get_stub()->VariantsReaderStub;
@@ -102,8 +102,7 @@ private:
   VariantsReaderStub* stub;
 };
 
-class VariantsBuilder
-{
+class VariantsBuilder {
 public:
   VariantsBuilder(void* opaque): opaque(opaque) {
     stub = get_stub()->VariantsBuilderStub;
@@ -120,8 +119,7 @@ public:
   VariantsBuilderStub* stub;
 };
 
-class CacheReader
-{
+class CacheReader {
 public:
   CacheReader(void* opaque): opaque(opaque) {
     stub = get_stub()->cacheReaderStub;
@@ -156,8 +154,7 @@ public:
   CacheReaderStub* stub;
 };
 
-class CacheWriter
-{
+class CacheWriter {
 public:
   CacheWriter(void* opaque): opaque(opaque) {
     stub = get_stub()->cacheWriterStub;
@@ -193,16 +190,16 @@ private:
   CacheWriterStub* stub;
 };
 
-class TaskAppender
-{
+// The binary compatibility issue still exists for
+// TaskAppender and Solver, but we ignore them now.
+class TaskAppender {
 public:
   virtual void addTask(int64 taskId) = 0;
 };
 
 #define RUN_ON_MASTER_NODE
 #define RUN_ON_WORKER_NODE
-class Solver
-{
+class Solver {
 public:
   #pragma RUN_ON_MASTER_NODE
   virtual void initAsMaster(TaskAppender* taskAppender) = 0;
