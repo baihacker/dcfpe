@@ -122,10 +122,10 @@ bool LocalServerNode::executeCommandRemotely(const std::string& line) {
 
   const int size = cmds.size();
   ecRequest->set_cmd(cmds[0]);
-  
   for (int i = 1; i < size; ++i) {
     ecRequest->add_args(cmds[i]);
   }
+
   ecRequest->set_wait_for_command(waitForCommand);
   ecRequest->set_remote_show_output(remoteShowOutput);
   ecRequest->set_remote_show_error(remoteShowError);
@@ -140,6 +140,21 @@ bool LocalServerNode::executeCommandRemotely(const std::string& line) {
     this->handleExecuteCommandResponse(zmqError, reply);
   }, 10*1000);
   return true;
+}
+
+void LocalServerNode::handleExecuteCommandResponse(int32_t zmqError, const Response& reply) {
+  if (zmqError == base::ZMQResponse::ZMQ_REP_TIME_OUT) {
+    willNotifyCommandExecuteStatus(ServerStatus::TIMEOUT);
+    return;
+  } if (zmqError != 0 || reply.error_code() != 0) {
+    runningRequestId = -1;
+    willNotifyCommandExecuteStatus(ServerStatus::FAILED);
+    return;
+  }
+  printf("Remote command: %s\n", reply.execute_command().command().c_str());
+  if (!waitForCommand) {
+    willNotifyCommandExecuteStatus(ServerStatus::SUCCEED);
+  }
 }
 
 bool LocalServerNode::handleInternalCommand(const std::string& line, const std::vector<std::string>& cmds) {
@@ -159,7 +174,7 @@ bool LocalServerNode::handleInternalCommand(const std::string& line, const std::
     while (line[now] != 'l') ++now;
     ++now;
     system(&line[now]);
-    willNotifyCommandExecuteStatusImpl(ServerStatus::SUCCEED);
+    willNotifyCommandExecuteStatus(ServerStatus::SUCCEED);
     return true;
   } if (cmds[0] == "option") {
     for (int i = 1; i < size; ++i) {
@@ -187,19 +202,19 @@ bool LocalServerNode::handleInternalCommand(const std::string& line, const std::
         printf("Unknown option %s", cmds[i].c_str());
       }
     }
-    willNotifyCommandExecuteStatusImpl(ServerStatus::SUCCEED);
+    willNotifyCommandExecuteStatus(ServerStatus::SUCCEED);
     return true;
   } else if (cmds[0] == "fs" || cmds[0] == "fst") {
     if (size == 1) {
       printf("No file specified!\n");
-      willNotifyCommandExecuteStatusImpl(ServerStatus::FAILED);
+      willNotifyCommandExecuteStatus(ServerStatus::FAILED);
       return true;
     }
 
     if (cmds[0] == "fst") {
       if (size % 2 == 0) {
         printf("Wrong number of arguments.\n");
-        willNotifyCommandExecuteStatusImpl(ServerStatus::FAILED);
+        willNotifyCommandExecuteStatus(ServerStatus::FAILED);
         return true;
       }
     }
@@ -208,7 +223,7 @@ bool LocalServerNode::handleInternalCommand(const std::string& line, const std::
       for (int i = 1; i < size; ++i) {
         if (!base::PathExists(base::FilePath(base::UTF8ToNative(cmds[i])))) {
           printf("%s doesn't exist\n", cmds[i].c_str());
-          willNotifyCommandExecuteStatusImpl(ServerStatus::FAILED);
+          willNotifyCommandExecuteStatus(ServerStatus::FAILED);
           return true;
         }
       }
@@ -216,7 +231,7 @@ bool LocalServerNode::handleInternalCommand(const std::string& line, const std::
       for (int i = 1; i + 1 < size; i += 2) {
         if (!base::PathExists(base::FilePath(base::UTF8ToNative(cmds[i])))) {
           printf("%s doesn't exist\n", cmds[i].c_str());
-          willNotifyCommandExecuteStatusImpl(ServerStatus::FAILED);
+          willNotifyCommandExecuteStatus(ServerStatus::FAILED);
           return true;
         }
       }
@@ -230,7 +245,7 @@ bool LocalServerNode::handleInternalCommand(const std::string& line, const std::
         std::string data;
         if (!base::ReadFileToString(base::FilePath(base::UTF8ToNative(cmds[i])), &data)) {
           printf("Cannot read %s\n", cmds[i].c_str());
-          willNotifyCommandExecuteStatusImpl(ServerStatus::FAILED);
+          willNotifyCommandExecuteStatus(ServerStatus::FAILED);
           return true;
         }
         foRequest->add_args(data);
@@ -241,7 +256,7 @@ bool LocalServerNode::handleInternalCommand(const std::string& line, const std::
         std::string data;
         if (!base::ReadFileToString(base::FilePath(base::UTF8ToNative(cmds[i])), &data)) {
           printf("Cannot read %s\n", cmds[i].c_str());
-          willNotifyCommandExecuteStatusImpl(ServerStatus::FAILED);
+          willNotifyCommandExecuteStatus(ServerStatus::FAILED);
           return true;
         }
         foRequest->add_args(data);
@@ -259,14 +274,14 @@ bool LocalServerNode::handleInternalCommand(const std::string& line, const std::
   } else if (cmds[0] == "fg" || cmds[0] == "fgt") {
     if (size == 1) {
       printf("No file specified!\n");
-      willNotifyCommandExecuteStatusImpl(ServerStatus::FAILED);
+      willNotifyCommandExecuteStatus(ServerStatus::FAILED);
       return true;
     }
 
     if (cmds[0] == "fgt") {
       if (size % 2 == 0) {
         printf("Wrong number of arguments.\n");
-        willNotifyCommandExecuteStatusImpl(ServerStatus::FAILED);
+        willNotifyCommandExecuteStatus(ServerStatus::FAILED);
         return true;
       }
     }
@@ -291,16 +306,17 @@ bool LocalServerNode::handleInternalCommand(const std::string& line, const std::
 
 void LocalServerNode::handleFileOperationResponse(int32_t zmqError, const Request& req, const Response& reply) {
   if (zmqError == base::ZMQResponse::ZMQ_REP_TIME_OUT) {
-    willNotifyCommandExecuteStatusImpl(ServerStatus::TIMEOUT);
+    willNotifyCommandExecuteStatus(ServerStatus::TIMEOUT);
+    return;
   } else if (zmqError != 0 || reply.error_code() != 0) {
-    willNotifyCommandExecuteStatusImpl(ServerStatus::FAILED);
+    willNotifyCommandExecuteStatus(ServerStatus::FAILED);
     return;
   }
 
   const auto& foRequest = req.file_operation();
   const auto& detail = reply.file_operation();
   if (foRequest.cmd() == "fs" || foRequest.cmd() == "fst") {
-    willNotifyCommandExecuteStatusImpl(ServerStatus::SUCCEED);
+    willNotifyCommandExecuteStatus(ServerStatus::SUCCEED);
   } else if (foRequest.cmd() == "fg" || foRequest.cmd() == "fgt") {
     const auto& args = detail.args();
     const int size = args.size();
@@ -308,62 +324,11 @@ void LocalServerNode::handleFileOperationResponse(int32_t zmqError, const Reques
       auto path = base::FilePath(base::UTF8ToNative(args[i]));
       auto dest = path.BaseName();
       if (base::WriteFile(dest, args[i+1].c_str(), args[i+1].size()) == -1) {
-        willNotifyCommandExecuteStatusImpl(ServerStatus::FAILED);
+        willNotifyCommandExecuteStatus(ServerStatus::FAILED);
         return;
       }
     }
-    willNotifyCommandExecuteStatusImpl(ServerStatus::SUCCEED);
-  }
-}
-
-void LocalServerNode::notifyCommandExecuteStatus(base::WeakPtr<LocalServerNode> pThis, int32_t newStatus) {
-  if (auto* self = pThis.get()) {
-    self->notifyCommandExecuteStatusImpl(newStatus);
-  }
-}
-
-void LocalServerNode::willNotifyCommandExecuteStatusImpl(int32_t newStatus) {
-  base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
-    base::Bind(&LocalServerNode::notifyCommandExecuteStatus, getWeakPtr(), newStatus));
-}
-
-void LocalServerNode::notifyCommandExecuteStatusImpl(int32_t newStatus) {
-  host->onCommandStatusChanged(newStatus);
-}
-
-void LocalServerNode::handleRequest(const Request& req, Response& reply) {
-  reply.set_session_id(sessionId);
-  reply.set_error_code(-1);
-
-  if (req.session_id() != sessionId) {
-    return;
-  }
-
-  if (req.has_execute_output()) {
-    const auto& detail = req.execute_output();
-    if (detail.original_request_id() != runningRequestId) {
-      // Unexpected output request.
-      return;
-    }
-
-    if (detail.is_exit()) {
-      printf("Exit code: %d\n", detail.exit_code());
-      willNotifyCommandExecuteStatusImpl(ServerStatus::SUCCEED);
-    } else {
-      if (detail.is_error_output() && localShowError) {
-        fprintf(stderr, "%s", detail.output().c_str());
-      }
-      if (!detail.is_error_output() && localShowOutput) {
-        printf("%s", detail.output().c_str());
-      }
-    }
-    reply.set_error_code(0);
-  } else if (req.has_create_session()) {
-    const auto& detail = req.create_session();
-    executorAddress = detail.address();
-    msgSender = new MessageSender(executorAddress);
-    reply.set_error_code(0);
-    host->onConnectStatusChanged(ServerStatus::CONNECTED);
+    willNotifyCommandExecuteStatus(ServerStatus::SUCCEED);
   }
 }
 
@@ -383,18 +348,54 @@ bool LocalServerNode::preHandleRequest(const Request& req, Response& reply) {
   return false;
 }
 
-void LocalServerNode::handleExecuteCommandResponse(int32_t zmqError, const Response& reply) {
-  if (zmqError == base::ZMQResponse::ZMQ_REP_TIME_OUT) {
-    willNotifyCommandExecuteStatusImpl(ServerStatus::TIMEOUT);
-    return;
-  } if (zmqError != 0 || reply.error_code() != 0) {
-    runningRequestId = -1;
-    willNotifyCommandExecuteStatusImpl(ServerStatus::FAILED);
+void LocalServerNode::handleRequest(const Request& req, Response& reply) {
+  reply.set_session_id(sessionId);
+  reply.set_error_code(-1);
+
+  if (req.session_id() != sessionId) {
     return;
   }
-  printf("Remote command: %s\n", reply.execute_command().command().c_str());
-  if (!waitForCommand) {
-    willNotifyCommandExecuteStatusImpl(ServerStatus::SUCCEED);
+
+  if (req.has_execute_output()) {
+    const auto& detail = req.execute_output();
+    if (detail.original_request_id() != runningRequestId) {
+      // Unexpected output request.
+      return;
+    }
+
+    if (detail.is_exit()) {
+      printf("Exit code: %d\n", detail.exit_code());
+      willNotifyCommandExecuteStatus(ServerStatus::SUCCEED);
+    } else {
+      if (detail.is_error_output() && localShowError) {
+        fprintf(stderr, "%s", detail.output().c_str());
+      }
+      if (!detail.is_error_output() && localShowOutput) {
+        printf("%s", detail.output().c_str());
+      }
+    }
+    reply.set_error_code(0);
+  } else if (req.has_create_session()) {
+    const auto& detail = req.create_session();
+    executorAddress = detail.address();
+    msgSender = new MessageSender(executorAddress);
+    reply.set_error_code(0);
+    host->onConnectStatusChanged(ServerStatus::CONNECTED);
   }
+}
+
+void LocalServerNode::notifyCommandExecuteStatus(base::WeakPtr<LocalServerNode> pThis, int32_t newStatus) {
+  if (auto* self = pThis.get()) {
+    self->notifyCommandExecuteStatusImpl(newStatus);
+  }
+}
+
+void LocalServerNode::willNotifyCommandExecuteStatus(int32_t newStatus) {
+  base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
+    base::Bind(&LocalServerNode::notifyCommandExecuteStatus, getWeakPtr(), newStatus));
+}
+
+void LocalServerNode::notifyCommandExecuteStatusImpl(int32_t newStatus) {
+  host->onCommandStatusChanged(newStatus);
 }
 }
