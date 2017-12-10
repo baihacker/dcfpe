@@ -49,5 +49,18 @@ if __name__ == '__main__':
                   os.path.join(dest_dir, 'main.cc'))
   shutil.copyfile(os.path.join(dpe_dir, 'dpe.h'),
                   os.path.join(dest_dir, 'dpe.h'))
+  shutil.copyfile(os.path.join(dpe_dir, 'README.md'),
+                  os.path.join(dest_dir, 'README.md'))
+  shutil.copyfile(os.path.join(dpe_dir, 'README_cn.txt'),
+                  os.path.join(dest_dir, 'README_cn.txt'))
+  # Release rs
+  dest_dir = os.path.join(output, 'rs')
+  rs_dir = os.path.join(ENV_SOLUTION_DIRECTORY, 'remote_shell')
+  shutil.copyfile(os.path.join(rs_dir, 'README.md'),
+                  os.path.join(dest_dir, 'README.md'))
+                  
+  # Release dcfpe
+  shutil.copyfile(os.path.join(ENV_SOLUTION_DIRECTORY, '../README.md'),
+                  os.path.join(output, 'README.md'))
   sys.exit(0)
 
