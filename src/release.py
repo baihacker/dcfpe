@@ -25,6 +25,8 @@ if __name__ == '__main__':
     rs_dir = os.path.join(ENV_SOLUTION_DIRECTORY, 'remote_shell')
     shutil.copyfile(os.path.join(rs_dir, 'deploy_demo.txt'),
                     os.path.join(dest_dir, 'deploy_demo.txt'))
+    shutil.copyfile(os.path.join(rs_dir, 'deploy_demo_README.txt'),
+                    os.path.join(dest_dir, 'deploy_demo_README.txt'))
 
     # Release dpe
     dest_dir = os.path.join(output, 'dpe/' + dir)
