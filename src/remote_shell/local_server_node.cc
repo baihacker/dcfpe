@@ -173,6 +173,8 @@ bool LocalServerNode::handleInternalCommand(const std::string& line, const std::
         localShowOutput = true;
       } else if (cmds[i] == "no_local_show_output") {
         localShowOutput = false;
+      } else {
+        printf("Unknown option %s", cmds[i].c_str());
       }
     }
     willNotifyCommandExecuteStatusImpl(ServerStatus::SUCCEED);
@@ -338,12 +340,11 @@ void LocalServerNode::handleRequest(const Request& req, Response& reply) {
       printf("Exit code: %d\n", detail.exit_code());
       willNotifyCommandExecuteStatusImpl(ServerStatus::SUCCEED);
     } else {
-      // TODO(baihacker): escape %s.
       if (detail.is_error_output() && showCommandErrorOutput) {
-        fprintf(stderr, detail.output().c_str());
+        fprintf(stderr, "%s", detail.output().c_str());
       }
       if (!detail.is_error_output() && showCommandOutput) {
-        printf(detail.output().c_str());
+        printf("%s", detail.output().c_str());
       }
     }
     reply.set_error_code(0);

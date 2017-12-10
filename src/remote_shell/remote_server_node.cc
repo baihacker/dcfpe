@@ -60,7 +60,7 @@ void RemoteServerNode::connectToHost(const std::string& host, int64_t sid) {
 void RemoteServerNode::handleCreateSessionResponse(int32_t zmqError, const Response& reply) {
   if (zmqError != 0 || reply.error_code() != 0) {
     std::string info = "Cannot connect to " + hostAddress + "!\n";
-    printf(info.c_str());
+    printf("%s", info.c_str());
     willStop(this);
     return;
   }

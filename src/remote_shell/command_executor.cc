@@ -96,7 +96,7 @@ void CommandExecutor::OnStop(process::Process* p, process::ProcessContext* conte
 void CommandExecutor::sendBufferedOutput() {
   if (!bufferedOutput.empty()) {
     if (remoteShowOutput) {
-      printf(bufferedOutput.c_str());
+      printf("%s", bufferedOutput.c_str());
     }
     if (localShowOutput) {
       ExecuteCommandOutputRequest* ecoRequest = new ExecuteCommandOutputRequest();
