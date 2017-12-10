@@ -45,7 +45,7 @@ void RemoteServerNode::connectToHost(const std::string& host, int64_t sid) {
   sessionId = sid;
   CreateSessionRequest* csRequest = new CreateSessionRequest();
   csRequest->set_address(zserver->GetServerAddress());
-  
+
   Request req;
   req.set_name("CreateSession");
   req.set_session_id(sessionId);
@@ -83,12 +83,12 @@ void RemoteServerNode::checkHeartBeat(base::WeakPtr<RemoteServerNode> self)
 void RemoteServerNode::checkHeartBeatImpl()
 {
   SessionHeartBeatRequest* shbRequest = new SessionHeartBeatRequest();
-  
+
   Request req;
   req.set_name("SessionHeartBeat");
   req.set_session_id(sessionId);
   req.set_allocated_session_heart_beat(shbRequest);
-  
+
   msgSender->sendRequest(req, [=](int32_t zmqError, const Response& reply){
     if (zmqError == 0 && reply.error_code() == 0) {
       this->scheduleHeartBeat();
@@ -103,7 +103,7 @@ void RemoteServerNode::handleRequest(const Request& req, Response& reply)
 {
   reply.set_session_id(sessionId);
   reply.set_error_code(-1);
-  
+
   if (req.session_id() != sessionId) {
     return;
   }
@@ -125,7 +125,7 @@ void RemoteServerNode::handleRequest(const Request& req, Response& reply)
     reply.set_srv_uid(srvUid);
     reply.set_allocated_execute_command(response);
     reply.set_error_code(0);
-    
+
     executor = new CommandExecutor(sessionId);
 
     std::string cmd = executor->execute(executeCommandRequest, req.request_id());
@@ -155,7 +155,7 @@ void RemoteServerNode::handleFileOperation(const FileOperationRequest& req, Resp
         return;
       }
     }
-    
+
     FileOperationResponse* foResponse = new FileOperationResponse();
     foResponse->set_cmd(req.cmd());
     reply.set_allocated_file_operation(foResponse);

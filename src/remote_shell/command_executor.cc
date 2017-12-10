@@ -2,20 +2,20 @@
 
 #include "dpe_base/dpe_base.h"
 #include "remote_shell/proto/rs.pb.h"
-#include <iostream>
 
 namespace rs
 {
-
-
 CommandExecutor::CommandExecutor(int64_t sessionId):
-  isStdout(1),
-  lastSendTime(0),
+  originalRequestId(-1),
   sessionId(sessionId),
   stopped(0),
+  isStdout(1),
+  lastSendTime(0),
   waitForCommand(true),
   remoteShowOutput(false),
+  remoteShowError(false),
   localShowOutput(true),
+  localShowError(true),
   weakptr_factory_(this) {
 }
 
@@ -24,13 +24,13 @@ CommandExecutor::~CommandExecutor() {
 
 std::string CommandExecutor::execute(const ExecuteCommandRequest& command, int64_t originalRequestId) {
   this->originalRequestId = originalRequestId;
-  
+
   waitForCommand = command.wait_for_command();
   remoteShowOutput = command.remote_show_output();
   remoteShowError = command.remote_show_error();
   localShowOutput = command.local_show_output();
   localShowError = command.local_show_error();
-  
+
   msgSender = new MessageSender(command.address());
 
   base::FilePath imagePath(base::UTF8ToNative("C:\\Windows\\System32\\cmd.exe"));
@@ -38,7 +38,7 @@ std::string CommandExecutor::execute(const ExecuteCommandRequest& command, int64
   for (auto& iter: command.args()) {
     arg = arg + " " + iter;
   }
-  
+
   if (!waitForCommand) {
     std::string cmd = "C:\\Windows\\System32\\cmd.exe /C " + arg;
     if (!remoteShowOutput) {
@@ -97,7 +97,7 @@ void CommandExecutor::OnStop(process::Process* p, process::ProcessContext* conte
   req.set_allocated_execute_output(ecoRequest);
 
   msgSender->sendRequest(req, 0);
-  
+
   stopped = 1;
 }
 
@@ -153,14 +153,12 @@ void CommandExecutor::scheduleFlushOutput() {
 }
 
 void CommandExecutor::flushOutput(base::WeakPtr<CommandExecutor> self) {
-  if (CommandExecutor* pThis = self.get())
-  {
+  if (CommandExecutor* pThis = self.get()) {
     self->flushOutputImpl();
   }
 }
 
 void CommandExecutor::flushOutputImpl() {
-  // LOG(INFO) << "CommandExecutor::flushOutputImpl";
   sendBufferedOutput();
   scheduleFlushOutput();
 }

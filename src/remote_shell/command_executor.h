@@ -8,7 +8,6 @@
 
 namespace rs
 {
-
 class CommandExecutor : public base::RefCounted<CommandExecutor>, public process::ProcessHost
 {
 public:
@@ -23,6 +22,7 @@ public:
 
   std::string execute(const ExecuteCommandRequest& command, int64_t originalRequestId);
   base::WeakPtr<CommandExecutor> getWeakPtr() {return weakptr_factory_.GetWeakPtr();}
+
 private:
   void OnStop(process::Process* p, process::ProcessContext* exit_code);
   void OnOutput(process::Process* p, bool is_std_out, const std::string& data);
@@ -30,21 +30,21 @@ private:
   void scheduleFlushOutput();
   static void flushOutput(base::WeakPtr<CommandExecutor> self);
   void flushOutputImpl();
+
 private:
-  // remote message handling: bind and receive and send
-  base::ZMQClient* clientStub;
   scoped_refptr<MessageSender> msgSender;
 
   scoped_refptr<process::Process> process;
 
-  std::string bufferedOutput;
-  int isStdout;
-  int64_t lastSendTime;
-  
   int64_t originalRequestId;
   int64_t sessionId;
   int stopped;
-  
+
+  // Output buffer.
+  std::string bufferedOutput;
+  int isStdout;
+  int64_t lastSendTime;
+
   bool waitForCommand;
   bool remoteShowOutput;
   bool remoteShowError;
