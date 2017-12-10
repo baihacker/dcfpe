@@ -31,6 +31,7 @@ std::string CommandExecutor::execute(const ExecuteCommandRequest& command, int64
 
   process = new process::Process(this);
   auto& option = process->GetProcessOption();
+  option.allow_sub_process_breakaway_job_ = true;
   option.image_path_ = imagePath;
   option.argument_list_r_.push_back(base::UTF8ToNative("/C"));
   option.argument_list_r_.push_back(base::UTF8ToNative(arg));
