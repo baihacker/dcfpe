@@ -53,3 +53,4 @@ Updated:
 * 2017.06.25 Release dpe_1.1.0.0. Support Variants, Cache, UI.
 * 2017.12.03 Add [remote shell](https://github.com/baihacker/dcfpe/tree/master/src/remote_shell).
 * 2017.12.09 17:59:43PST Use [rs](https://github.com/baihacker/dcfpe/tree/master/src/remote_shell) and [dpe](https://github.com/baihacker/dcfpe/tree/master/src/dpe) to compute 0^2 + 1^2 + 2^2 + ... + 299^2 = 8955050
+* 2017.12.10 10:27:22PST Make [rs](https://github.com/baihacker/dcfpe/tree/master/src/remote_shell) and [dpe](https://github.com/baihacker/dcfpe/tree/master/src/dpe) work smoothly to compute and prepare the release package.
