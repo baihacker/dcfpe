@@ -146,7 +146,7 @@ void RemoteServerNode::handleFileOperation(const FileOperationRequest& req, Resp
     const auto& args = req.args();
     const int size = args.size();
     for (int i = 0; i + 1 < size; i += 2) {
-      auto path = base::FilePath(base::UTF8ToNative(args[i]));
+      auto path = base::MakeAbsoluteFilePath(base::FilePath(base::UTF8ToNative(args[i])));
       if (req.cmd() == "fs") {
         path = path.BaseName();
       }
@@ -166,7 +166,7 @@ void RemoteServerNode::handleFileOperation(const FileOperationRequest& req, Resp
     FileOperationResponse* foResponse = new FileOperationResponse();
     if (req.cmd() == "fg") {
       for (int i = 0; i < size; ++i) {
-        auto path = base::FilePath(base::UTF8ToNative(args[i]));
+        auto path = base::MakeAbsoluteFilePath(base::FilePath(base::UTF8ToNative(args[i])));
         std::string data;
         if (!base::ReadFileToString(path, &data)) {
           reply.set_error_code(-1);
@@ -177,7 +177,7 @@ void RemoteServerNode::handleFileOperation(const FileOperationRequest& req, Resp
       }
     } else {
       for (int i = 0; i + 1 < size; i += 2) {
-        auto path = base::FilePath(base::UTF8ToNative(args[i]));
+        auto path = base::MakeAbsoluteFilePath(base::FilePath(base::UTF8ToNative(args[i])));
         std::string data;
         if (!base::ReadFileToString(path, &data)) {
           reply.set_error_code(-1);
@@ -187,6 +187,21 @@ void RemoteServerNode::handleFileOperation(const FileOperationRequest& req, Resp
         foResponse->add_args(data);
       }
     }
+    foResponse->set_cmd(req.cmd());
+    reply.set_allocated_file_operation(foResponse);
+    reply.set_error_code(0);
+  } else if (req.cmd() == "mkdir") {
+    const auto& args = req.args();
+    const int size = args.size();
+    for (int i = 0; i < size; ++i) {
+      auto path = base::MakeAbsoluteFilePath(base::FilePath(base::UTF8ToNative(args[i])));
+      base::File::Error err;
+      if (!base::CreateDirectoryAndGetError(path, &err)) {
+        reply.set_error_code(-1);
+        return;
+      }
+    }
+    FileOperationResponse* foResponse = new FileOperationResponse();
     foResponse->set_cmd(req.cmd());
     reply.set_allocated_file_operation(foResponse);
     reply.set_error_code(0);

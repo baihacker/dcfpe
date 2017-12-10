@@ -22,6 +22,10 @@ if __name__ == '__main__':
                     os.path.join(dest_dir, 'zmq.dll'))
     shutil.copyfile(os.path.join(src_dir, 'rs.exe'),
                     os.path.join(dest_dir, 'rs.exe'))
+    rs_dir = os.path.join(ENV_SOLUTION_DIRECTORY, 'remote_shell')
+    shutil.copyfile(os.path.join(rs_dir, 'deploy_demo.txt'),
+                    os.path.join(dest_dir, 'deploy_demo.txt'))
+
     # Release dpe
     dest_dir = os.path.join(output, 'dpe/' + dir)
     os.makedirs(dest_dir)
@@ -42,13 +46,13 @@ if __name__ == '__main__':
                     os.path.join(dest_dir, 'index.html'))
     shutil.copyfile(os.path.join(dpe_dir, 'web\\jquery.min.js'),
                     os.path.join(dest_dir, 'jquery.min.js'))
+    shutil.copyfile(os.path.join(dpe_dir, 'main.cc'),
+                    os.path.join(dest_dir, 'main.cc'))
+    shutil.copyfile(os.path.join(dpe_dir, 'dpe.h'),
+                    os.path.join(dest_dir, 'dpe.h'))
   # Releae dpe
   dest_dir = os.path.join(output, 'dpe')
   dpe_dir = os.path.join(ENV_SOLUTION_DIRECTORY, 'dpe')
-  shutil.copyfile(os.path.join(dpe_dir, 'main.cc'),
-                  os.path.join(dest_dir, 'main.cc'))
-  shutil.copyfile(os.path.join(dpe_dir, 'dpe.h'),
-                  os.path.join(dest_dir, 'dpe.h'))
   shutil.copyfile(os.path.join(dpe_dir, 'README.md'),
                   os.path.join(dest_dir, 'README.md'))
   shutil.copyfile(os.path.join(dpe_dir, 'README_cn.txt'),

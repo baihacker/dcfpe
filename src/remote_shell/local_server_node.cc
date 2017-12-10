@@ -221,16 +221,18 @@ bool LocalServerNode::handleInternalCommand(const std::string& line, const std::
 
     if (cmds[0] == "fs") {
       for (int i = 1; i < size; ++i) {
-        if (!base::PathExists(base::FilePath(base::UTF8ToNative(cmds[i])))) {
-          printf("%s doesn't exist\n", cmds[i].c_str());
+        auto path = MakeAbsoluteFilePath(base::FilePath(base::UTF8ToNative(cmds[i])));
+        if (!base::PathExists(path)) {
+          printf("%s doesn't exist\n", base::NativeToUTF8(path.value()).c_str());
           willNotifyCommandExecuteStatus(ServerStatus::FAILED);
           return true;
         }
       }
     } else {
       for (int i = 1; i + 1 < size; i += 2) {
-        if (!base::PathExists(base::FilePath(base::UTF8ToNative(cmds[i])))) {
-          printf("%s doesn't exist\n", cmds[i].c_str());
+        auto path = MakeAbsoluteFilePath(base::FilePath(base::UTF8ToNative(cmds[i])));
+        if (!base::PathExists(path)) {
+          printf("%s doesn't exist\n", base::NativeToUTF8(path.value()).c_str());
           willNotifyCommandExecuteStatus(ServerStatus::FAILED);
           return true;
         }
@@ -243,8 +245,9 @@ bool LocalServerNode::handleInternalCommand(const std::string& line, const std::
       for (int i = 1; i < size; ++i) {
         foRequest->add_args(cmds[i]);
         std::string data;
-        if (!base::ReadFileToString(base::FilePath(base::UTF8ToNative(cmds[i])), &data)) {
-          printf("Cannot read %s\n", cmds[i].c_str());
+        auto path = base::MakeAbsoluteFilePath(base::FilePath(base::UTF8ToNative(cmds[i])));
+        if (!base::ReadFileToString(path, &data)) {
+          printf("Cannot read %s\n", base::NativeToUTF8(path.value()).c_str());
           willNotifyCommandExecuteStatus(ServerStatus::FAILED);
           return true;
         }
@@ -254,8 +257,9 @@ bool LocalServerNode::handleInternalCommand(const std::string& line, const std::
       for (int i = 1; i < size; i += 2) {
         foRequest->add_args(cmds[i+1]);
         std::string data;
-        if (!base::ReadFileToString(base::FilePath(base::UTF8ToNative(cmds[i])), &data)) {
-          printf("Cannot read %s\n", cmds[i].c_str());
+        auto path = base::MakeAbsoluteFilePath(base::FilePath(base::UTF8ToNative(cmds[i])));
+        if (!base::ReadFileToString(path, &data)) {
+          printf("Cannot read %s\n", base::NativeToUTF8(path.value()).c_str());
           willNotifyCommandExecuteStatus(ServerStatus::FAILED);
           return true;
         }
@@ -300,6 +304,25 @@ bool LocalServerNode::handleInternalCommand(const std::string& line, const std::
       this->handleFileOperationResponse(zmqError, req, reply);
     }, 0);
     return true;
+  } else if (cmds[0] == "mkdir") {
+    if (size == 1) {
+      printf("Argument missing!\n");
+      willNotifyCommandExecuteStatus(ServerStatus::FAILED);
+      return true;
+    }
+
+    FileOperationRequest* foRequest = new FileOperationRequest();
+    foRequest->set_cmd(cmds[0]);
+    for (int i = 1; i < size; ++i) {
+      foRequest->add_args(cmds[i]);
+    }
+    Request req;
+    req.set_name("FileOperation");
+    req.set_session_id(sessionId);
+    req.set_allocated_file_operation(foRequest);
+    msgSender->sendRequest(req, [=](int32_t zmqError, const Response& reply){
+      this->handleFileOperationResponse(zmqError, req, reply);
+    }, 0);
   }
   return false;
 }
@@ -315,15 +338,17 @@ void LocalServerNode::handleFileOperationResponse(int32_t zmqError, const Reques
 
   const auto& foRequest = req.file_operation();
   const auto& detail = reply.file_operation();
-  if (foRequest.cmd() == "fs" || foRequest.cmd() == "fst") {
+  if (foRequest.cmd() == "fs" || foRequest.cmd() == "fst" || foRequest.cmd() == "mkdir") {
     willNotifyCommandExecuteStatus(ServerStatus::SUCCEED);
   } else if (foRequest.cmd() == "fg" || foRequest.cmd() == "fgt") {
     const auto& args = detail.args();
     const int size = args.size();
     for (int i = 0; i + 1 < size; i += 2) {
-      auto path = base::FilePath(base::UTF8ToNative(args[i]));
-      auto dest = path.BaseName();
-      if (base::WriteFile(dest, args[i+1].c_str(), args[i+1].size()) == -1) {
+      auto path = base::MakeAbsoluteFilePath(base::FilePath(base::UTF8ToNative(args[i])));
+      if (foRequest.cmd() == "fg") {
+        path = path.BaseName();
+      }
+      if (base::WriteFile(path, args[i+1].c_str(), args[i+1].size()) == -1) {
         willNotifyCommandExecuteStatus(ServerStatus::FAILED);
         return;
       }

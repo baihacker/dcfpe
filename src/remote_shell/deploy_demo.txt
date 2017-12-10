@@ -1,0 +1,30 @@
+# This demo will try to deploy an x64 target
+name: "deploy_demo"
+resource {
+  local_dir: "../../dpe/Release_x64"
+  files: "dpe.dll"
+  files: "dpe.h"
+  files: "msvcp120.dll"
+  files: "msvcr120.dll"
+  files: "pm.exe"
+  files: "zmq.dll"
+  files: "main.cc"
+}
+
+# deploy server
+deploys {
+  hosts: "192.168.137.128"
+  target_dir: "../deploy_demo"
+  deploy: "pe++.py deploy_demo/main.cc -o deploy_demo/main.exe"
+  deploy: "option no_wait_for_command remote_show_output remote_show_error"
+  deploy: "deploy_demo\\main.exe -l=0"
+}
+
+# deploy worker
+deploys {
+  hosts: "192.168.137.131"
+  target_dir: "../deploy_demo"
+  deploy: "pe++.py deploy_demo/main.cc -o deploy_demo/main.exe"
+  deploy: "option no_wait_for_command remote_show_output remote_show_error"
+  deploy: "deploy_demo\\main.exe -l=0 -id=0 --type=worker --server_ip=192.168.137.128"
+}
