@@ -2,7 +2,7 @@
 
 namespace dpe
 {
-
+static char buff[1024];
 DPEMasterNode::DPEMasterNode(
     const std::string& myIP, const std::string& serverIP):
     DPENodeBase(myIP, serverIP),
@@ -11,6 +11,10 @@ DPEMasterNode::DPEMasterNode(
     port(kServerPort),
     weakptr_factory_(this)
   {
+    GetModuleFileNameA(NULL, buff, 1024);
+    std::string modulePath = buff;
+    auto parentDir = base::FilePath(base::UTF8ToNative(modulePath)).DirName();
+    moduleDir = base::NativeToUTF8(parentDir.value());
 
   }
 DPEMasterNode::~DPEMasterNode()
@@ -221,7 +225,7 @@ bool DPEMasterNode::handleRequest(const http::HttpRequest& req, http::HttpRespon
     else if (req.path == "/")
     {
       std::string data;
-      base::FilePath filePath(base::UTF8ToNative("index.html"));
+      base::FilePath filePath(base::UTF8ToNative(moduleDir + "\\index.html"));
       if (!base::ReadFileToString(filePath, &data))
       {
         return true;
@@ -231,7 +235,7 @@ bool DPEMasterNode::handleRequest(const http::HttpRequest& req, http::HttpRespon
     else if (req.path == "/jquery.min.js")
     {
       std::string data;
-      base::FilePath filePath(base::UTF8ToNative("jquery.min.js"));
+      base::FilePath filePath(base::UTF8ToNative(moduleDir + "\\jquery.min.js"));
       if (!base::ReadFileToString(filePath, &data))
       {
         return true;
@@ -241,7 +245,7 @@ bool DPEMasterNode::handleRequest(const http::HttpRequest& req, http::HttpRespon
     else if (req.path == "/Chart.bundle.js")
     {
       std::string data;
-      base::FilePath filePath(base::UTF8ToNative("Chart.bundle.js"));
+      base::FilePath filePath(base::UTF8ToNative(moduleDir + "\\Chart.bundle.js"));
       if (!base::ReadFileToString(filePath, &data))
       {
         return true;

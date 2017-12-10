@@ -37,6 +37,7 @@ private:
   std::string srvUidString;
   int port;
   std::vector<RemoteNodeImpl*> remoteNodes;
+  std::string moduleDir;
   base::WeakPtrFactory<DPEMasterNode>                 weakptr_factory_;
 };
 }

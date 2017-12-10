@@ -11,6 +11,11 @@ resource {
   files: "pm.exe"
   files: "zmq.dll"
   files: "main.cc"
+  # Optional resources.
+  # They are used for web UI on master node.
+  files: "Chart.bundle.js"
+  files: "index.html"
+  files: "jquery.min.js"
 }
 
 # deploy master
