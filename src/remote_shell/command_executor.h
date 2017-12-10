@@ -44,6 +44,11 @@ private:
   int64_t originalRequestId;
   int64_t sessionId;
   int stopped;
+  
+  bool waitForCommand;
+  bool remoteShowOutput;
+  bool localShowOutput;
+
   base::WeakPtrFactory<CommandExecutor>                 weakptr_factory_;
 };
 

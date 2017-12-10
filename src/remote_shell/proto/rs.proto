@@ -14,13 +14,19 @@ message SessionHeartBeatRequest {
 
 message ExecuteCommandRequest {
   optional string address = 1;
-  optional string cmd = 3;
-  repeated string args = 4;
+  optional string cmd = 2;
+  repeated string args = 3;
+  optional int32 wait_for_command = 4 [default = 1];
+  optional int32 remote_show_output = 5 [default = 0];
+  optional int32 local_show_output = 6 [default = 1];
 }
 
 message ExecuteCommandResponse {
   optional string address = 1;
-  optional string command = 3;
+  optional string command = 2;
+  optional int32 wait_for_command = 4 [default = 1];
+  optional int32 remote_show_output = 5 [default = 0];
+  optional int32 local_show_output = 6 [default = 1];
 }
 
 message ExecuteCommandOutputRequest {

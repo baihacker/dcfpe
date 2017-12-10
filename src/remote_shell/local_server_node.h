@@ -67,6 +67,11 @@ private:
   bool shoudExit;
   bool showCommandOutput;
   bool showCommandErrorOutput;
+
+  bool waitForCommand;
+  bool remoteShowOutput;
+  bool localShowOutput;
+
   base::WeakPtrFactory<LocalServerNode>                 weakptr_factory_;
 };
 }

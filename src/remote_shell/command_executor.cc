@@ -13,6 +13,9 @@ CommandExecutor::CommandExecutor(int64_t sessionId):
   lastSendTime(0),
   sessionId(sessionId),
   stopped(0),
+  waitForCommand(true),
+  remoteShowOutput(false),
+  localShowOutput(true),
   weakptr_factory_(this) {
 }
 
@@ -21,12 +24,33 @@ CommandExecutor::~CommandExecutor() {
 
 std::string CommandExecutor::execute(const ExecuteCommandRequest& command, int64_t originalRequestId) {
   this->originalRequestId = originalRequestId;
+  
+  waitForCommand = command.wait_for_command();
+  remoteShowOutput = command.remote_show_output();
+  localShowOutput = command.local_show_output();
+  
   msgSender = new MessageSender(command.address());
 
   base::FilePath imagePath(base::UTF8ToNative("C:\\Windows\\System32\\cmd.exe"));
   std::string arg = command.cmd();
   for (auto& iter: command.args()) {
     arg = arg + " " + iter;
+  }
+  
+  if (!waitForCommand) {
+    std::string cmd = "C:\\Windows\\System32\\cmd.exe /C " + arg;
+    if (!remoteShowOutput) {
+      cmd += " >nul 2>nul";
+    }
+    auto wcmd = base::UTF8ToNative(cmd);
+    STARTUPINFO                           si_ = {0};
+    PROCESS_INFORMATION                   process_info_ = {0};
+    if (CreateProcess(NULL, (wchar_t*)wcmd.c_str(),
+      NULL, NULL, false, 0, NULL, NULL, &si_, &process_info_)) {
+        return cmd;
+    } else {
+      return "";
+    }
   }
 
   process = new process::Process(this);
@@ -35,7 +59,10 @@ std::string CommandExecutor::execute(const ExecuteCommandRequest& command, int64
   option.image_path_ = imagePath;
   option.argument_list_r_.push_back(base::UTF8ToNative("/C"));
   option.argument_list_r_.push_back(base::UTF8ToNative(arg));
-  option.redirect_std_inout_ = true;
+  if (!remoteShowOutput && !localShowOutput) {
+    option.argument_list_r_.push_back(base::UTF8ToNative(">nul 2>nul"));
+  }
+  option.redirect_std_inout_ = remoteShowOutput || localShowOutput;
 
 
   if (!process->Start()) {
@@ -68,18 +95,23 @@ void CommandExecutor::OnStop(process::Process* p, process::ProcessContext* conte
 
 void CommandExecutor::sendBufferedOutput() {
   if (!bufferedOutput.empty()) {
-    ExecuteCommandOutputRequest* ecoRequest = new ExecuteCommandOutputRequest();
-    ecoRequest->set_original_request_id(originalRequestId);
-    ecoRequest->set_is_exit(0);
-    ecoRequest->set_is_error_output(!isStdout);
-    ecoRequest->set_output(bufferedOutput);
+    if (remoteShowOutput) {
+      printf(bufferedOutput.c_str());
+    }
+    if (localShowOutput) {
+      ExecuteCommandOutputRequest* ecoRequest = new ExecuteCommandOutputRequest();
+      ecoRequest->set_original_request_id(originalRequestId);
+      ecoRequest->set_is_exit(0);
+      ecoRequest->set_is_error_output(!isStdout);
+      ecoRequest->set_output(bufferedOutput);
 
-    Request req;
-    req.set_name("");
-    req.set_session_id(sessionId);
-    req.set_allocated_execute_output(ecoRequest);
+      Request req;
+      req.set_name("");
+      req.set_session_id(sessionId);
+      req.set_allocated_execute_output(ecoRequest);
 
-    msgSender->sendRequest(req, 0);
+      msgSender->sendRequest(req, 0);
+    }
     std::string().swap(bufferedOutput);
     lastSendTime = base::Time::Now().ToInternalValue();
   }

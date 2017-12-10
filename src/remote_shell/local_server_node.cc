@@ -15,6 +15,9 @@ LocalServerNode::LocalServerNode(
     shoudExit(false),
     showCommandOutput(true),
     showCommandErrorOutput(true),
+    waitForCommand(true),
+    remoteShowOutput(false),
+    localShowOutput(true),
     weakptr_factory_(this)
   {
 
@@ -48,7 +51,7 @@ void LocalServerNode::connectToTarget(const std::string& target) {
   targetAddress = base::AddressHelper::MakeZMQTCPAddress(target, kRSListenerPort);
   CreateSessionRequest* csRequest = new CreateSessionRequest();
   csRequest->set_address(zserver->GetServerAddress());
-  
+
   Request req;
   req.set_name("CreateSession");
   req.set_allocated_create_session(csRequest);
@@ -77,7 +80,7 @@ bool LocalServerNode::executeCommandRemotely(const std::string& line) {
   for (int now = 0; now < n;) {
     while (now < n && line[now] == ' ') ++now;
     if (now == n) break;
-    
+
     if (line[now] == '"') {
       std::string token;
       ++now;
@@ -103,7 +106,7 @@ bool LocalServerNode::executeCommandRemotely(const std::string& line) {
       cmds.push_back(token);
     }
   }
-  if (cmds.empty()) {
+  if (cmds.empty() || cmds.size() == 1 && (cmds[0] == "i" || cmds[0] == "l")) {
     printf("Command is empty!\n");
     return false;
   }
@@ -111,16 +114,22 @@ bool LocalServerNode::executeCommandRemotely(const std::string& line) {
   if (handleInternalCommand(line, cmds)) {
     return true;
   }
-  
+
   std::string myAddress = base::AddressHelper::MakeZMQTCPAddress(myIP, port);
 
   ExecuteCommandRequest* ecRequest = new ExecuteCommandRequest();
   ecRequest->set_address(myAddress);
-  
+
+  const int size = cmds.size();
   ecRequest->set_cmd(cmds[0]);
-  cmds.erase(cmds.begin());
-  for (auto& a: cmds) ecRequest->add_args(a);
   
+  for (int i = 1; i < size; ++i) {
+    ecRequest->add_args(cmds[i]);
+  }
+  ecRequest->set_wait_for_command(waitForCommand);
+  ecRequest->set_remote_show_output(remoteShowOutput);
+  ecRequest->set_local_show_output(localShowOutput);
+
   Request req;
   req.set_name("ExecuteCommand");
   req.set_session_id(sessionId);
@@ -150,13 +159,31 @@ bool LocalServerNode::handleInternalCommand(const std::string& line, const std::
     system(&line[now]);
     willNotifyCommandExecuteStatusImpl(ServerStatus::SUCCEED);
     return true;
+  } if (cmds[0] == "option") {
+    for (int i = 1; i < size; ++i) {
+      if (cmds[i] == "wait_for_command") {
+        waitForCommand = true;
+      } else if (cmds[i] == "no_wait_for_command") {
+        waitForCommand = false;
+      } else if (cmds[i] == "remote_show_output") {
+        remoteShowOutput = true;
+      } else if (cmds[i] == "no_remote_show_output") {
+        remoteShowOutput = false;
+      } else if (cmds[i] == "local_show_output") {
+        localShowOutput = true;
+      } else if (cmds[i] == "no_local_show_output") {
+        localShowOutput = false;
+      }
+    }
+    willNotifyCommandExecuteStatusImpl(ServerStatus::SUCCEED);
+    return true;
   } else if (cmds[0] == "fs" || cmds[0] == "fst") {
     if (size == 1) {
       printf("No file specified!\n");
       willNotifyCommandExecuteStatusImpl(ServerStatus::FAILED);
       return true;
     }
-    
+
     if (cmds[0] == "fst") {
       if (size % 2 == 0) {
         printf("Wrong number of arguments.\n");
@@ -314,7 +341,7 @@ void LocalServerNode::handleRequest(const Request& req, Response& reply) {
       // TODO(baihacker): escape %s.
       if (detail.is_error_output() && showCommandErrorOutput) {
         fprintf(stderr, detail.output().c_str());
-      } 
+      }
       if (!detail.is_error_output() && showCommandOutput) {
         printf(detail.output().c_str());
       }
@@ -355,5 +382,8 @@ void LocalServerNode::handleExecuteCommandResponse(int32_t zmqError, const Respo
     return;
   }
   printf("Remote command: %s\n", reply.execute_command().command().c_str());
+  if (!waitForCommand) {
+    willNotifyCommandExecuteStatusImpl(ServerStatus::SUCCEED);
+  }
 }
 }
