@@ -36,6 +36,13 @@ deploys {
 
 Command reference
 =================
+## Command option
+* option \<option1\> \<option2\> ...
+  * wait_for_command: for each command wait for the remote process to stop.
+  * remote_show_output: whether to show the output on remote process.
+  * local_show_output: whether to show the output on local shell. if wait_for_command is not set, local_show_output will not take effect.
+  * no_wait_for_command, no_remote_show_output, no_local_show_output: the corresponding opposite options.
+
 ## DOS commands
 All dos command is supported, please enter it directly.
 
