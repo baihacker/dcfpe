@@ -39,13 +39,13 @@ const Variants& VariantsBuilderImpl::getVariants() const
   return variants;
 }
 
-VariantsBuilder* VariantsBuilderImpl::appendInt64Value(int64 value)
+VariantsBuilderImpl* VariantsBuilderImpl::appendInt64Value(int64 value)
 {
   variants.add_element()->set_value_int64(value);
   return this;
 }
 
-VariantsBuilder* VariantsBuilderImpl::appendStringValue(const char* str)
+VariantsBuilderImpl* VariantsBuilderImpl::appendStringValue(const char* str)
 {
   variants.add_element()->set_value_string(str);
   return this;

@@ -12,6 +12,7 @@
 #include "dpe/dpe_worker_node.h"
 #include "dpe/cache.h"
 #include "dpe/http_server.h"
+#include "dpe/variants.h"
 
 namespace dpe
 {
@@ -102,7 +103,7 @@ void willExitDpe()
     base::Bind(exitDpeImpl));
 }
 
-CacheReader* newCacheReader(const char* path)
+void* newCacheReader(const char* path)
 {
   std::string data;
   base::FilePath filePath(base::UTF8ToNative(path));
@@ -117,7 +118,7 @@ CacheReader* newCacheReader(const char* path)
   return dpe::CacheReaderImpl::fromLines(lines);
 }
 
-CacheWriter* newCacheWriter(const char* path, bool reset)
+void* newCacheWriter(const char* path, bool reset)
 {
   auto result = new dpe::CacheWriterImpl(base::FilePath(base::UTF8ToNative(path)), reset);
   if (!result->ready())
@@ -128,7 +129,7 @@ CacheWriter* newCacheWriter(const char* path, bool reset)
   return result;
 }
 
-CacheReader* newDefaultCacheReader()
+void* newDefaultCacheReader()
 {
   if (cacheFilePath.empty())
   {
@@ -137,7 +138,7 @@ CacheReader* newDefaultCacheReader()
   return newCacheReader(cacheFilePath.c_str());
 }
 
-CacheWriter* newDefaultCacheWriter()
+void* newDefaultCacheWriter()
 {
   return newCacheWriter(cacheFilePath.c_str(), resetCache);
 }
@@ -341,7 +342,85 @@ void runDpe(Solver* solver, int argc, char* argv[])
 
   stopNetwork();
 }
+
+static int getVariantsSize(void* opaque) {
+  return ((VariantsReaderImpl*)opaque)->size();
 }
+
+static int64 getInt64Value(void* opaque, int idx) {
+  return ((VariantsReaderImpl*)opaque)->int64Value(idx);
+}
+const char* getStringValue(void* opaque, int idx) {
+  return ((VariantsReaderImpl*)opaque)->stringValue(idx);
+}
+
+static void appendInt64Value(void* opaque, int64 value) {
+  ((VariantsBuilderImpl*)opaque)->appendInt64Value(value);
+}
+
+static void appendStringValue(void* opaque, const char* str) {
+  ((VariantsBuilderImpl*)opaque)->appendStringValue(str);
+}
+
+static void crAddRef(void* opaque) {
+  ((CacheReaderImpl*)opaque)->addRef();
+}
+static void crRelease(void* opaque) {
+  ((CacheReaderImpl*)opaque)->release();
+}
+static void* crGet(void* opaque, int64 taskId) {
+  return ((CacheReaderImpl*)opaque)->get(taskId);
+}
+static int64 getInt64(void* opaque, int64 taskId) {
+  return ((CacheReaderImpl*)opaque)->getInt64(taskId);
+}
+static const char* getString(void* opaque, int64 taskId) {
+  return ((CacheReaderImpl*)opaque)->getString(taskId);
+}
+
+static void cwAddRef(void* opaque) {
+  ((CacheWriterImpl*)opaque)->addRef();
+}
+static void cwRelease(void* opaque) {
+  ((CacheWriterImpl*)opaque)->release();
+}
+static void cwAppend(void* opaque, int64 taskId, VariantsBuilder* result) {
+  ((CacheWriterImpl*)opaque)->append(taskId, (VariantsBuilderImpl*)result->opaque);
+}
+static void cwAppendInt64(void* opaque, int64 taskId, int64 value) {
+  ((CacheWriterImpl*)opaque)->append(taskId, value);
+}
+static void cwAppendString(void* opaque, int64 taskId, const char* value) {
+  ((CacheWriterImpl*)opaque)->append(taskId, value);
+}
+}
+
+static VariantsReaderStub __vr_stub = {
+  &dpe::getVariantsSize,
+  &dpe::getInt64Value,
+  &dpe::getStringValue,
+};
+
+static VariantsBuilderStub __vb_stub = {
+  &dpe::appendInt64Value,
+  &dpe::appendStringValue,
+};
+
+static CacheReaderStub __cr_stub = {
+  &dpe::crAddRef,
+  &dpe::crRelease,
+  &dpe::crGet,
+  &dpe::getInt64,
+  &dpe::getString,
+};
+
+static CacheWriterStub __cw_stub = {
+  &dpe::cwAddRef,
+  &dpe::cwRelease,
+  &dpe::cwAppend,
+  &dpe::cwAppendInt64,
+  &dpe::cwAppendString,
+};
 
 static DpeStub __stub_impl =
 {
@@ -349,6 +428,10 @@ static DpeStub __stub_impl =
   &dpe::newCacheWriter,
   &dpe::newDefaultCacheReader,
   &dpe::newDefaultCacheWriter,
+  &__vr_stub,
+  &__vb_stub,
+  &__cr_stub,
+  &__cw_stub,
   &dpe::runDpe
 };
 

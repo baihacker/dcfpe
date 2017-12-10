@@ -30,44 +30,167 @@
 #include <cstdint>
 typedef std::int64_t int64;
 
+struct VariantsReaderStub {
+  int (*getVariantsSize)(void* opaque);
+  int64 (*getInt64Value)(void* opaque, int idx);
+  const char* (*getStringValue)(void* opaque, int idx);
+};
+
+struct VariantsBuilderStub {
+  void (*appendInt64Value)(void* opaque, int64 value);
+  void (*appendStringValue)(void* opaque, const char* str);
+};
+
+struct CacheReaderStub
+{
+  void (*addRef)(void* opaque);
+  void (*release)(void* opaque);
+  // The VariantsReader* is valid before releasing the CacheReader.
+  void* (*get)(void* opaque, int64 taskId);
+  int64 (*getInt64)(void* opaque, int64 taskId);
+  const char* (*getString)(void* opaque, int64 taskId);
+};
+
+class VariantsBuilder;
+
+struct CacheWriterStub
+{
+  void (*addRef)(void* opaque);
+  void (*release)(void* opaque);
+  void (*append)(void* opaque, int64 taskId, VariantsBuilder* result);
+  void (*appendInt64)(void* opaque, int64 taskId, int64 value);
+  void (*appendString)(void* opaque, int64 taskId, const char* value);
+};
+
+class Solver;
+struct DpeStub
+{
+  void* (*newCacheReader)(const char* path);
+  void* (*newCacheWriter)(const char* path, bool reset);
+  void* (*newDefaultCacheReader)();
+  void* (*newDefaultCacheWriter)();
+  
+  VariantsReaderStub* VariantsReaderStub;
+  VariantsBuilderStub* VariantsBuilderStub;
+  CacheReaderStub* cacheReaderStub;
+  CacheWriterStub* cacheWriterStub;
+  
+  void (*runDpe)(Solver* solver, int argc, char* argv[]);
+};
+
+
+DPE_EXPORT DpeStub* get_stub();
+
 class VariantsReader
 {
 public:
-  virtual ~VariantsReader(){}
-  virtual int size() const = 0;
-  virtual int64 int64Value(int idx) const = 0;
-  virtual const char* stringValue(int idx) const = 0;
+  VariantsReader(void* opaque): opaque(opaque) {
+    stub = get_stub()->VariantsReaderStub;
+  }
+
+  int size() const {
+    return stub->getVariantsSize(opaque);
+  }
+  int64 int64Value(int idx) const {
+    return stub->getInt64Value(opaque, idx);
+  }
+  const char* stringValue(int idx) const {
+    return stub->getStringValue(opaque, idx);
+  }
+private:
+  void* opaque;
+  VariantsReaderStub* stub;
 };
 
 class VariantsBuilder
 {
 public:
-  virtual ~VariantsBuilder(){}
-  virtual VariantsBuilder* appendInt64Value(int64 value) = 0;
-  virtual VariantsBuilder* appendStringValue(const char* str) = 0;
+  VariantsBuilder(void* opaque): opaque(opaque) {
+    stub = get_stub()->VariantsBuilderStub;
+  }
+  VariantsBuilder* appendInt64Value(int64 value) {
+    stub->appendInt64Value(opaque, value);
+    return this;
+  }
+  VariantsBuilder* appendStringValue(const char* str) {
+    stub->appendStringValue(opaque, str);
+    return this;
+  }
+  void* opaque;
+  VariantsBuilderStub* stub;
 };
 
 class CacheReader
 {
 public:
-  virtual ~CacheReader(){}
-  virtual void addRef() = 0;
-  virtual void release() = 0;
-  // The VariantsReader* is valid before releasing the CacheReader.
-  virtual VariantsReader* get(int64 taskId) = 0;
-  virtual int64 getInt64(int64 taskId) = 0;
-  virtual const char* getString(int64 taskId) = 0;
+  CacheReader(void* opaque): opaque(opaque) {
+    stub = get_stub()->cacheReaderStub;
+  }
+  ~CacheReader() {
+  }
+  
+  void addRef() {
+    stub->addRef(opaque);
+  }
+  void release() {
+    stub->release(opaque);
+  }
+  VariantsReader get(int64 taskId) {
+    void* vr = stub->get(opaque, taskId);
+    return VariantsReader(vr);
+  }
+  int64 getInt64(int64 taskId) {
+    return stub->getInt64(opaque, taskId);
+  }
+  const char* getString(int64 taskId) {
+    return stub->getString(opaque, taskId);
+  }
+  static CacheReader newCacheReader(const char* path) {
+    return CacheReader(get_stub()->newCacheReader(path));
+  }
+  static CacheReader newDefaultCacheReader() {
+    return CacheReader(get_stub()->newDefaultCacheReader());
+  }
+  
+  void* opaque;
+  CacheReaderStub* stub;
 };
 
 class CacheWriter
 {
 public:
-  virtual ~CacheWriter(){}
-  virtual void addRef() = 0;
-  virtual void release() = 0;
-  virtual void append(int64 taskId, VariantsBuilder* result) = 0;
-  virtual void append(int64 taskId, int64 value) = 0;
-  virtual void append(int64 taskId, const char* value) = 0;
+  CacheWriter(void* opaque): opaque(opaque) {
+    stub = get_stub()->cacheWriterStub;
+    addRef();
+  }
+  ~CacheWriter() {
+    release();
+  }
+
+  void addRef() {
+    stub->addRef(opaque);
+  }
+  void release() {
+    stub->release(opaque);
+  }
+  void append(int64 taskId, VariantsBuilder* result) {
+    stub->append(opaque, taskId, result);
+  }
+  void append(int64 taskId, int64 value) {
+    stub->appendInt64(opaque, taskId, value);
+  }
+  void append(int64 taskId, const char* value) {
+    stub->appendString(opaque, taskId, value);
+  }
+  static CacheWriter newCacheWriter(const char* path, bool reset) {
+    return CacheWriter(get_stub()->newCacheWriter(path, reset));
+  }
+  static CacheWriter newDefaultCacheWriter() {
+    return CacheWriter(get_stub()->newDefaultCacheWriter());
+  }
+private:
+  void* opaque;
+  CacheWriterStub* stub;
 };
 
 class TaskAppender
@@ -78,7 +201,6 @@ public:
 
 #define RUN_ON_MASTER_NODE
 #define RUN_ON_WORKER_NODE
-
 class Solver
 {
 public:
@@ -97,16 +219,5 @@ public:
   #pragma RUN_ON_MASTER_NODE
   virtual void finish() = 0;
 };
-
-struct DpeStub
-{
-  CacheReader* (*newCacheReader)(const char* path);
-  CacheWriter* (*newCacheWriter)(const char* path, bool reset);
-  CacheReader* (*newDefaultCacheReader)();
-  CacheWriter* (*newDefaultCacheWriter)();
-  void (*runDpe)(Solver* solver, int argc, char* argv[]);
-};
-
-DPE_EXPORT DpeStub* get_stub();
 
 #endif

@@ -6,18 +6,19 @@
 #include "dpe/dpe.h"
 #include "dpe_base/dpe_base.h"
 #include "dpe/proto/dpe.pb.h"
+#include "dpe/variants.h"
 
 namespace dpe
 {
-class CacheReaderImpl : public CacheReader
+class CacheReaderImpl
 {
 public:
-  CacheReaderImpl(const std::unordered_map<int64, VariantsReader*>& data);
-  CacheReaderImpl(std::unordered_map<int64, VariantsReader*>&& data);
+  CacheReaderImpl(const std::unordered_map<int64, VariantsReaderImpl*>& data);
+  CacheReaderImpl(std::unordered_map<int64, VariantsReaderImpl*>&& data);
   ~CacheReaderImpl();
   void addRef();
   void release();
-  VariantsReader* get(int64 taskId);
+  VariantsReaderImpl* get(int64 taskId);
   int64 getInt64(int64 taskId);
   const char* getString(int64 taskId);
 
@@ -26,10 +27,10 @@ private:
   void clearMap();
 private:
   int refCount;
-  std::unordered_map<int64, VariantsReader*> data;
+  std::unordered_map<int64, VariantsReaderImpl*> data;
 };
 
-class CacheWriterImpl : public CacheWriter
+class CacheWriterImpl
 {
 public:
   CacheWriterImpl(const base::FilePath& path, bool reset);
@@ -40,7 +41,7 @@ public:
   }
   void addRef();
   void release();
-  void append(int64 taskId, VariantsBuilder* result);
+  void append(int64 taskId, VariantsBuilderImpl* result);
   void append(int64 taskId, int64 value);
   void append(int64 taskId, const char* value);
 private:

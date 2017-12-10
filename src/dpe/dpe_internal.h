@@ -8,10 +8,10 @@ namespace dpe
 Solver* getSolver();
 void willExitDpe();
 
-CacheReader* newCacheReader(const char* path);
-CacheWriter* newCacheWriter(const char* path, bool reset);
-CacheReader* newDefaultCacheReader();
-CacheWriter* newDefaultCacheWriter();
+void* newCacheReader(const char* path);
+void* newCacheWriter(const char* path, bool reset);
+void* newDefaultCacheReader();
+void* newDefaultCacheWriter();
 void runDpe(Solver* solver, int argc, char* argv[]);
 }
 

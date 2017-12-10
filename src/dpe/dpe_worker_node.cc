@@ -35,8 +35,9 @@ void WorkerTaskExecuter::handleCompute(int taskId)
 void WorkerTaskExecuter::doCompute(base::WeakPtr<WorkerTaskExecuter> self, int taskId)
 {
   VariantsBuilderImpl vbi;
+  VariantsBuilder vb(&vbi);
   auto t0 = base::Time::Now().ToInternalValue();
-  getSolver()->compute(taskId, &vbi);
+  getSolver()->compute(taskId, &vb);
   auto t1 = base::Time::Now().ToInternalValue();
 
   base::ThreadPool::PostTask(base::ThreadPool::UI,

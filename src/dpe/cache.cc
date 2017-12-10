@@ -5,11 +5,11 @@
 
 namespace dpe
 {
-CacheReaderImpl::CacheReaderImpl(const std::unordered_map<int64, VariantsReader*>& data) : refCount(0), data(data)
+CacheReaderImpl::CacheReaderImpl(const std::unordered_map<int64, VariantsReaderImpl*>& data) : refCount(0), data(data)
 {
 }
 
-CacheReaderImpl::CacheReaderImpl(std::unordered_map<int64, VariantsReader*>&& odata) : refCount(0)
+CacheReaderImpl::CacheReaderImpl(std::unordered_map<int64, VariantsReaderImpl*>&& odata) : refCount(0)
 {
   data.swap(odata);
 }
@@ -32,7 +32,7 @@ void CacheReaderImpl::release()
   }
 }
 
-VariantsReader* CacheReaderImpl::get(int64 taskId)
+VariantsReaderImpl* CacheReaderImpl::get(int64 taskId)
 {
   auto where = data.find(taskId);
   if (where != data.end())
@@ -68,12 +68,12 @@ void CacheReaderImpl::clearMap()
   {
     delete iter.second;
   }
-  std::unordered_map<int64, VariantsReader*>().swap(data);
+  std::unordered_map<int64, VariantsReaderImpl*>().swap(data);
 }
 
 CacheReaderImpl* CacheReaderImpl::fromLines(std::vector<std::string>& lines)
 {
-  std::unordered_map<int64, VariantsReader*> result;
+  std::unordered_map<int64, VariantsReaderImpl*> result;
   for (const auto& iter: lines)
   {
     const int n = static_cast<int>(iter.size());
@@ -122,7 +122,7 @@ void CacheWriterImpl::release()
   }
 }
 
-void CacheWriterImpl::append(int64 taskId, VariantsBuilder* result)
+void CacheWriterImpl::append(int64 taskId, VariantsBuilderImpl* result)
 {
   auto impl = static_cast<VariantsBuilderImpl*>(result);
   append(taskId, impl->getVariants());

@@ -171,7 +171,8 @@ void SimpleMasterTaskScheduler::handleFinishCompute(int64 taskId, bool ok, const
     if (ctx.status == NodeContext::COMPUTING_TASK && ctx.taskId == taskId)
     {
       VariantsReaderImpl vri(result);
-      getSolver()->setResult(taskId, &vri, timeUsage);
+      VariantsReader vr(&vri);
+      getSolver()->setResult(taskId, &vr, timeUsage);
       ctx.status = NodeContext::READY;
       ctx.taskId = -1;
 

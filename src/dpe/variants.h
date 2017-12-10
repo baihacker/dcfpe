@@ -6,7 +6,7 @@
 
 namespace dpe
 {
-class VariantsReaderImpl : public VariantsReader {
+class VariantsReaderImpl {
 public:
   VariantsReaderImpl(const Variants& variants);
   ~VariantsReaderImpl();
@@ -18,13 +18,13 @@ private:
   Variants variants;
 };
 
-class VariantsBuilderImpl : public VariantsBuilder {
+class VariantsBuilderImpl {
 public:
   VariantsBuilderImpl();
   ~VariantsBuilderImpl();
   const Variants& getVariants() const;
-  VariantsBuilder* appendInt64Value(int64 value);
-  VariantsBuilder* appendStringValue(const char* str);
+  VariantsBuilderImpl* appendInt64Value(int64 value);
+  VariantsBuilderImpl* appendStringValue(const char* str);
 private:
   Variants variants;
 };
