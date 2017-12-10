@@ -13,11 +13,11 @@ LocalServerNode::LocalServerNode(
     runningRequestId(-1),
     sessionId(-1),
     shoudExit(false),
-    showCommandOutput(true),
-    showCommandErrorOutput(true),
     waitForCommand(true),
     remoteShowOutput(false),
     localShowOutput(true),
+    showCommandOutput(true),
+    showCommandErrorOutput(true),
     weakptr_factory_(this)
   {
 
