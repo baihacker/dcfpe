@@ -323,6 +323,7 @@ bool LocalServerNode::handleInternalCommand(const std::string& line, const std::
     msgSender->sendRequest(req, [=](int32_t zmqError, const Response& reply){
       this->handleFileOperationResponse(zmqError, req, reply);
     }, 0);
+    return true;
   }
   return false;
 }
