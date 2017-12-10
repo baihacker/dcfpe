@@ -33,6 +33,7 @@ deploys {
   deploy: "test_deploy\\orz.exe
 }
 ```
+* A real [deploy example](https://github.com/baihacker/dcfpe/blob/master/src/remote_shell/deploy_demo.txt).
 
 Command reference
 =================
