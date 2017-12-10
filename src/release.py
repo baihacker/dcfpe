@@ -4,7 +4,7 @@ import shutil
 
 if __name__ == '__main__':
   ENV_SOLUTION_DIRECTORY = os.path.dirname(os.path.realpath(__file__))
-  output = os.path.join(ENV_SOLUTION_DIRECTORY, 'Release')
+  output = os.path.join(ENV_SOLUTION_DIRECTORY, 'dcfpe')
   if os.path.isdir(output):
     os.system('rmdir /S /Q %s'%output)
   os.makedirs(output)
