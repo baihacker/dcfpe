@@ -47,7 +47,9 @@ private:
   
   bool waitForCommand;
   bool remoteShowOutput;
+  bool remoteShowError;
   bool localShowOutput;
+  bool localShowError;
 
   base::WeakPtrFactory<CommandExecutor>                 weakptr_factory_;
 };

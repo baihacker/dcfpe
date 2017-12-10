@@ -15,9 +15,9 @@ LocalServerNode::LocalServerNode(
     shoudExit(false),
     waitForCommand(true),
     remoteShowOutput(false),
+    remoteShowError(false),
     localShowOutput(true),
-    showCommandOutput(true),
-    showCommandErrorOutput(true),
+    localShowError(true),
     weakptr_factory_(this)
   {
 
@@ -128,7 +128,9 @@ bool LocalServerNode::executeCommandRemotely(const std::string& line) {
   }
   ecRequest->set_wait_for_command(waitForCommand);
   ecRequest->set_remote_show_output(remoteShowOutput);
+  ecRequest->set_remote_show_error(remoteShowError);
   ecRequest->set_local_show_output(localShowOutput);
+  ecRequest->set_local_show_error(localShowError);
 
   Request req;
   req.set_name("ExecuteCommand");
@@ -169,10 +171,18 @@ bool LocalServerNode::handleInternalCommand(const std::string& line, const std::
         remoteShowOutput = true;
       } else if (cmds[i] == "no_remote_show_output") {
         remoteShowOutput = false;
+      } else if (cmds[i] == "remote_show_error") {
+        remoteShowError = true;
+      } else if (cmds[i] == "no_remote_show_error") {
+        remoteShowError = false;
       } else if (cmds[i] == "local_show_output") {
         localShowOutput = true;
       } else if (cmds[i] == "no_local_show_output") {
         localShowOutput = false;
+      } else if (cmds[i] == "local_show_error") {
+        localShowError = true;
+      } else if (cmds[i] == "no_local_show_error") {
+        localShowError = false;
       } else {
         printf("Unknown option %s", cmds[i].c_str());
       }
@@ -340,10 +350,10 @@ void LocalServerNode::handleRequest(const Request& req, Response& reply) {
       printf("Exit code: %d\n", detail.exit_code());
       willNotifyCommandExecuteStatusImpl(ServerStatus::SUCCEED);
     } else {
-      if (detail.is_error_output() && showCommandErrorOutput) {
+      if (detail.is_error_output() && localShowError) {
         fprintf(stderr, "%s", detail.output().c_str());
       }
-      if (!detail.is_error_output() && showCommandOutput) {
+      if (!detail.is_error_output() && localShowOutput) {
         printf("%s", detail.output().c_str());
       }
     }

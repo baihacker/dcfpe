@@ -27,7 +27,9 @@ std::string CommandExecutor::execute(const ExecuteCommandRequest& command, int64
   
   waitForCommand = command.wait_for_command();
   remoteShowOutput = command.remote_show_output();
+  remoteShowError = command.remote_show_error();
   localShowOutput = command.local_show_output();
+  localShowError = command.local_show_error();
   
   msgSender = new MessageSender(command.address());
 
@@ -40,7 +42,10 @@ std::string CommandExecutor::execute(const ExecuteCommandRequest& command, int64
   if (!waitForCommand) {
     std::string cmd = "C:\\Windows\\System32\\cmd.exe /C " + arg;
     if (!remoteShowOutput) {
-      cmd += " >nul 2>nul";
+      cmd += " 1>nul";
+    }
+    if (!remoteShowError) {
+      cmd += " 2>nul";
     }
     auto wcmd = base::UTF8ToNative(cmd);
     STARTUPINFO                           si_ = {0};
@@ -60,7 +65,10 @@ std::string CommandExecutor::execute(const ExecuteCommandRequest& command, int64
   option.argument_list_r_.push_back(base::UTF8ToNative("/C"));
   option.argument_list_r_.push_back(base::UTF8ToNative(arg));
   if (!remoteShowOutput && !localShowOutput) {
-    option.argument_list_r_.push_back(base::UTF8ToNative(">nul 2>nul"));
+    option.argument_list_r_.push_back(base::UTF8ToNative("1>nul"));
+  }
+  if (!remoteShowError && !localShowError) {
+    option.argument_list_r_.push_back(base::UTF8ToNative("2>nul"));
   }
   option.redirect_std_inout_ = remoteShowOutput || localShowOutput;
 
@@ -95,10 +103,13 @@ void CommandExecutor::OnStop(process::Process* p, process::ProcessContext* conte
 
 void CommandExecutor::sendBufferedOutput() {
   if (!bufferedOutput.empty()) {
-    if (remoteShowOutput) {
+    if (remoteShowOutput && isStdout) {
       printf("%s", bufferedOutput.c_str());
     }
-    if (localShowOutput) {
+    if (remoteShowError && !isStdout) {
+      fprintf(stderr, "%s", bufferedOutput.c_str());
+    }
+    if (localShowOutput && isStdout || localShowError && !isStdout) {
       ExecuteCommandOutputRequest* ecoRequest = new ExecuteCommandOutputRequest();
       ecoRequest->set_original_request_id(originalRequestId);
       ecoRequest->set_is_exit(0);

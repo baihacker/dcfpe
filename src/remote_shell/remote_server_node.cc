@@ -118,7 +118,10 @@ void RemoteServerNode::handleRequest(const Request& req, Response& reply)
     ExecuteCommandResponse* response = new ExecuteCommandResponse();
     response->set_wait_for_command(executeCommandRequest.wait_for_command());
     response->set_remote_show_output(executeCommandRequest.remote_show_output());
+    response->set_remote_show_error(executeCommandRequest.remote_show_error());
     response->set_local_show_output(executeCommandRequest.local_show_output());
+    response->set_local_show_error(executeCommandRequest.local_show_error());
+
     reply.set_srv_uid(srvUid);
     reply.set_allocated_execute_command(response);
     reply.set_error_code(0);

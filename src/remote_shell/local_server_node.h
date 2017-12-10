@@ -48,15 +48,6 @@ public:
 
   std::string target() const {return targetAddress;}
   bool canExitNow() const {return shoudExit;}
-
-  LocalServerNode& setShowCommandOutput(bool show) {
-    showCommandOutput = show;
-    return *this;
-  }
-  LocalServerNode& setShowCommandErrorOutput(bool show) {
-    showCommandErrorOutput = show;
-    return *this;
-  }
 private:
   scoped_refptr<MessageSender> msgSender;
   LocalServerHost* host;
@@ -70,19 +61,15 @@ private:
   // Whether to wait for a command to finish.
   bool waitForCommand;
   
-  // Whether to show output on remote node.
+  // Whether to show output/error on remote node.
   bool remoteShowOutput;
+  bool remoteShowError;
   
   // Whether to show output on local node.
   // if waitForCommand is true, this field cannot take effect
   // for true value.
   bool localShowOutput;
-
-  // If waitForCommand and localShowOutput are true,
-  // the following two fields are used to specify whether
-  // to display on local node.
-  bool showCommandOutput;
-  bool showCommandErrorOutput;
+  bool localShowError;
 
   base::WeakPtrFactory<LocalServerNode>                 weakptr_factory_;
 };

@@ -18,7 +18,9 @@ message ExecuteCommandRequest {
   repeated string args = 3;
   optional int32 wait_for_command = 4 [default = 1];
   optional int32 remote_show_output = 5 [default = 0];
-  optional int32 local_show_output = 6 [default = 1];
+  optional int32 remote_show_error = 6 [default = 0];
+  optional int32 local_show_output = 7 [default = 1];
+  optional int32 local_show_error = 8 [default = 1];
 }
 
 message ExecuteCommandResponse {
@@ -26,7 +28,9 @@ message ExecuteCommandResponse {
   optional string command = 2;
   optional int32 wait_for_command = 4 [default = 1];
   optional int32 remote_show_output = 5 [default = 0];
-  optional int32 local_show_output = 6 [default = 1];
+  optional int32 remote_show_error = 6 [default = 0];
+  optional int32 local_show_output = 7 [default = 1];
+  optional int32 local_show_error = 8 [default = 1];
 }
 
 message ExecuteCommandOutputRequest {

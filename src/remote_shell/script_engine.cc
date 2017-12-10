@@ -229,8 +229,6 @@ void ScriptEngine::executeNextOperationImpl() {
     }
     shell = new BatchExecuteShell(this);
     shell->setShowPrompt(true);
-    shell->setShowCommandOutput(false);
-    shell->setShowCommandErrorOutput(false);
     printf("Running on target: %s\n", scriptOperations[runningOperationIdx].target.c_str());
     shell->start(scriptOperations[runningOperationIdx].target, scriptOperations[runningOperationIdx].commands);
   }
