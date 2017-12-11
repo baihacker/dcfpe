@@ -19,7 +19,7 @@ struct BatchOperation {
 
 struct ScriptCompiler {
   virtual ~ScriptCompiler() {}
-  virtual bool accept(const std::string& data) = 0;
+  virtual bool accept(const base::FilePath& absFilePath, const std::string& data) = 0;
   virtual bool compile(const std::string& action, std::vector<BatchOperation>& result) = 0;
 };
 

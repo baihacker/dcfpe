@@ -12,7 +12,8 @@ struct DeployScriptCompiler : public ScriptCompiler {
 
   ~DeployScriptCompiler(){}
 
-  bool accept(const std::string& data) {
+  bool accept(const base::FilePath& absFilePath, const std::string& data) {
+    this->absFilePath = absFilePath;
     if (google::protobuf::TextFormat::ParseFromString(data, &package)) {
       printf("Found app package.\n");
       return true;
@@ -21,6 +22,9 @@ struct DeployScriptCompiler : public ScriptCompiler {
   }
 
   bool compile(const std::string& action, std::vector<BatchOperation>& result) {
+    // If the resource dir is relative path, use this as base.
+    auto baseDir = absFilePath.DirName();
+    
     std::vector<BatchOperation>().swap(result);
 
     const std::string name = package.name();
@@ -35,15 +39,20 @@ struct DeployScriptCompiler : public ScriptCompiler {
       resourceDir += "/";
     }
 
-    if (!resourceDir.empty() && !base::PathExists(base::FilePath(base::UTF8ToNative(resourceDir)))) {
+    base::FilePath resourcePath = base::FilePath(base::UTF8ToNative(resourceDir));
+    if (!resourcePath.IsAbsolute()) {
+      resourcePath = base::MakeAbsoluteFilePath(baseDir.Append(base::UTF8ToNative(resourceDir)));
+    }
+
+    if (!base::PathExists(resourcePath)) {
       printf("%s doesn't exist!", resourceDir.c_str());
       return false;
     }
 
     for (auto& iter: resource.files()) {
-      const std::string path = resourceDir + iter;
-      if (!base::PathExists(base::FilePath(base::UTF8ToNative(path)))) {
-        printf("%s doesn't exist!", iter.c_str());
+      auto path = base::MakeAbsoluteFilePath(resourcePath.Append(base::UTF8ToNative(iter)));
+      if (!base::PathExists(path)) {
+        printf("%s doesn't exist!", base::NativeToUTF8(path.value()).c_str());
         return false;
       }
     }
@@ -60,7 +69,7 @@ struct DeployScriptCompiler : public ScriptCompiler {
           targetDir += "/";
         }
         for (const auto& iter: resource.files()) {
-          const std::string srcPath = resourceDir + iter;
+          const std::string srcPath = base::NativeToUTF8(base::MakeAbsoluteFilePath(resourcePath.Append(base::UTF8ToNative(iter))).value());
           const std::string destPath = targetDir + iter;
           cmds.push_back("fst " + srcPath + " " + destPath);
         }
@@ -107,6 +116,7 @@ struct DeployScriptCompiler : public ScriptCompiler {
   }
 private:
   rs::DeployPackage package;
+  base::FilePath absFilePath;
 };
 
 ScriptEngine::ScriptEngine(): nextOperationId(0), weakptr_factory_(this) {
@@ -158,22 +168,24 @@ void ScriptEngine::onStop(bool succeed) {
 }
 
 void ScriptEngine::runScript(const std::string& filePath, const std::string& action) {
-  if (!base::PathExists(base::FilePath(base::UTF8ToNative(filePath)))) {
-    printf("%s doesn't exist\n", filePath.c_str());
+  auto absFilePath = base::MakeAbsoluteFilePath(base::FilePath(base::UTF8ToNative(filePath)));
+
+  if (!base::PathExists(absFilePath)) {
+    printf("%s doesn't exist\n", base::NativeToUTF8(absFilePath.value()).c_str());
     willExit(this);
     return;
   }
 
   std::string data;
-  if (!base::ReadFileToString(base::FilePath(base::UTF8ToNative(filePath)), &data)) {
-    printf("Cannot read %s\n", filePath.c_str());
+  if (!base::ReadFileToString(absFilePath, &data)) {
+    printf("Cannot read %s\n", base::NativeToUTF8(absFilePath.value()).c_str());
     willExit(this);
     return;
   }
 
   for (auto* compiler: compilers) {
     std::vector<BatchOperation> result;
-    if (compiler->accept(data)) {
+    if (compiler->accept(absFilePath, data)) {
       if (compiler->compile(action, result)) {
         printf("Script compiled.\n");
         scriptOperations = std::move(result);
