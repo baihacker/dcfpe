@@ -29,19 +29,15 @@ struct DeployScriptCompiler : public ScriptCompiler {
 
     const std::string name = package.name();
     if (name.empty()) {
-      printf("The name is empty!");
+      printf("The package name is empty!");
       return false;
     }
 
     const Resource& resource = package.resource();
-    std::string resourceDir = resource.local_dir();
-    if (!resourceDir.empty() && !EndsWith(resourceDir, "/", false)) {
-      resourceDir += "/";
-    }
 
-    base::FilePath resourcePath = base::FilePath(base::UTF8ToNative(resourceDir));
+    base::FilePath resourcePath = base::FilePath(base::UTF8ToNative(resource.local_dir()));
     if (!resourcePath.IsAbsolute()) {
-      resourcePath = base::MakeAbsoluteFilePath(baseDir.Append(base::UTF8ToNative(resourceDir)));
+      resourcePath = base::MakeAbsoluteFilePath(baseDir.Append(base::UTF8ToNative(resource.local_dir())));
     }
 
     if (!base::PathExists(resourcePath)) {
