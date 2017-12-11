@@ -45,14 +45,14 @@ struct DeployScriptCompiler : public ScriptCompiler {
     }
 
     if (!base::PathExists(resourcePath)) {
-      printf("%s doesn't exist!", resourceDir.c_str());
+      printf("Resource dir %s doesn't exist!\n", base::NativeToUTF8(resourcePath.value()).c_str());
       return false;
     }
 
     for (auto& iter: resource.files()) {
       auto path = base::MakeAbsoluteFilePath(resourcePath.Append(base::UTF8ToNative(iter)));
       if (!base::PathExists(path)) {
-        printf("%s doesn't exist!", base::NativeToUTF8(path.value()).c_str());
+        printf("Resource path %s doesn't exist!\n", base::NativeToUTF8(path.value()).c_str());
         return false;
       }
     }
