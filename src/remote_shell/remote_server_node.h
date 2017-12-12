@@ -2,14 +2,11 @@
 #define REMOTE_SHELL_REMOTE_SERVER_NODE_H_
 
 #include "remote_shell/server_node.h"
-#include "remote_shell/proto/rs.pb.h"
 #include "remote_shell/message_sender.h"
 #include "remote_shell/command_executor.h"
 
-namespace rs
-{
-class RemoteServerNode : public ServerNode, public base::RefCounted<RemoteServerNode>
-{
+namespace rs {
+class RemoteServerNode : public ServerNode, public base::RefCounted<RemoteServerNode> {
 public:
   RemoteServerNode(const std::string& myIP);
   ~RemoteServerNode();
@@ -23,6 +20,7 @@ public:
 
   void handleRequest(const Request& req, Response& reply);
   void handleFileOperation(const FileOperationRequest& req, Response& reply);
+
 private:
   scoped_refptr<MessageSender> msgSender;
   std::string hostAddress;

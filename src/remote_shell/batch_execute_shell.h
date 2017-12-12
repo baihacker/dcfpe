@@ -3,8 +3,7 @@
 
 #include "remote_shell/local_server_node.h"
 
-namespace rs
-{
+namespace rs {
 struct BatchExecuteShellHost {
   virtual ~BatchExecuteShellHost() {}
   virtual void onStop(bool succeed) = 0;

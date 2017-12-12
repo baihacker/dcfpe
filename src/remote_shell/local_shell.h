@@ -3,8 +3,7 @@
 
 #include "remote_shell/local_server_node.h"
 
-namespace rs
-{
+namespace rs {
 class LocalShell : public LocalServerHost, public base::RefCounted<LocalShell> {
 public:
   LocalShell();

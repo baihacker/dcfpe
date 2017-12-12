@@ -2,17 +2,15 @@
 #define REMOTE_SHELL_COMMAND_EXECUTOR_
 
 #include "dpe_base/dpe_base.h"
-#include "remote_shell/proto/rs.pb.h"
-#include "remote_shell/message_sender.h"
 #include "process/process.h"
 
-namespace rs
-{
-class CommandExecutor : public base::RefCounted<CommandExecutor>, public process::ProcessHost
-{
+#include "remote_shell/proto/rs.pb.h"
+#include "remote_shell/message_sender.h"
+
+namespace rs {
+class CommandExecutor : public base::RefCounted<CommandExecutor>, public process::ProcessHost {
 public:
-  enum
-  {
+  enum {
     ZSERVER_IDLE,
     ZSERVER_RUNNING,
   };

@@ -3,10 +3,9 @@
 
 #include "remote_shell/zserver.h"
 #include "remote_shell/proto/rs.pb.h"
-namespace rs
-{
-class ServerNode : public ZServerHandler
-{
+
+namespace rs {
+class ServerNode : public ZServerHandler {
 public:
   ServerNode(const std::string& myIP);
   ~ServerNode();

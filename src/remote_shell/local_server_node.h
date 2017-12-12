@@ -2,7 +2,6 @@
 #define REMOTE_SHELL_LOCAL_SERVER_NODE_H_
 
 #include "remote_shell/server_node.h"
-#include "remote_shell/proto/rs.pb.h"
 #include "remote_shell/message_sender.h"
 
 namespace rs {
@@ -20,8 +19,7 @@ struct LocalServerHost {
   virtual void onCommandStatusChanged(int newStatus) = 0;
 };
 
-class LocalServerNode : public ServerNode, public base::RefCounted<LocalServerNode>
-{
+class LocalServerNode : public ServerNode, public base::RefCounted<LocalServerNode> {
 public:
   LocalServerNode(LocalServerHost* host, const std::string& myIP);
   ~LocalServerNode();
@@ -46,6 +44,7 @@ public:
   std::string target() const {return targetAddress;}
   bool canExitNow() const {return shoudExit;}
   base::WeakPtr<LocalServerNode> getWeakPtr() {return weakptr_factory_.GetWeakPtr();}
+
 private:
   scoped_refptr<MessageSender> msgSender;
   LocalServerHost* host;

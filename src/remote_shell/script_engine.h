@@ -3,8 +3,8 @@
 
 #include "remote_shell/batch_execute_shell.h"
 #include "remote_shell/proto/deploy.pb.h"
-namespace rs
-{
+
+namespace rs {
 enum InternalOperation {
   EXIT = -1,
 };

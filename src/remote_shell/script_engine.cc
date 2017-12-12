@@ -1,12 +1,12 @@
 #include "remote_shell/script_engine.h"
-#include "remote_shell/proto/rs.pb.h"
+
 #include "dpe_base/dpe_base.h"
+
 #include <google/protobuf/text_format.h>
 
 extern std::string get_iface_address();
 
-namespace rs
-{
+namespace rs {
 struct DeployScriptCompiler : public ScriptCompiler {
   DeployScriptCompiler(){}
 

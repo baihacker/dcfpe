@@ -3,8 +3,8 @@
 
 #include "dpe_base/dpe_base.h"
 #include "remote_shell/proto/rs.pb.h"
-namespace rs
-{
+
+namespace rs {
 typedef std::function<void (int32_t zmqError, const Response&)> MessageCallback;
 class ZMQClientContext {
 public:
@@ -14,8 +14,7 @@ public:
   static int nextRequestId;
 };
 
-class MessageSender : public base::RefCounted<MessageSender>
-{
+class MessageSender : public base::RefCounted<MessageSender> {
 public:
   MessageSender(const std::string& address);
   ~MessageSender();

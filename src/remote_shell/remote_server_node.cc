@@ -1,21 +1,15 @@
 #include "remote_shell/remote_server_node.h"
-#include "remote_shell/proto/rs.pb.h"
 
-namespace rs
-{
-
+namespace rs {
 RemoteServerNode::RemoteServerNode(
     const std::string& myIP):
     ServerNode(myIP),
     runningRequestId(-1),
     sessionId(-1),
-    weakptr_factory_(this)
-  {
+    weakptr_factory_(this) {
+}
 
-  }
-
-RemoteServerNode::~RemoteServerNode()
-{
+RemoteServerNode::~RemoteServerNode() {
 }
 
 static void stopImpl(RemoteServerNode* node) {
@@ -73,15 +67,13 @@ void RemoteServerNode::scheduleHeartBeat() {
       base::TimeDelta::FromMilliseconds(10000));
 }
 
-void RemoteServerNode::checkHeartBeat(base::WeakPtr<RemoteServerNode> self)
-{
+void RemoteServerNode::checkHeartBeat(base::WeakPtr<RemoteServerNode> self) {
   if (RemoteServerNode* pThis = self.get()) {
     self->checkHeartBeatImpl();
   }
 }
 
-void RemoteServerNode::checkHeartBeatImpl()
-{
+void RemoteServerNode::checkHeartBeatImpl() {
   SessionHeartBeatRequest* shbRequest = new SessionHeartBeatRequest();
 
   Request req;
@@ -89,7 +81,7 @@ void RemoteServerNode::checkHeartBeatImpl()
   req.set_session_id(sessionId);
   req.set_allocated_session_heart_beat(shbRequest);
 
-  msgSender->sendRequest(req, [=](int32_t zmqError, const Response& reply){
+  msgSender->sendRequest(req, [=](int32_t zmqError, const Response& reply) {
     if (zmqError == 0 && reply.error_code() == 0) {
       this->scheduleHeartBeat();
     } else {
@@ -99,8 +91,7 @@ void RemoteServerNode::checkHeartBeatImpl()
   }, 10*1000);
 }
 
-void RemoteServerNode::handleRequest(const Request& req, Response& reply)
-{
+void RemoteServerNode::handleRequest(const Request& req, Response& reply) {
   reply.set_session_id(sessionId);
   reply.set_error_code(-1);
 

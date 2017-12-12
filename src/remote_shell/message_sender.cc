@@ -1,7 +1,6 @@
 #include "remote_shell/message_sender.h"
 
-namespace rs
-{
+namespace rs {
 int ZMQClientContext::nextRequestId = 0;
 
 MessageSender::MessageSender(const std::string& address): address(address), weakptr_factory_(this) {
@@ -10,12 +9,10 @@ MessageSender::MessageSender(const std::string& address): address(address), weak
 MessageSender::~MessageSender() {
 }
 
-static void NullCallback(int32_t zmqError, const Response& rep)
-{
+static void NullCallback(int32_t zmqError, const Response& rep) {
 }
 
-int MessageSender::sendRequest(Request& req, int timeout)
-{
+int MessageSender::sendRequest(Request& req, int timeout) {
   return sendRequest(req, NullCallback, timeout);
 }
 
@@ -39,10 +36,8 @@ int MessageSender::sendRequest(Request& req, MessageCallback callback, int timeo
 
 void  MessageSender::handleResponse(base::WeakPtr<MessageSender> self,
             MessageCallback callback,
-            scoped_refptr<base::ZMQResponse> rep)
-{
-  if (auto* sender = self.get())
-  {
+            scoped_refptr<base::ZMQResponse> rep) {
+  if (auto* sender = self.get()) {
     Response body;
     body.ParseFromString(rep->data_);
     callback(rep->error_code_, body);

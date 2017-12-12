@@ -4,8 +4,7 @@
 
 extern std::string get_iface_address();
 
-namespace rs
-{
+namespace rs {
 LocalShell::LocalShell(): weakptr_factory_(this) {
 }
 

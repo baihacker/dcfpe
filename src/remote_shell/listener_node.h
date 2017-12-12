@@ -2,13 +2,10 @@
 #define REMOTE_SHELL_LISTENER_NODE_H_
 
 #include "remote_shell/server_node.h"
-#include "remote_shell/proto/rs.pb.h"
 
-namespace rs
-{
+namespace rs {
 static const int kRSListenerPort = 3330;
-class ListenerNode : public ServerNode, public base::RefCounted<ListenerNode>
-{
+class ListenerNode : public ServerNode, public base::RefCounted<ListenerNode> {
 public:
   ListenerNode(const std::string& myIP);
   ~ListenerNode();

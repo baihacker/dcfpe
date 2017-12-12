@@ -1,29 +1,21 @@
 #include "remote_shell/listener_node.h"
-#include "remote_shell/proto/rs.pb.h"
-#include "remote_shell/command_executor.h"
 
-namespace rs
-{
-
+namespace rs {
 ListenerNode::ListenerNode(
     const std::string& myIP):
     ServerNode(myIP),
     nextSessionId(0),
-    weakptr_factory_(this)
-  {
+    weakptr_factory_(this) {
+}
 
-  }
-
-ListenerNode::~ListenerNode()
-{
+ListenerNode::~ListenerNode() {
 }
 
 bool ListenerNode::listen() {
   return ServerNode::start(kRSListenerPort);
 }
 
-void ListenerNode::handleRequest(const Request& req, Response& reply)
-{
+void ListenerNode::handleRequest(const Request& req, Response& reply) {
   reply.set_error_code(-1);
   if (req.has_create_session()) {
     auto sessionId = nextSessionId++;

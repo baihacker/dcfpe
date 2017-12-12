@@ -1,11 +1,10 @@
 #include "remote_shell/batch_execute_shell.h"
-#include "remote_shell/proto/rs.pb.h"
+
 #include "dpe_base/dpe_base.h"
 
 extern std::string get_iface_address();
 
-namespace rs
-{
+namespace rs {
 BatchExecuteShell::BatchExecuteShell(BatchExecuteShellHost* host):
   host(host),
   nextCommandIndex(0),

@@ -1,10 +1,6 @@
 #include "remote_shell/command_executor.h"
 
-#include "dpe_base/dpe_base.h"
-#include "remote_shell/proto/rs.pb.h"
-
-namespace rs
-{
+namespace rs {
 CommandExecutor::CommandExecutor(int64_t sessionId):
   originalRequestId(-1),
   sessionId(sessionId),

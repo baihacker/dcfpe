@@ -3,8 +3,7 @@
 #include "dpe_base/dpe_base.h"
 #include "remote_shell/listener_node.h"
 
-namespace rs
-{
+namespace rs {
 LocalServerNode::LocalServerNode(
     LocalServerHost* host,
     const std::string& myIP):
@@ -18,13 +17,10 @@ LocalServerNode::LocalServerNode(
     remoteShowError(false),
     localShowOutput(true),
     localShowError(true),
-    weakptr_factory_(this)
-  {
+    weakptr_factory_(this) {
+}
 
-  }
-
-LocalServerNode::~LocalServerNode()
-{
+LocalServerNode::~LocalServerNode() {
   if (sessionId != -1 && msgSender != NULL && !executorAddress.empty()) {
     DeleteSessionRequest* dsRequest = new DeleteSessionRequest();
     Request req;

@@ -4,21 +4,17 @@
 #include "dpe_base/dpe_base.h"
 #include "remote_shell/proto/rs.pb.h"
 
-namespace rs
-{
-struct ZServerHandler
-{
+namespace rs {
+struct ZServerHandler {
   virtual void handleRequest(const Request& req, Response& reply) = 0;
   virtual bool preHandleRequest(const Request& req, Response& reply) {
     return false;
   }
 };
 
-class ZServer : public base::RequestHandler, public base::RefCounted<ZServer>
-{
+class ZServer : public base::RequestHandler, public base::RefCounted<ZServer> {
 public:
-  enum
-  {
+  enum {
     ZSERVER_IDLE,
     ZSERVER_RUNNING,
   };
