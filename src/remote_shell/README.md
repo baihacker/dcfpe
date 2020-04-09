@@ -1,10 +1,8 @@
-Remote shell
-============
+# Remote shell
 
 A windows remote shell allows you to run command remotely.
 
-Usage
-=====
+# Usage
 ## Remote computer
 #### Start the listener on remote computer
 * Command: rs --log=0 -b
@@ -35,8 +33,7 @@ deploys {
 ```
 * A real [deploy example](https://github.com/baihacker/dcfpe/blob/master/src/remote_shell/deploy_demo.txt).
 
-Command reference
-=================
+# Command reference
 ## Command option
 * option \<option1\> \<option2\> ...
   * wait_for_command: for each command wait for the remote process to stop.
