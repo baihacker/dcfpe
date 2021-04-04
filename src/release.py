@@ -1,3 +1,4 @@
+#! python2
 import os
 import sys
 import shutil
@@ -64,7 +65,7 @@ if __name__ == '__main__':
   rs_dir = os.path.join(ENV_SOLUTION_DIRECTORY, 'remote_shell')
   shutil.copyfile(os.path.join(rs_dir, 'README.md'),
                   os.path.join(dest_dir, 'README.md'))
-                  
+
   # Release dcfpe
   shutil.copyfile(os.path.join(ENV_SOLUTION_DIRECTORY, '../README.md'),
                   os.path.join(output, 'README.md'))

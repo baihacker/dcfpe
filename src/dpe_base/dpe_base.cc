@@ -37,42 +37,42 @@ int32_t dpe_base_main(void (*logic_main)(),
   }
   LOG(INFO) << "InitializeThreadPool";
   base::ThreadPool::InitializeThreadPool();
-  
+
   LOG(INFO) << "MessageCenter";
   msg_center_impl = new MessageCenter();
   msg_center_impl->Start();
-  
+
   LOG(INFO) << "ZMQServer";
   zmq_server_impl = new ZMQServer();
   zmq_server_impl->Start();
-  
+
   LOG(INFO) << "ZMQClient";
   zmq_client_impl = new ZMQClient();
   zmq_client_impl->Start();
-  
+
   base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
         base::Bind(logic_main));
-  
+
   LOG(INFO) << "RunMainLoop";
   base::ThreadPool::RunMainLoop(dispatcher);
-  
+
   LOG(INFO) << "Stop services";
 
   //LOG(INFO) << "Stop zmq client";
   delete zmq_client_impl;
   zmq_client_impl = NULL;
-  
+
   //LOG(INFO) << "Stop zmq server";
   delete zmq_server_impl;
   zmq_server_impl = NULL;
-  
+
   //LOG(INFO) << "Stop zmq center";
   delete msg_center_impl;
   msg_center_impl = NULL;
-  
+
   LOG(INFO) << "DeinitializeThreadPool";
   base::ThreadPool::DeinitializeThreadPool();
-  
+
   return 0;
 }
 
@@ -166,7 +166,7 @@ static std::string ConvertToString(DWORD dwDiskData[256], int nFirstIndex, int n
   {
     char val = dwDiskData[nIndex] / 256;
     if (val != 0 && val != 32) result.append(1, val);
-    
+
     val = dwDiskData[nIndex] % 256;
     if (val != 0 && val != 32) result.append(1, val);
   }
@@ -198,7 +198,7 @@ static std::string HardDriverIDImpl(int32_t driver_id)
   if(gvopVersionParams.bIDEDeviceMap <= 0)
   {
     ::CloseHandle(hFile);
-    return ""; 
+    return "";
   }
 
   int btIDCmd = 0;
@@ -229,8 +229,8 @@ static std::string HardDriverIDImpl(int32_t driver_id)
   for(int i=0; i < 256; i++) dwDiskData[i] = pIDSector[i];
 
   return ConvertToString(dwDiskData, 10, 19);
-  // 10 19 åºåˆ—å·
-  // 27 46 æ¨¡åž‹å·
+  // 10 19 ÐòÁÐºÅ
+  // 27 46 Ä£ÐÍºÅ
 }
 
 static std::string GetCPUID()
@@ -247,15 +247,15 @@ static std::string GetCPUID()
   {
   case '1':
       __asm{
-          xor eax,eax      //eax=0:å–Vendorä¿¡æ¯
-          cpuid    //å–cpu idæŒ‡ä»¤ï¼Œå¯åœ¨Ring3çº§ä½¿ç”¨
+          xor eax,eax      //eax=0:È¡VendorÐÅÏ¢
+          cpuid    //È¡cpu idÖ¸Áî£¬¿ÉÔÚRing3¼¶Ê¹ÓÃ
           mov dword ptr vendor_id,ebx
           mov dword ptr vendor_id[+4],edx
           mov dword ptr vendor_id[+8],ecx
       }
       VernderID = base::StringPrintf("%s-",vendor_id);
       __asm{
-          mov eax,01h   //eax=1:å–CPUåºåˆ—å·
+          mov eax,01h   //eax=1:È¡CPUÐòÁÐºÅ
           xor edx,edx
           cpuid
           mov s1,edx
@@ -292,7 +292,7 @@ std::string PhysicalAddress()
 {
   static std::string address;
   if (!address.empty()) return address;
-  
+
   std::string cpuid = GetCPUID();
   std::string driver_id;
   for (int i = 1; i <= 8; ++i)
