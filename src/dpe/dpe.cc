@@ -98,14 +98,23 @@ void WillExitDpe() {
 }
 
 static inline void run() {
-  LOG(INFO) << "running";
   LOG(INFO) << "type = " << type;
   LOG(INFO) << "my_ip = " << my_ip;
   LOG(INFO) << "server_ip = " << server_ip;
+  server_port = server_port == 0 ? dpe::kServerPort : server_port;
+  LOG(INFO) << "server_port = " << server_port;
+  LOG(INFO) << "logging_level = " << logging_level;
 
   if (type == "server") {
-    master_node = new DPEMasterNode(
-        my_ip, server_port == 0 ? dpe::kServerPort : server_port);
+    LOG(INFO) << "http_port = " << http_port;
+  }
+  if (type == "worker") {
+    LOG(INFO) << "batch_size = " << batch_size;
+    LOG(INFO) << "thread_number = " << thread_number;
+  }
+
+  if (type == "server") {
+    master_node = new DPEMasterNode(my_ip, server_port);
     http_server.SetHandler(master_node);
     http_server.Start(http_port);
     if (!master_node->Start()) {
@@ -113,8 +122,7 @@ static inline void run() {
       WillExitDpe();
     }
   } else if (type == "worker") {
-    worker_node = new DPEWorkerNode(
-        server_ip, server_port == 0 ? dpe::kServerPort : server_port);
+    worker_node = new DPEWorkerNode(server_ip, server_port);
     if (!worker_node->Start()) {
       LOG(ERROR) << "Failed to start worker node";
       WillExitDpe();
@@ -129,6 +137,7 @@ void RunDpe(Solver* solver, int argc, char* argv[]) {
   std::cout << "DCFPE (version 2.0.0.0)" << std::endl;
   std::cout << "Author: baihacker" << std::endl;
   std::cout << "HomePage: https://github.com/baihacker/dcfpe" << std::endl;
+  std::cout << std::endl;
 
   dpe::solver = solver;
   StartNetwork();

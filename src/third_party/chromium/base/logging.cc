@@ -681,7 +681,9 @@ void LogMessage::Init(const char* file, int line) {
             << std::setw(2) << tm_time->tm_mday
             << '/'
             << std::setw(2) << tm_time->tm_hour
+            << ':'
             << std::setw(2) << tm_time->tm_min
+            << ':'
             << std::setw(2) << tm_time->tm_sec
             << ':';
   }
