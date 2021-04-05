@@ -24,20 +24,14 @@ struct TaskData {
   int64 result;
 };
 
-class SolverImpl : public Solver
-{
-public:
-  SolverImpl()
-  {
-  }
+class SolverImpl : public Solver {
+ public:
+  SolverImpl() {}
 
-  ~SolverImpl()
-  {
-  }
+  ~SolverImpl() {}
 
-  #pragma RUN_ON_MASTER_NODE
-  void initAsMaster(TaskAppender* taskAppender)
-  {
+#pragma RUN_ON_MASTER_NODE
+  void initAsMaster(TaskAppender* taskAppender) {
 #if 0
     // Example for how to use cache
     auto cw = CacheWriter(stub->newDefaultCacheWriter());
@@ -49,7 +43,7 @@ public:
     std::cerr << cr.getInt64(1) << std::endl;
     cr.release();
 #endif
-    for (int i = 0; i < 300; ++i) {
+    for (int i = 0; i < 30; ++i) {
       TaskData item;
       item.status = TaskData::NEW_TASK;
       item.id = i;
@@ -59,9 +53,9 @@ public:
     }
   }
 
-  #pragma RUN_ON_WORKER_NODE
+#pragma RUN_ON_WORKER_NODE
   void initAsWorker() {
-    for (int i = 0; i < 300; ++i) {
+    for (int i = 0; i < 30; ++i) {
       TaskData item;
       item.status = TaskData::NEW_TASK;
       item.id = i;
@@ -70,25 +64,24 @@ public:
     }
   }
 
-  #pragma RUN_ON_MASTER_NODE
-  void setResult(int64 taskId, VariantsReader* result, int64 timeUsage) {
-    taskData[taskId].result = result->int64Value(0);
+#pragma RUN_ON_MASTER_NODE
+  void setResult(int64 taskId, void* result, int result_size, int64 timeUsage) {
     std::cerr << taskId << " finished. Timeusage " << timeUsage << std::endl;
   }
 
-  #pragma RUN_ON_WORKER_NODE
-  void compute(int64 taskId, VariantsBuilder* result) {
-    result->appendInt64Value(taskId*taskId);
+#pragma RUN_ON_WORKER_NODE
+  void compute(int64 taskId) {
     Sleep(500);
   }
 
-  #pragma RUN_ON_MASTER_NODE
+#pragma RUN_ON_MASTER_NODE
   void finish() {
     int64 ans = 0;
     for (auto& t : taskData) ans += t.result;
     std::cerr << std::endl << "ans = " << ans << std::endl << std::endl;
   }
-private:
+
+ private:
   std::vector<TaskData> taskData;
 };
 

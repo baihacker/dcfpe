@@ -13,56 +13,36 @@ message Variants {
   repeated Variant element = 1;
 }
 
-message ConnectRequest {
-  optional string address = 1;
+message GetTaskRequest {
 }
 
-message ConnectResponse {
-  optional int64 connection_id = 1;
-}
-
-message DisconnectRequest {
-  optional string address = 1;
-}
-
-message ComputeRequest {
+message GetTaskResponse {
   optional int64 task_id = 1;
 }
 
 message FinishComputeRequest {
   optional int64 task_id = 1;
-  optional Variants result = 2;
+  optional Variant result = 2;
   optional int64 time_usage = 3 [default = 0];
-}
-
-message UpdateWorkerStatusRequest {
-  optional int64 running_task_id = 1; // -1 if no task is running
 }
 
 message Request {
   optional string name = 1;
-  optional int64 connection_id = 2 [default = 0];
-  optional int64 request_id = 3 [default = 0];
-  optional int64 srv_uid = 4 [default = 0];
 
   optional int64 timestamp = 100 [default = 0];
-  
-  optional ConnectRequest connect = 300;
-  optional DisconnectRequest disconnect = 301;
-  optional ComputeRequest compute = 302;
-  optional FinishComputeRequest finish_compute = 303;
-  optional UpdateWorkerStatusRequest update_worker_status = 304;
+
+  optional GetTaskRequest get_task = 300;
+  optional FinishComputeRequest finish_compute = 301;
+
 }
 
 message Response {
   optional string name = 1;
   optional int64 error_code = 2;
-  optional int64 srv_uid = 3 [default = 0];
 
   optional int64 timestamp = 100 [default = 0];
-  
+
   optional int64 request_timestamp = 200 [default = 0];
-  optional int64 request_id = 201 [default = 0];
-  
-  optional ConnectResponse connect = 300;
+
+  optional GetTaskResponse get_task = 300;
 }

@@ -14,40 +14,32 @@
 #include "dpe/http_server.h"
 #include "dpe/variants.h"
 
-namespace dpe
-{
-static inline std::string get_iface_address()
-{
+namespace dpe {
+static inline std::string get_iface_address() {
   char hostname[128];
-  char localHost[128][32]={{0}};
+  char localHost[128][32] = {{0}};
   struct hostent* temp;
   gethostname(hostname, 128);
-  temp = gethostbyname( hostname );
-  for(int i=0 ; temp->h_addr_list[i] != NULL && i < 1; ++i)
-  {
-    strcpy(localHost[i], inet_ntoa(*(struct in_addr *)temp->h_addr_list[i]));
+  temp = gethostbyname(hostname);
+  for (int i = 0; temp->h_addr_list[i] != NULL && i < 1; ++i) {
+    strcpy(localHost[i], inet_ntoa(*(struct in_addr*)temp->h_addr_list[i]));
   }
   return localHost[0];
 }
 
-static inline void startNetwork()
-{
+static inline void startNetwork() {
   WSADATA wsaData;
   WORD sockVersion = MAKEWORD(2, 2);
-  if (::WSAStartup(sockVersion, &wsaData) != 0)
-  {
-     std::cerr << "Cannot initialize wsa" << std::endl;
-     exit(-1);
+  if (::WSAStartup(sockVersion, &wsaData) != 0) {
+    std::cerr << "Cannot initialize wsa" << std::endl;
+    exit(-1);
   }
 }
 
-static inline void stopNetwork()
-{
-  ::WSACleanup();
-}
+static inline void stopNetwork() { ::WSACleanup(); }
 
-static inline std::string parseCmd(const std::string& s, int& idx, std::string& value)
-{
+static inline std::string parseCmd(const std::string& s, int& idx,
+                                   std::string& value) {
   idx = -1;
   value = "";
 
@@ -56,12 +48,11 @@ static inline std::string parseCmd(const std::string& s, int& idx, std::string& 
   while (i < l && s[i] == '-') ++i;
   int j = i;
   while (j < l && s[j] != '=') ++j;
-  if (j < l)
-  {
+  if (j < l) {
     idx = j;
-    value = s.substr(j+1);
+    value = s.substr(j + 1);
   }
-  return StringToLowerASCII(s.substr(i, j-i));
+  return StringToLowerASCII(s.substr(i, j - i));
 }
 
 scoped_refptr<DPEMasterNode> dpeMasterNode;
@@ -78,112 +69,58 @@ bool resetCache = false;
 Solver* solver;
 int httpPort = 80;
 
-static void exitDpeImpl()
-{
+static void exitDpeImpl() {
   LOG(INFO) << "exitDpeImpl";
-  if (dpeMasterNode)
-  {
+  if (dpeMasterNode) {
     dpeMasterNode->stop();
   }
   dpeMasterNode = NULL;
   httpServer.stop();
-  if (dpeWorkerNode)
-  {
-    dpeWorkerNode->stop();
+  if (dpeWorkerNode) {
+    // dpeWorkerNode->stop();
   }
   dpeWorkerNode = NULL;
   base::will_quit_main_loop();
 }
 
-void willExitDpe()
-{
+void willExitDpe() {
   LOG(INFO) << "willExitDpe";
   httpServer.setHandler(NULL);
   base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
-    base::Bind(exitDpeImpl));
+                             base::Bind(exitDpeImpl));
 }
 
-void* newCacheReader(const char* path)
-{
-  std::string data;
-  base::FilePath filePath(base::UTF8ToNative(path));
-  if (!base::ReadFileToString(filePath, &data))
-  {
-    return NULL;
-  }
-  
-  std::vector<std::string> lines;
-  Tokenize(data, "\n", &lines);
-  
-  return dpe::CacheReaderImpl::fromLines(lines);
-}
+Solver* getSolver() { return solver; }
 
-void* newCacheWriter(const char* path, bool reset)
-{
-  auto result = new dpe::CacheWriterImpl(base::FilePath(base::UTF8ToNative(path)), reset);
-  if (!result->ready())
-  {
-    delete result;
-    return NULL;
-  }
-  return result;
-}
-
-void* newDefaultCacheReader()
-{
-  if (cacheFilePath.empty())
-  {
-    cacheFilePath = defaultCacheFilePath;
-  }
-  return newCacheReader(cacheFilePath.c_str());
-}
-
-void* newDefaultCacheWriter()
-{
-  return newCacheWriter(cacheFilePath.c_str(), resetCache);
-}
-
-Solver* getSolver()
-{
-  return solver;
-}
-
-static inline void run()
-{
+static inline void run() {
   LOG(INFO) << "running";
   LOG(INFO) << "type = " << type;
   LOG(INFO) << "myIP = " << myIP;
   LOG(INFO) << "serverIP = " << serverIP;
 
-  if (type == "server")
-  {
-    dpeMasterNode = new DPEMasterNode(myIP, serverIP);
+  if (type == "server") {
+    dpeMasterNode =
+        new DPEMasterNode(myIP, port == 0 ? dpe::kServerPort : port);
     httpServer.setHandler(dpeMasterNode);
     httpServer.start(httpPort);
-    if (!dpeMasterNode->start(port == 0 ? dpe::kServerPort + instanceId : port))
-    {
+    if (!dpeMasterNode->start()) {
       LOG(ERROR) << "Failed to start master node";
       willExitDpe();
     }
-  }
-  else if (type == "worker")
-  {
-    dpeWorkerNode = new DPEWorkerNode(myIP, serverIP);
-    if (!dpeWorkerNode->start(port == 0 ? dpe::kWorkerPort + instanceId : port))
-    {
+  } else if (type == "worker") {
+    dpeWorkerNode =
+        new DPEWorkerNode(serverIP, port == 0 ? dpe::kServerPort : port);
+    if (!dpeWorkerNode->start()) {
       LOG(ERROR) << "Failed to start worker node";
       willExitDpe();
     }
-  }
-  else
-  {
+  } else {
     LOG(ERROR) << "Unknown type";
     willExitDpe();
   }
 }
 
-void runDpe(Solver* solver, int argc, char* argv[])
-{
+void runDpe(Solver* solver, int argc, char* argv[]) {
   std::cout << "DCFPE (version 1.1.0.0)" << std::endl;
   std::cout << "Author: baihacker" << std::endl;
   std::cout << "HomePage: https://github.com/baihacker/dcfpe" << std::endl;
@@ -196,144 +133,92 @@ void runDpe(Solver* solver, int argc, char* argv[])
   serverIP = myIP;
 
   int loggingLevel = 1;
-  for (int i = 1; i < argc;)
-  {
+  for (int i = 1; i < argc;) {
     int idx;
     std::string value;
     const std::string str = parseCmd(argv[i], idx, value);
-    if (str == "t" || str == "type")
-    {
-      if (idx == -1)
-      {
-        type = argv[i+1];
+    if (str == "t" || str == "type") {
+      if (idx == -1) {
+        type = argv[i + 1];
         i += 2;
-      }
-      else
-      {
+      } else {
         type = value;
         ++i;
       }
-    }
-    else if (str == "ip")
-    {
-      if (idx == -1)
-      {
-        myIP = argv[i+1];
+    } else if (str == "ip") {
+      if (idx == -1) {
+        myIP = argv[i + 1];
         i += 2;
-      }
-      else
-      {
+      } else {
         myIP = value;
         ++i;
       }
-    }
-    else if (str == "server_ip")
-    {
-      if (idx == -1)
-      {
-        serverIP = argv[i+1];
+    } else if (str == "server_ip") {
+      if (idx == -1) {
+        serverIP = argv[i + 1];
         i += 2;
-      }
-      else
-      {
+      } else {
         serverIP = value;
         ++i;
       }
-    }
-    else if (str == "l" || str == "log")
-    {
-      if (idx == -1)
-      {
-        loggingLevel = atoi(argv[i+1]);
+    } else if (str == "l" || str == "log") {
+      if (idx == -1) {
+        loggingLevel = atoi(argv[i + 1]);
         i += 2;
-      }
-      else
-      {
+      } else {
         loggingLevel = atoi(value.c_str());
         ++i;
       }
-    }
-    else if (str == "p" || str == "port")
-    {
-      if (idx == -1)
-      {
-        port = atoi(argv[i+1]);
+    } else if (str == "p" || str == "port") {
+      if (idx == -1) {
+        port = atoi(argv[i + 1]);
         i += 2;
-      }
-      else
-      {
+      } else {
         port = atoi(value.c_str());
         ++i;
       }
-    }
-    else if (str == "id")
-    {
-      if (idx == -1)
-      {
-        instanceId = atoi(argv[i+1]);
+    } else if (str == "id") {
+      if (idx == -1) {
+        instanceId = atoi(argv[i + 1]);
         i += 2;
-      }
-      else
-      {
+      } else {
         instanceId = atoi(value.c_str());
         ++i;
       }
-    }
-    else if (str == "c" || str == "cache")
-    {
-      if (idx == -1)
-      {
-        cacheFilePath = argv[i+1];
+    } else if (str == "c" || str == "cache") {
+      if (idx == -1) {
+        cacheFilePath = argv[i + 1];
         i += 2;
-      }
-      else
-      {
+      } else {
         cacheFilePath = value;
         ++i;
       }
-    }
-    else if (str == "reset_cache")
-    {
+    } else if (str == "reset_cache") {
       std::string data;
-      if (idx == -1)
-      {
-        data = argv[i+1];
+      if (idx == -1) {
+        data = argv[i + 1];
         i += 2;
-      }
-      else
-      {
+      } else {
         data = value;
         ++i;
       }
       data = StringToLowerASCII(data);
-      if (data == "true" || data == "1")
-      {
+      if (data == "true" || data == "1") {
         resetCache = true;
-      }
-      else if (data == "false" || data == "0")
-      {
+      } else if (data == "false" || data == "0") {
+        resetCache = false;
+      } else {
         resetCache = false;
       }
-      else
-      {
-        resetCache = false;
-      }
-    }
-    else if (str == "hp" || str == "http_port")
-    {
-      if (idx == -1)
-      {
-        httpPort = atoi(argv[i+1]);
+    } else if (str == "hp" || str == "http_port") {
+      if (idx == -1) {
+        httpPort = atoi(argv[i + 1]);
         i += 2;
-      }
-      else
-      {
+      } else {
         httpPort = atoi(value.c_str());
         ++i;
       }
-    }
-    else
-    {
+    } else {
       ++i;
     }
   }
@@ -343,99 +228,7 @@ void runDpe(Solver* solver, int argc, char* argv[])
   stopNetwork();
 }
 
-static int getVariantsSize(void* opaque) {
-  return ((VariantsReaderImpl*)opaque)->size();
-}
+static DpeStub __stub_impl = {&dpe::runDpe};
 
-static int64 getInt64Value(void* opaque, int idx) {
-  return ((VariantsReaderImpl*)opaque)->int64Value(idx);
-}
-const char* getStringValue(void* opaque, int idx) {
-  return ((VariantsReaderImpl*)opaque)->stringValue(idx);
-}
-
-static void appendInt64Value(void* opaque, int64 value) {
-  ((VariantsBuilderImpl*)opaque)->appendInt64Value(value);
-}
-
-static void appendStringValue(void* opaque, const char* str) {
-  ((VariantsBuilderImpl*)opaque)->appendStringValue(str);
-}
-
-static void crAddRef(void* opaque) {
-  ((CacheReaderImpl*)opaque)->addRef();
-}
-static void crRelease(void* opaque) {
-  ((CacheReaderImpl*)opaque)->release();
-}
-static void* crGet(void* opaque, int64 taskId) {
-  return ((CacheReaderImpl*)opaque)->get(taskId);
-}
-static int64 getInt64(void* opaque, int64 taskId) {
-  return ((CacheReaderImpl*)opaque)->getInt64(taskId);
-}
-static const char* getString(void* opaque, int64 taskId) {
-  return ((CacheReaderImpl*)opaque)->getString(taskId);
-}
-
-static void cwAddRef(void* opaque) {
-  ((CacheWriterImpl*)opaque)->addRef();
-}
-static void cwRelease(void* opaque) {
-  ((CacheWriterImpl*)opaque)->release();
-}
-static void cwAppend(void* opaque, int64 taskId, VariantsBuilder* result) {
-  ((CacheWriterImpl*)opaque)->append(taskId, (VariantsBuilderImpl*)result->opaque);
-}
-static void cwAppendInt64(void* opaque, int64 taskId, int64 value) {
-  ((CacheWriterImpl*)opaque)->append(taskId, value);
-}
-static void cwAppendString(void* opaque, int64 taskId, const char* value) {
-  ((CacheWriterImpl*)opaque)->append(taskId, value);
-}
-}
-
-static VariantsReaderStub __vr_stub = {
-  &dpe::getVariantsSize,
-  &dpe::getInt64Value,
-  &dpe::getStringValue,
-};
-
-static VariantsBuilderStub __vb_stub = {
-  &dpe::appendInt64Value,
-  &dpe::appendStringValue,
-};
-
-static CacheReaderStub __cr_stub = {
-  &dpe::crAddRef,
-  &dpe::crRelease,
-  &dpe::crGet,
-  &dpe::getInt64,
-  &dpe::getString,
-};
-
-static CacheWriterStub __cw_stub = {
-  &dpe::cwAddRef,
-  &dpe::cwRelease,
-  &dpe::cwAppend,
-  &dpe::cwAppendInt64,
-  &dpe::cwAppendString,
-};
-
-static DpeStub __stub_impl =
-{
-  &dpe::newCacheReader,
-  &dpe::newCacheWriter,
-  &dpe::newDefaultCacheReader,
-  &dpe::newDefaultCacheWriter,
-  &__vr_stub,
-  &__vb_stub,
-  &__cr_stub,
-  &__cw_stub,
-  &dpe::runDpe
-};
-
-DPE_EXPORT DpeStub* get_stub()
-{
-  return &__stub_impl;
-}
+DPE_EXPORT DpeStub* get_stub() { return &__stub_impl; }
+}  // namespace dpe

@@ -6,47 +6,31 @@
 #include <utility>
 typedef int64_t int64;
 
-namespace dpe_util
-{
-struct RangeBasedTaskGenerator
-{
-  struct Task
-  {
+namespace dpe_util {
+struct RangeBasedTaskGenerator {
+  struct Task {
     int64 id;
-    int operator == (const Task& other) const
-    {
-      return id == other.id;
-    }
-    int operator != (const Task& other) const
-    {
-      return !(*this == other);
-    }
-    Task& operator * ()
-    {
-      return *this;
-    }
-    Task& operator ++ ()
-    {
+    int operator==(const Task& other) const { return id == other.id; }
+    int operator!=(const Task& other) const { return !(*this == other); }
+    Task& operator*() { return *this; }
+    Task& operator++() {
       ++id;
       return *this;
     }
   };
 
-  RangeBasedTaskGenerator(int64 first = 0, int64 last = 0, int64 block_size = 1) :
-    first_(first), last_(last), block_size_(block_size)
-    {
-      assert(block_size_ >= 1);
-      const int64 cnt = last_ - first_ + 1;
-      first_task_ = 1;
-      last_task_ = (cnt + block_size - 1) / block_size;
-    }
-
-  ~RangeBasedTaskGenerator()
-  {
+  RangeBasedTaskGenerator(int64 first = 0, int64 last = 0, int64 block_size = 1)
+      : first_(first), last_(last), block_size_(block_size) {
+    assert(block_size_ >= 1);
+    const int64 cnt = last_ - first_ + 1;
+    first_task_ = 1;
+    last_task_ = (cnt + block_size - 1) / block_size;
   }
 
-  RangeBasedTaskGenerator& setRange(int64 first = 0, int64 last = 0, int64 block_size = 1)
-  {
+  ~RangeBasedTaskGenerator() {}
+
+  RangeBasedTaskGenerator& setRange(int64 first = 0, int64 last = 0,
+                                    int64 block_size = 1) {
     first_ = first;
     last_ = last;
     block_size_ = block_size;
@@ -57,39 +41,22 @@ struct RangeBasedTaskGenerator
     return *this;
   }
 
-  Task firstTask() const
-  {
-    return {first_task_};
-  }
+  Task firstTask() const { return {first_task_}; }
 
-  Task nextTask(Task curr) const
-  {
+  Task nextTask(Task curr) const {
     curr.id++;
     return curr;
   }
 
-  Task lastTask() const
-  {
-    return {last_task_};
-  }
+  Task lastTask() const { return {last_task_}; }
 
-  Task begin() const
-  {
-    return {first_task_};
-  }
+  Task begin() const { return {first_task_}; }
 
-  Task end() const
-  {
-    return {last_task_+1};
-  }
+  Task end() const { return {last_task_ + 1}; }
 
-  int64 count() const
-  {
-    return last_task_ - first_task_ + 1;
-  }
+  int64 count() const { return last_task_ - first_task_ + 1; }
 
-  std::pair<int64, int64> toRange(int64 id) const
-  {
+  std::pair<int64, int64> toRange(int64 id) const {
     assert(id >= first_task_ && id <= last_task_);
 
     int64 u = (id - 1) * block_size_ + first_;
@@ -105,7 +72,7 @@ struct RangeBasedTaskGenerator
   int64 last_task_;
 };
 typedef RangeBasedTaskGenerator RBTG;
-}
+}  // namespace dpe_util
 namespace du = dpe_util;
 
 #endif

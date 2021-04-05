@@ -1,221 +1,98 @@
 #include "dpe/dpe_worker_node.h"
 
+#include "dpe_base/dpe_base.h"
+#include "dpe_base/zmq_adapter.h"
 #include "dpe/dpe.h"
 #include "dpe/dpe_internal.h"
 #include "dpe/proto/dpe.pb.h"
 #include "dpe/variants.h"
+#include "dpe/dpe_master_node.h"
 
-namespace dpe
-{
-WorkerTaskExecuter::WorkerTaskExecuter() : weakptr_factory_(this)
-{
-}
+namespace dpe {
+DPEWorkerNode::DPEWorkerNode(const std::string& serverIP, int serverPort)
+    : weakptr_factory_(this),
+      serverAddress(
+          base::AddressHelper::MakeZMQTCPAddress(serverIP, serverPort)),
+      zmqClient(base::zmq_client()) {}
 
-WorkerTaskExecuter::~WorkerTaskExecuter()
-{
-}
+DPEWorkerNode::~DPEWorkerNode() {}
 
-void WorkerTaskExecuter::start()
-{
-  getSolver()->initAsWorker();
-}
-
-void WorkerTaskExecuter::setMasterNode(RemoteNodeController* node)
-{
-  this->node = node;
-}
-
-void WorkerTaskExecuter::handleCompute(int taskId)
-{
-  base::ThreadPool::PostTask(base::ThreadPool::COMPUTE,
-      FROM_HERE,
-      base::Bind(&WorkerTaskExecuter::doCompute, weakptr_factory_.GetWeakPtr(), taskId));
-}
-
-void WorkerTaskExecuter::doCompute(base::WeakPtr<WorkerTaskExecuter> self, int taskId)
-{
-  VariantsBuilderImpl vbi;
-  VariantsBuilder vb(&vbi);
-  auto t0 = base::Time::Now().ToInternalValue();
-  getSolver()->compute(taskId, &vb);
-  auto t1 = base::Time::Now().ToInternalValue();
-
-  base::ThreadPool::PostTask(base::ThreadPool::UI,
-      FROM_HERE,
-      base::Bind(&WorkerTaskExecuter::finishCompute, self, taskId, vbi.getVariants(), t1 - t0));
-}
-
-void WorkerTaskExecuter::finishCompute(base::WeakPtr<WorkerTaskExecuter> self, int taskId, const Variants& result, int64 timeUsage)
-{
-  if (auto* pThis = self.get())
-  {
-    pThis->finishComputeImpl(taskId, result, timeUsage);
-  }
-}
-
-void WorkerTaskExecuter::finishComputeImpl(int taskId, const Variants& result, int64 timeUsage)
-{
-  node->finishTask(taskId, result, timeUsage, [=](bool ok){
-    if (!ok)
-    {
-      LOG(ERROR) << "Cannot finish compute properly";
-      willExitDpe();
-    }
-  });
-}
-
-DPEWorkerNode::DPEWorkerNode(const std::string& myIP, const std::string& serverIP):
-  DPENodeBase(myIP, serverIP),
-  srvUid(0),
-  port(kWorkerPort),
-  weakptr_factory_(this),
-  runningTaskId(-1),
-  remoteNode(NULL),
-  remoteNodeController(NULL)
-{
-
-}
-
-DPEWorkerNode::~DPEWorkerNode()
-{
-  stop();
-}
-
-bool DPEWorkerNode::start(int port)
-{
-  this->port = port;
-  zserver = new ZServer(this);
-  if (!zserver->Start(myIP, port))
-  {
-    zserver = NULL;
-    LOG(WARNING) << "Cannot start worker node.";
-    LOG(WARNING) << "ip = " << myIP;
-    LOG(WARNING) << "port = " << port;
-    return false;
-  }
-  else
-  {
-    LOG(INFO) << "Zserver starts at: " << zserver->GetServerAddress();
-  }
-  taskExecuter.start();
-  remoteNode = new RemoteNodeImpl(
-    this,
-    zserver->GetServerAddress(),
-    nextConnectionId++);
-  remoteNode->connectTo(base::AddressHelper::MakeZMQTCPAddress(serverIP, kServerPort));
+bool DPEWorkerNode::start() {
+  Request request;
+  request.set_name("get_task");
+  request.set_allocated_get_task(new GetTaskRequest());
+  this->sendRequest(
+      request, base::Bind(&dpe::DPEWorkerNode::HandleGetTask, this), 60000);
   return true;
 }
 
-void DPEWorkerNode::stop()
-{
-  if (remoteNode)
-  {
-    remoteNode->disconnect();
-    remoteNode = NULL;
-  }
-  if (remoteNodeController)
-  {
-    remoteNodeController->release();
-    remoteNodeController = NULL;
-  }
-  if (zserver)
-  {
-    zserver->Stop();
-    zserver = NULL;
-  }
-}
-
-int DPEWorkerNode::handleConnectRequest(const std::string& address, int64& srvUid)
-{
-  if (remoteNode && remoteNode->getRemoteAddress() == address)
-  {
-    this->srvUid = srvUid;
-    remoteNode->setSrvUid(srvUid);
-    return remoteNode->getId();
-  }
-  return -1;
-}
-
-int DPEWorkerNode::handleDisconnectRequest(const std::string& address)
-{
-  LOG(INFO) << address;
-  LOG(INFO) << remoteNode->getRemoteAddress();
-  if (remoteNode && remoteNode->getRemoteAddress() == address)
-  {
-    delete remoteNode;
-    remoteNode = NULL;
+void DPEWorkerNode::HandleGetTask(scoped_refptr<base::ZMQResponse> response) {
+  if (response->error_code_ != base::ZMQResponse::ZMQ_REP_OK) {
     willExitDpe();
+  } else {
+    Response body;
+    body.ParseFromString(response->data_);
+    auto& get_task = body.get_task();
+    if (!get_task.has_task_id()) {
+      willExitDpe();
+    } else {
+      getSolver()->compute(get_task.task_id());
+
+      FinishComputeRequest* fr = new FinishComputeRequest();
+      fr->set_task_id(get_task.task_id());
+      Variant* v = new Variant();
+      v->set_value_int64(2);
+      fr->set_allocated_result(v);
+      Request request;
+      request.set_name("finish_compute");
+      request.set_allocated_finish_compute(fr);
+      this->sendRequest(
+          request, base::Bind(&dpe::DPEWorkerNode::HandleFinishCompute, this),
+          60000);
+    }
   }
-  return 0;
 }
 
-int DPEWorkerNode::onConnectionFinished(RemoteNodeImpl* node, bool ok)
-{
-  if (!ok)
-  {
-    delete remoteNode;
-    remoteNode = NULL;
+void DPEWorkerNode::HandleFinishCompute(
+    scoped_refptr<base::ZMQResponse> response) {
+  if (response->error_code_ != base::ZMQResponse::ZMQ_REP_OK) {
     willExitDpe();
+  } else {
+    Request request;
+    request.set_name("get_task");
+    request.set_allocated_get_task(new GetTaskRequest());
+    this->sendRequest(
+        request, base::Bind(&dpe::DPEWorkerNode::HandleGetTask, this), 60000);
   }
-  else
-  {
-    if (remoteNodeController)
-    {
-      remoteNodeController->release();
-      remoteNodeController = NULL;
-    }
-    remoteNodeController =
-        new RemoteNodeControllerImpl(weakptr_factory_.GetWeakPtr(), node->getWeakPtr());
-    remoteNodeController->addRef();
-    taskExecuter.setMasterNode(remoteNodeController);
+}
 
-  repeatedAction = new base::RepeatedAction(this);
-  repeatedAction->Start([=](){
-      updateWorkerStatus();
-    }, 0, 10, -1);
-  }
+int DPEWorkerNode::sendRequest(Request& req, base::ZMQCallBack callback,
+                               int timeout) {
+  req.set_timestamp(base::Time::Now().ToInternalValue());
+
+  std::string val;
+  req.SerializeToString(&val);
+
+  LOG(INFO) << "Send request:\n" << req.DebugString();
+
+  zmqClient->SendRequest(serverAddress, val.c_str(),
+                         static_cast<int>(val.size()),
+                         base::Bind(&DPEWorkerNode::handleResponse,
+                                    weakptr_factory_.GetWeakPtr(), callback),
+                         timeout);
+
   return 0;
 }
 
-void DPEWorkerNode::updateWorkerStatus()
-{
-  remoteNodeController->updateWorkerStatus(runningTaskId, [=](bool ok){
-    if (!ok)
-    {
-      LOG(ERROR) << "Cannot send udpate worker status request";
-      willExitDpe();
-    }
-  });
-}
-
-int DPEWorkerNode::handleRequest(const Request& req, Response& reply)
-{
-  reply.set_srv_uid(srvUid);
-
-  if (req.srv_uid() != srvUid)
-  {
-    return 0;
+void DPEWorkerNode::handleResponse(base::WeakPtr<DPEWorkerNode> self,
+                                   base::ZMQCallBack callback,
+                                   scoped_refptr<base::ZMQResponse> rep) {
+  if (auto* pThis = self.get()) {
+    Response body;
+    body.ParseFromString(rep->data_);
+    LOG(INFO) << "handleResponse:\n" << body.DebugString();
+    callback.Run(rep);
   }
-
-  if (req.has_compute())
-  {
-    if (runningTaskId == -1)
-    {
-      taskExecuter.handleCompute(req.compute().task_id());
-      reply.set_error_code(0);
-    }
-    else
-    {
-      LOG(ERROR) << "Received task request while there is a running task " << runningTaskId;
-      reply.set_error_code(-1);
-      willExitDpe();
-    }
-  }
-  return 0;
 }
 
-void DPEWorkerNode::removeNode(int64 id)
-{
-}
-
-}
+}  // namespace dpe

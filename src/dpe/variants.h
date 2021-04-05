@@ -4,30 +4,31 @@
 #include "dpe/dpe.h"
 #include "dpe/proto/dpe.pb.h"
 
-namespace dpe
-{
+namespace dpe {
 class VariantsReaderImpl {
-public:
+ public:
   VariantsReaderImpl(const Variants& variants);
   ~VariantsReaderImpl();
 
   int size() const;
   int64 int64Value(int idx) const;
   const char* stringValue(int idx) const;
-private:
+
+ private:
   Variants variants;
 };
 
 class VariantsBuilderImpl {
-public:
+ public:
   VariantsBuilderImpl();
   ~VariantsBuilderImpl();
   const Variants& getVariants() const;
   VariantsBuilderImpl* appendInt64Value(int64 value);
   VariantsBuilderImpl* appendStringValue(const char* str);
-private:
+
+ private:
   Variants variants;
 };
-}
+}  // namespace dpe
 
 #endif

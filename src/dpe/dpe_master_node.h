@@ -1,44 +1,43 @@
 #ifndef DPE_MASTER_NODE_H_
 #define DPE_MASTER_NODE_H_
 
-#include "dpe/dpe_node_base.h"
-#include "dpe/compute_model.h"
+#include "dpe_base/dpe_base.h"
 #include "dpe/http_server.h"
+#include "dpe/proto/dpe.pb.h"
+#include "dpe/zserver.h"
+#include <vector>
+#include <utility>
+#include <queue>
+#include <set>
 
-namespace dpe
-{
-class DPEMasterNode :
-    public DPENodeBase,
-    public http::HttpReqestHandler,
-    public base::RefCounted<DPEMasterNode>
-{
-public:
-  DPEMasterNode(
-    const std::string& myIP, const std::string& serverIP);
+namespace dpe {
+
+static const int kServerPort = 3310;
+
+class DPEMasterNode : public ZServerHandler,
+                      public http::HttpReqestHandler,
+                      public base::RefCounted<DPEMasterNode> {
+ public:
+  DPEMasterNode(const std::string& myIP, int port);
   ~DPEMasterNode();
 
-  bool start(int port);
+  bool start();
   void stop();
-
-  int handleConnectRequest(const std::string& address, int64& srvUid);
-
-  int handleDisconnectRequest(const std::string& address);
-
-  int onConnectionFinished(RemoteNodeImpl* node, bool ok);
 
   int handleRequest(const Request& req, Response& reply);
 
-  void removeNode(int64 id);
-  
   bool handleRequest(const http::HttpRequest& req, http::HttpResponse* rep);
-private:
-  MasterTaskScheduler* scheduler;
-  int64 srvUid;
-  std::string srvUidString;
+
+ private:
+  scoped_refptr<ZServer> zserver;
+  std::string myIP;
   int port;
-  std::vector<RemoteNodeImpl*> remoteNodes;
   std::string moduleDir;
-  base::WeakPtrFactory<DPEMasterNode>                 weakptr_factory_;
+  base::WeakPtrFactory<DPEMasterNode> weakptr_factory_;
+
+  std::deque<int64> taskQueue;
+  std::set<int64> taskRunningQueue;
+  std::vector<std::pair<int64, int64>> result;
 };
-}
+}  // namespace dpe
 #endif

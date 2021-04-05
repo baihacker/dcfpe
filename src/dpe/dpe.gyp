@@ -27,7 +27,7 @@
           },
         },
       },
-      
+
       'Debug_Base': {
         'msvs_settings': {
           'VCLinkerTool': {
@@ -62,24 +62,19 @@
           'dpe.cc',
           'zserver.h',
           'zserver.cc',
-          'remote_node_impl.h',
-          'remote_node_impl.cc',
-          'dpe_node_base.h',
           'dpe_master_node.h',
           'dpe_master_node.cc',
           'dpe_worker_node.h',
           'dpe_worker_node.cc',
-          'compute_model.h',
-          'compute_model.cc',
           'dpe_export.def',
-          
+
           'proto/dpe.pb.h',
           'proto/dpe.pb.cc',
           'variants.h',
           'variants.cc',
           'cache.h',
           'cache.cc',
-          
+
           'http_server.h',
           'http_server.cc',
         ],
