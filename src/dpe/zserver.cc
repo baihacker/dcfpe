@@ -43,18 +43,18 @@ bool ZServer::Stop() {
 }
 
 std::string ZServer::handle_request(base::ServerContext& context) {
-  LOG(INFO) << "Has request";
+  VLOG(1) << "Has request";
   Request req;
   req.ParseFromString(context.data_);
 
-  LOG(INFO) << "\nZServer receives request:\n" << req.DebugString();
+  VLOG(1) << "\nZServer receives request:\n" << req.DebugString();
 
   Response rep;
   do {
     rep.set_error_code(-1);
     rep.set_name(req.name());
-    rep.set_timestamp(base::Time::Now().ToInternalValue());
-    rep.set_request_timestamp(req.timestamp());
+    rep.set_response_timestamp(base::Time::Now().ToInternalValue());
+    rep.set_request_timestamp(req.request_timestamp());
 
     // handle request
     handler_->HandleRequest(req, rep);
@@ -63,7 +63,7 @@ std::string ZServer::handle_request(base::ServerContext& context) {
   std::string ret;
   rep.SerializeToString(&ret);
 
-  LOG(INFO) << "reply :\n" << rep.DebugString();
+  VLOG(1) << "reply :\n" << rep.DebugString();
   return ret;
 }
 

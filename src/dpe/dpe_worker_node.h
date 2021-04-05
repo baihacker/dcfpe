@@ -8,7 +8,7 @@ namespace dpe {
 
 class DPEWorkerNode : public base::RefCounted<DPEWorkerNode> {
  public:
-  DPEWorkerNode(const std::string& serverIP, int serverPort);
+  DPEWorkerNode(const std::string& server_ip, int serverPort);
   ~DPEWorkerNode();
 
   bool Start();
@@ -18,9 +18,9 @@ class DPEWorkerNode : public base::RefCounted<DPEWorkerNode> {
   void HandleGetTask(scoped_refptr<base::ZMQResponse> response);
   void HandleFinishCompute(scoped_refptr<base::ZMQResponse> response);
 
-  int sendRequest(Request& req, base::ZMQCallBack callback, int timeout);
+  int SendRequest(Request& req, base::ZMQCallBack callback, int timeout);
 
-  static void handleResponse(base::WeakPtr<DPEWorkerNode> self,
+  static void HandleResponse(base::WeakPtr<DPEWorkerNode> self,
                              base::ZMQCallBack callback,
                              scoped_refptr<base::ZMQResponse> rep);
 

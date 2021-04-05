@@ -5,6 +5,8 @@
 
 namespace dpe {
 Solver* GetSolver();
+int GetThreadNumber();
+int GetBatchSize();
 void WillExitDpe();
 void RunDpe(Solver* solver, int argc, char* argv[]);
 }  // namespace dpe

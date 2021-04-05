@@ -15,14 +15,14 @@
 namespace dpe {
 static inline std::string GetInterfaceAddress() {
   char hostname[128];
-  char localHost[128][32] = {{0}};
+  char local_host[128][32] = {{0}};
   struct hostent* temp;
   gethostname(hostname, 128);
   temp = gethostbyname(hostname);
   for (int i = 0; temp->h_addr_list[i] != NULL && i < 1; ++i) {
-    strcpy(localHost[i], inet_ntoa(*(struct in_addr*)temp->h_addr_list[i]));
+    strcpy(local_host[i], inet_ntoa(*(struct in_addr*)temp->h_addr_list[i]));
   }
-  return localHost[0];
+  return local_host[0];
 }
 
 static inline void StartNetwork() {
@@ -53,58 +53,69 @@ static inline std::string ParseCmd(const std::string& s, int& idx,
   return StringToLowerASCII(s.substr(i, j - i));
 }
 
-scoped_refptr<DPEMasterNode> dpeMasterNode;
-scoped_refptr<DPEWorkerNode> dpeWorkerNode;
-http::HttpServer httpServer;
-std::string type = "server";
-std::string myIP;
-std::string serverIP;
-int port = 0;
 Solver* solver;
-int httpPort = 80;
+Solver* GetSolver() { return solver; }
+
+scoped_refptr<DPEMasterNode> master_node;
+scoped_refptr<DPEWorkerNode> worker_node;
+http::HttpServer http_server;
+int http_port = 80;
+std::string type = "server";
+std::string my_ip;
+std::string server_ip;
+int logging_level = 0;
+int server_port = 0;
+// The max task count in GetTaskRequest.
+// If the value is zero, use thread_number * 3.
+// If max task count is zero, the server use 1.
+int batch_size = 0;
+// Currently, thread number is forwarded to worker ans an argument.
+// This worker is not responsible for executing the tasks in parallel.
+int thread_number = 1;
+
+int GetBatchSize() { return batch_size; }
+int GetThreadNumber() { return thread_number; }
 
 static void ExitDpeImpl() {
-  LOG(INFO) << "exitDpeImpl";
-  if (dpeMasterNode) {
-    dpeMasterNode->Stop();
+  LOG(INFO) << "ExitDpeImpl";
+  if (master_node) {
+    master_node->Stop();
   }
-  dpeMasterNode = NULL;
-  httpServer.Stop();
-  if (dpeWorkerNode) {
-    dpeWorkerNode->Stop();
+  master_node = NULL;
+  http_server.Stop();
+  if (worker_node) {
+    worker_node->Stop();
   }
-  dpeWorkerNode = NULL;
+  worker_node = NULL;
   base::will_quit_main_loop();
 }
 
 void WillExitDpe() {
   LOG(INFO) << "WillExitDpe";
-  httpServer.SetHandler(NULL);
+  http_server.SetHandler(NULL);
   base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
                              base::Bind(ExitDpeImpl));
 }
 
-Solver* GetSolver() { return solver; }
-
 static inline void run() {
   LOG(INFO) << "running";
   LOG(INFO) << "type = " << type;
-  LOG(INFO) << "myIP = " << myIP;
-  LOG(INFO) << "serverIP = " << serverIP;
+  LOG(INFO) << "my_ip = " << my_ip;
+  LOG(INFO) << "server_ip = " << server_ip;
 
   if (type == "server") {
-    dpeMasterNode =
-        new DPEMasterNode(myIP, port == 0 ? dpe::kServerPort : port);
-    httpServer.SetHandler(dpeMasterNode);
-    httpServer.Start(httpPort);
-    if (!dpeMasterNode->Start()) {
+    master_node = new DPEMasterNode(
+        my_ip, server_port == 0 ? dpe::kServerPort : server_port);
+    http_server.SetHandler(master_node);
+    http_server.Start(http_port);
+    if (!master_node->Start()) {
       LOG(ERROR) << "Failed to start master node";
       WillExitDpe();
     }
   } else if (type == "worker") {
-    dpeWorkerNode =
-        new DPEWorkerNode(serverIP, port == 0 ? dpe::kServerPort : port);
-    if (!dpeWorkerNode->Start()) {
+    worker_node = new DPEWorkerNode(
+        server_ip, server_port == 0 ? dpe::kServerPort : server_port);
+    if (!worker_node->Start()) {
       LOG(ERROR) << "Failed to start worker node";
       WillExitDpe();
     }
@@ -123,10 +134,9 @@ void RunDpe(Solver* solver, int argc, char* argv[]) {
   StartNetwork();
 
   type = "server";
-  myIP = GetInterfaceAddress();
-  serverIP = myIP;
+  my_ip = GetInterfaceAddress();
+  server_ip = my_ip;
 
-  int loggingLevel = 1;
   for (int i = 1; i < argc;) {
     int idx;
     std::string value;
@@ -141,42 +151,58 @@ void RunDpe(Solver* solver, int argc, char* argv[]) {
       }
     } else if (str == "ip") {
       if (idx == -1) {
-        myIP = argv[i + 1];
+        my_ip = argv[i + 1];
         i += 2;
       } else {
-        myIP = value;
+        my_ip = value;
         ++i;
       }
     } else if (str == "server_ip") {
       if (idx == -1) {
-        serverIP = argv[i + 1];
+        server_ip = argv[i + 1];
         i += 2;
       } else {
-        serverIP = value;
+        server_ip = value;
+        ++i;
+      }
+    } else if (str == "sp" || str == "server_port") {
+      if (idx == -1) {
+        server_port = atoi(argv[i + 1]);
+        i += 2;
+      } else {
+        server_port = atoi(value.c_str());
+        ++i;
+      }
+    } else if (str == "tn" || str == "thread_number") {
+      if (idx == -1) {
+        thread_number = atoi(argv[i + 1]);
+        i += 2;
+      } else {
+        thread_number = atoi(value.c_str());
+        ++i;
+      }
+    } else if (str == "bs" || str == "batch_size") {
+      if (idx == -1) {
+        batch_size = atoi(argv[i + 1]);
+        i += 2;
+      } else {
+        batch_size = atoi(value.c_str());
         ++i;
       }
     } else if (str == "l" || str == "log") {
       if (idx == -1) {
-        loggingLevel = atoi(argv[i + 1]);
+        logging_level = atoi(argv[i + 1]);
         i += 2;
       } else {
-        loggingLevel = atoi(value.c_str());
-        ++i;
-      }
-    } else if (str == "p" || str == "port") {
-      if (idx == -1) {
-        port = atoi(argv[i + 1]);
-        i += 2;
-      } else {
-        port = atoi(value.c_str());
+        logging_level = atoi(value.c_str());
         ++i;
       }
     } else if (str == "hp" || str == "http_port") {
       if (idx == -1) {
-        httpPort = atoi(argv[i + 1]);
+        http_port = atoi(argv[i + 1]);
         i += 2;
       } else {
-        httpPort = atoi(value.c_str());
+        http_port = atoi(value.c_str());
         ++i;
       }
     } else {
@@ -184,7 +210,7 @@ void RunDpe(Solver* solver, int argc, char* argv[]) {
     }
   }
 
-  base::dpe_base_main(run, NULL, loggingLevel);
+  base::dpe_base_main(run, NULL, logging_level);
 
   StopNetwork();
 }

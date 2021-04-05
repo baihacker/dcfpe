@@ -8,15 +8,16 @@
 #include "dpe/dpe_master_node.h"
 
 namespace dpe {
-DPEWorkerNode::DPEWorkerNode(const std::string& serverIP, int serverPort)
+DPEWorkerNode::DPEWorkerNode(const std::string& server_ip, int server_port)
     : weakptr_factory_(this),
       serverAddress(
-          base::AddressHelper::MakeZMQTCPAddress(serverIP, serverPort)),
+          base::AddressHelper::MakeZMQTCPAddress(server_ip, server_port)),
       zmqClient(base::zmq_client()) {}
 
 DPEWorkerNode::~DPEWorkerNode() {}
 
 bool DPEWorkerNode::Start() {
+  GetSolver()->InitAsWorker();
   GetNextTask();
   return true;
 }
@@ -25,12 +26,15 @@ void DPEWorkerNode::Stop() {}
 
 void DPEWorkerNode::GetNextTask() {
   GetTaskRequest* get_task = new GetTaskRequest();
-  get_task->set_max_task_count(10);
+  const int batch_size = GetBatchSize();
+
+  get_task->set_max_task_count(batch_size == 0 ? GetThreadNumber() * 3
+                                               : batch_size);
 
   Request request;
   request.set_name("get_task");
   request.set_allocated_get_task(get_task);
-  sendRequest(request, base::Bind(&dpe::DPEWorkerNode::HandleGetTask, this),
+  SendRequest(request, base::Bind(&dpe::DPEWorkerNode::HandleGetTask, this),
               5000);
 }
 
@@ -61,7 +65,8 @@ void DPEWorkerNode::HandleGetTask(scoped_refptr<base::ZMQResponse> response) {
   std::vector<int64> time_usage(size, 0);
 
   const int64 start_time = base::Time::Now().ToInternalValue();
-  GetSolver()->compute(size, &task_id[0], &result[0], &time_usage[0], 10);
+  GetSolver()->Compute(size, &task_id[0], &result[0], &time_usage[0],
+                       GetThreadNumber());
   const int64 end_time = base::Time::Now().ToInternalValue();
 
   FinishComputeRequest* fr = new FinishComputeRequest();
@@ -75,7 +80,7 @@ void DPEWorkerNode::HandleGetTask(scoped_refptr<base::ZMQResponse> response) {
   Request request;
   request.set_name("finish_compute");
   request.set_allocated_finish_compute(fr);
-  sendRequest(request,
+  SendRequest(request,
               base::Bind(&dpe::DPEWorkerNode::HandleFinishCompute, this),
               60000);
 }
@@ -91,31 +96,31 @@ void DPEWorkerNode::HandleFinishCompute(
   }
 }
 
-int DPEWorkerNode::sendRequest(Request& req, base::ZMQCallBack callback,
+int DPEWorkerNode::SendRequest(Request& req, base::ZMQCallBack callback,
                                int timeout) {
-  req.set_timestamp(base::Time::Now().ToInternalValue());
+  req.set_request_timestamp(base::Time::Now().ToInternalValue());
 
   std::string val;
   req.SerializeToString(&val);
 
-  LOG(INFO) << "Send request:\n" << req.DebugString();
+  VLOG(1) << "Send request:\n" << req.DebugString();
 
   zmqClient->SendRequest(serverAddress, val.c_str(),
                          static_cast<int>(val.size()),
-                         base::Bind(&DPEWorkerNode::handleResponse,
+                         base::Bind(&DPEWorkerNode::HandleResponse,
                                     weakptr_factory_.GetWeakPtr(), callback),
                          timeout);
 
   return 0;
 }
 
-void DPEWorkerNode::handleResponse(base::WeakPtr<DPEWorkerNode> self,
+void DPEWorkerNode::HandleResponse(base::WeakPtr<DPEWorkerNode> self,
                                    base::ZMQCallBack callback,
                                    scoped_refptr<base::ZMQResponse> rep) {
   if (auto* pThis = self.get()) {
     Response body;
     body.ParseFromString(rep->data_);
-    LOG(INFO) << "handleResponse:\n" << body.DebugString();
+    VLOG(1) << "HandleResponse:\n" << body.DebugString();
     callback.Run(rep);
   }
 }

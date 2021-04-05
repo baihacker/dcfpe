@@ -18,7 +18,7 @@ class DPEMasterNode : public ZServerHandler,
                       public http::HttpReqestHandler,
                       public base::RefCounted<DPEMasterNode> {
  public:
-  DPEMasterNode(const std::string& myIP, int port);
+  DPEMasterNode(const std::string& my_ip, int port);
   ~DPEMasterNode();
 
   bool Start();
@@ -30,7 +30,7 @@ class DPEMasterNode : public ZServerHandler,
 
  private:
   scoped_refptr<ZServer> zserver;
-  std::string myIP;
+  std::string my_ip;
   int port;
   std::string moduleDir;
   base::WeakPtrFactory<DPEMasterNode> weakptr_factory_;

@@ -20,7 +20,7 @@ message FinishComputeRequest {
 message Request {
   optional string name = 1;
 
-  optional int64 timestamp = 100 [default = 0];
+  optional int64 request_timestamp = 100 [default = 0];
 
   optional GetTaskRequest get_task = 300;
   optional FinishComputeRequest finish_compute = 301;
@@ -30,7 +30,7 @@ message Response {
   optional string name = 1;
   optional int64 error_code = 2;
 
-  optional int64 timestamp = 100 [default = 0];
+  optional int64 response_timestamp = 100 [default = 0];
 
   optional int64 request_timestamp = 200 [default = 0];
 

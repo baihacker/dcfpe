@@ -6,8 +6,8 @@
 
 namespace dpe {
 static char buff[1024];
-DPEMasterNode::DPEMasterNode(const std::string& myIP, int port)
-    : myIP(myIP), port(port), weakptr_factory_(this) {
+DPEMasterNode::DPEMasterNode(const std::string& my_ip, int port)
+    : my_ip(my_ip), port(port), weakptr_factory_(this) {
   GetModuleFileNameA(NULL, buff, 1024);
   std::string modulePath = buff;
   auto parentDir = base::FilePath(base::UTF8ToNative(modulePath)).DirName();
@@ -18,10 +18,10 @@ DPEMasterNode::~DPEMasterNode() { Stop(); }
 
 bool DPEMasterNode::Start() {
   zserver = new ZServer(this);
-  if (!zserver->Start(myIP, port)) {
+  if (!zserver->Start(my_ip, port)) {
     zserver = NULL;
     LOG(WARNING) << "Cannot start master node.";
-    LOG(WARNING) << "ip = " << myIP;
+    LOG(WARNING) << "ip = " << my_ip;
     LOG(WARNING) << "port = " << port;
     return false;
   } else {
@@ -34,14 +34,14 @@ bool DPEMasterNode::Start() {
 
     ~TaskAppenderImpl() {}
 
-    void addTask(int64 taskId) { taskQueue.push_back(taskId); }
+    void AddTask(int64 taskId) { taskQueue.push_back(taskId); }
 
    private:
     std::deque<int64>& taskQueue;
   };
   TaskAppenderImpl appender(taskQueue);
-  GetSolver()->initAsMaster(&appender);
-  LOG(INFO) << taskQueue.size() << " tasks." << std::endl;
+  GetSolver()->InitAsMaster(&appender);
+  LOG(INFO) << "Found " << taskQueue.size() << " tasks." << std::endl;
   return true;
 }
 
@@ -84,10 +84,10 @@ int DPEMasterNode::HandleRequest(const Request& req, Response& reply) {
     }
 
     if (size > 0) {
-      GetSolver()->setResult(task_id.size(), &task_id[0], &result[0],
+      GetSolver()->SetResult(task_id.size(), &task_id[0], &result[0],
                              &time_usage[0], data.total_time_usage());
       if (taskQueue.empty() && taskRunningQueue.empty()) {
-        GetSolver()->finish();
+        GetSolver()->Finish();
         WillExitDpe();
       }
     }

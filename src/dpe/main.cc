@@ -19,41 +19,37 @@ class SolverImpl : public Solver {
 
   ~SolverImpl() {}
 
-#pragma RUN_ON_MASTER_NODE
-  void initAsMaster(TaskAppender* taskAppender) {
+  void InitAsMaster(TaskAppender* taskAppender) {
     for (int i = 0; i < 30; ++i) {
-      taskAppender->addTask(i);
+      taskAppender->AddTask(i);
     }
   }
+  void InitAsWorker() {}
 
-#pragma RUN_ON_WORKER_NODE
-  void initAsWorker() {}
-
-#pragma RUN_ON_MASTER_NODE
-  void setResult(int size, int64* task_id, int64* result, int64* time_usage,
+  void SetResult(int size, int64* task_id, int64* result, int64* time_usage,
                  int64 total_time_usage) {
     for (int i = 0; i < size; ++i) {
-      std::cerr << task_id[i] << " finished. Timeusage " << time_usage[i]
+      std::cerr << task_id[i] << " finished. Time usage " << time_usage[i]
                 << std::endl;
       ans += result[i];
     }
-    std::cerr << "Timeusage for batch task" << total_time_usage << std::endl;
+    std::cerr << "Time usage for batch tasks: " << total_time_usage
+              << std::endl;
   }
 
-#pragma RUN_ON_WORKER_NODE
-  void compute(int size, const int64* task_id, int64* result, int64* time_usage,
+  void Compute(int size, const int64* task_id, int64* result, int64* time_usage,
                int thread_number) {
     for (int i = 0; i < size; ++i) {
       int start = clock();
-      result[i] = work(task_id[i]);
+      result[i] = Work(task_id[i]);
       time_usage[i] = clock() - start;
     }
+    // Sleep(5000);
   }
 
-  int64 work(int64 task_id) { return task_id * task_id; }
+  int64 Work(int64 task_id) { return task_id * task_id * task_id; }
 
-#pragma RUN_ON_MASTER_NODE
-  void finish() {
+  void Finish() {
     std::cerr << std::endl << "ans = " << ans << std::endl << std::endl;
   }
 

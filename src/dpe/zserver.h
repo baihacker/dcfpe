@@ -31,7 +31,6 @@ class ZServer : public base::RequestHandler, public base::RefCounted<ZServer> {
   std::string handle_request(base::ServerContext& context) override;
 
  public:
-  // remote message handling: bind and receive and send
   int32_t server_state_;
   std::string server_address_;
   ZServerHandler* handler_;

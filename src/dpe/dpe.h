@@ -41,29 +41,18 @@ DPE_EXPORT DpeStub* get_stub();
 // TaskAppender and Solver, but we ignore them now.
 class TaskAppender {
  public:
-  virtual void addTask(int64 taskId) = 0;
+  virtual void AddTask(int64 taskId) = 0;
 };
 
-#define RUN_ON_MASTER_NODE
-#define RUN_ON_WORKER_NODE
 class Solver {
  public:
-#pragma RUN_ON_MASTER_NODE
-  virtual void initAsMaster(TaskAppender* taskAppender) = 0;
-
-#pragma RUN_ON_WORKER_NODE
-  virtual void initAsWorker() = 0;
-
-#pragma RUN_ON_MASTER_NODE
-  virtual void setResult(int size, int64* taskId, int64* result,
+  virtual void InitAsMaster(TaskAppender* taskAppender) = 0;
+  virtual void InitAsWorker() = 0;
+  virtual void SetResult(int size, int64* taskId, int64* result,
                          int64* time_usage, int64 total_time_usage) = 0;
-
-#pragma RUN_ON_WORKER_NODE
-  virtual void compute(int size, const int64* taskId, int64* result,
+  virtual void Compute(int size, const int64* taskId, int64* result,
                        int64* time_usage, int thread_number) = 0;
-
-#pragma RUN_ON_MASTER_NODE
-  virtual void finish() = 0;
+  virtual void Finish() = 0;
 };
 
 #endif
