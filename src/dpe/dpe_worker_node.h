@@ -11,8 +11,10 @@ class DPEWorkerNode : public base::RefCounted<DPEWorkerNode> {
   DPEWorkerNode(const std::string& serverIP, int serverPort);
   ~DPEWorkerNode();
 
-  bool start();
+  bool Start();
+  void Stop();
 
+  void GetNextTask();
   void HandleGetTask(scoped_refptr<base::ZMQResponse> response);
   void HandleFinishCompute(scoped_refptr<base::ZMQResponse> response);
 

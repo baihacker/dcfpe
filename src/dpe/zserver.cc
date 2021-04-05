@@ -3,7 +3,7 @@
 
 namespace dpe {
 ZServer::ZServer(ZServerHandler* handler)
-    : handler(handler), server_state_(ZSERVER_IDLE), weakptr_factory_(this) {}
+    : handler_(handler), server_state_(ZSERVER_IDLE), weakptr_factory_(this) {}
 
 ZServer::~ZServer() { Stop(); }
 
@@ -57,7 +57,7 @@ std::string ZServer::handle_request(base::ServerContext& context) {
     rep.set_request_timestamp(req.timestamp());
 
     // handle request
-    handler->handleRequest(req, rep);
+    handler_->HandleRequest(req, rep);
   } while (false);
 
   std::string ret;

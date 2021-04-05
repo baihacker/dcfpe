@@ -18,14 +18,14 @@ HttpServer::HttpServer()
 
 HttpServer::~HttpServer() { CloseHandle(taskEvent); }
 
-void HttpServer::start(int port) {
+void HttpServer::Start(int port) {
   this->port = port;
   unsigned id = 0;
-  threadHandle = (HANDLE)_beginthreadex(NULL, 0, &HttpServer::threadMain,
+  threadHandle = (HANDLE)_beginthreadex(NULL, 0, &HttpServer::ThreadMain,
                                         (void*)this, 0, &id);
 }
 
-void HttpServer::stop() {
+void HttpServer::Stop() {
   if (threadHandle == NULL) {
     return;
   }
@@ -62,13 +62,14 @@ void HttpServer::stop() {
   threadHandle = NULL;
 }
 
-unsigned __stdcall HttpServer::threadMain(void* arg) {
+unsigned __stdcall HttpServer::ThreadMain(void* arg) {
   if (HttpServer* pThis = (HttpServer*)arg) {
-    pThis->run();
+    pThis->Run();
   }
   return 0;
 }
-unsigned HttpServer::run() {
+
+unsigned HttpServer::Run() {
   SOCKET s;
   struct sockaddr_in tcpaddr;
   s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -97,7 +98,7 @@ unsigned HttpServer::run() {
     }
     buff[len] = 0;
     std::string data;
-    if (!handleRequestOnThread(buff, data)) {
+    if (!HandleRequestOnThread(buff, data)) {
       closesocket(c);
       break;
     }
@@ -110,10 +111,10 @@ unsigned HttpServer::run() {
   return 0;
 }
 
-bool HttpServer::handleRequestOnThread(const std::string& reqData,
+bool HttpServer::HandleRequestOnThread(const std::string& reqData,
                                        std::string& repData) {
   LOG(INFO) << "Handle http request:\n" << reqData;
-  auto req = parseRequest(reqData);
+  auto req = ParseRequest(reqData);
 
   if (req.path == "quit") {
     return false;
@@ -122,7 +123,7 @@ bool HttpServer::handleRequestOnThread(const std::string& reqData,
   HttpResponse rep;
   base::ThreadPool::PostTask(
       base::ThreadPool::UI, FROM_HERE,
-      base::Bind(handleRequest, weakptr_factory_.GetWeakPtr(), req, &rep));
+      base::Bind(HandleRequest, weakptr_factory_.GetWeakPtr(), req, &rep));
 
   DWORD result = WaitForSingleObject(taskEvent, 10 * 1000);
   if (quitFlag) {
@@ -132,11 +133,11 @@ bool HttpServer::handleRequestOnThread(const std::string& reqData,
     return false;
   }
 
-  repData = std::move(responseToString(rep));
+  repData = std::move(ResponseToString(rep));
   return true;
 }
 
-HttpRequest HttpServer::parseRequest(const std::string& requestData) {
+HttpRequest HttpServer::ParseRequest(const std::string& requestData) {
   std::vector<std::string> tokens;
   Tokenize(requestData, "\n", &tokens);
   HttpRequest req;
@@ -149,7 +150,7 @@ HttpRequest HttpServer::parseRequest(const std::string& requestData) {
     if (hs > 0) req.method = verb[0];
     if (hs > 1) {
       req.fullPath = verb[1];
-      parsePath(req.fullPath, req.path, req.parameters);
+      ParsePath(req.fullPath, req.path, req.parameters);
 #if 0
       std::cerr << req.fullPath << std::endl;
       std::cerr << req.path << std::endl;
@@ -182,7 +183,7 @@ HttpRequest HttpServer::parseRequest(const std::string& requestData) {
   return req;
 }
 
-void HttpServer::parsePath(const std::string& fullPath, std::string& path,
+void HttpServer::ParsePath(const std::string& fullPath, std::string& path,
                            std::map<std::string, std::string>& parameters) {
   const int len = static_cast<int>(fullPath.size());
   auto i = std::find(fullPath.begin(), fullPath.end(), '?');
@@ -206,32 +207,32 @@ void HttpServer::parsePath(const std::string& fullPath, std::string& path,
   }
 }
 
-std::string HttpServer::responseToString(const HttpResponse& rep) {
+std::string HttpServer::ResponseToString(const HttpResponse& rep) {
   std::string result;
   result.append("HTTP/1.0 200 OK\n");
   result.append(
-      base::StringPrintf("Content-Length: %u\n", rep.getBody().size()));
-  for (const auto& iter : rep.getHeaders()) {
+      base::StringPrintf("Content-Length: %u\n", rep.GetBody().size()));
+  for (const auto& iter : rep.GetHeaders()) {
     result.append(base::StringPrintf("%s: %s\n", iter.first.c_str(),
                                      iter.second.c_str()));
   }
   result.append("\n");
-  result.append(rep.getBody());
+  result.append(rep.GetBody());
 
   return result;
 }
 
-void HttpServer::handleRequest(base::WeakPtr<HttpServer> self,
+void HttpServer::HandleRequest(base::WeakPtr<HttpServer> self,
                                const HttpRequest& req, HttpResponse* rep) {
   if (auto* pThis = self.get()) {
-    pThis->handleRequestImpl(req, rep);
+    pThis->HandleRequestImpl(req, rep);
     SetEvent(pThis->taskEvent);
   }
 }
 
-void HttpServer::handleRequestImpl(const HttpRequest& req, HttpResponse* rep) {
+void HttpServer::HandleRequestImpl(const HttpRequest& req, HttpResponse* rep) {
   if (handler) {
-    handler->handleRequest(req, rep);
+    handler->HandleRequest(req, rep);
   }
 }
 }  // namespace http

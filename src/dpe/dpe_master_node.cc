@@ -14,9 +14,9 @@ DPEMasterNode::DPEMasterNode(const std::string& myIP, int port)
   moduleDir = base::NativeToUTF8(parentDir.value());
 }
 
-DPEMasterNode::~DPEMasterNode() { stop(); }
+DPEMasterNode::~DPEMasterNode() { Stop(); }
 
-bool DPEMasterNode::start() {
+bool DPEMasterNode::Start() {
   zserver = new ZServer(this);
   if (!zserver->Start(myIP, port)) {
     zserver = NULL;
@@ -40,19 +40,19 @@ bool DPEMasterNode::start() {
     std::deque<int64>& taskQueue;
   };
   TaskAppenderImpl appender(taskQueue);
-  getSolver()->initAsMaster(&appender);
+  GetSolver()->initAsMaster(&appender);
   LOG(INFO) << taskQueue.size() << " tasks." << std::endl;
   return true;
 }
 
-void DPEMasterNode::stop() {
+void DPEMasterNode::Stop() {
   if (zserver) {
     zserver->Stop();
     zserver = NULL;
   }
 }
 
-int DPEMasterNode::handleRequest(const Request& req, Response& reply) {
+int DPEMasterNode::HandleRequest(const Request& req, Response& reply) {
   if (req.has_get_task()) {
     if (!taskQueue.empty()) {
       const int64 task_id = taskQueue.front();
@@ -62,6 +62,7 @@ int DPEMasterNode::handleRequest(const Request& req, Response& reply) {
       taskRunningQueue.insert(task_id);
       reply.set_allocated_get_task(task);
     }
+    reply.set_error_code(0);
   } else if (req.has_finish_compute()) {
     auto& data = req.finish_compute();
     const int64 task_id = data.task_id();
@@ -69,12 +70,12 @@ int DPEMasterNode::handleRequest(const Request& req, Response& reply) {
     int64 int64_result = result.value_int64();
     if (taskRunningQueue.count(task_id)) {
       this->result.push_back({task_id, int64_result});
-      getSolver()->setResult(task_id, &int64_result, sizeof(int64),
+      GetSolver()->setResult(task_id, &int64_result, sizeof(int64),
                              data.time_usage());
       taskRunningQueue.erase(task_id);
       if (taskQueue.empty() && taskRunningQueue.empty()) {
-        getSolver()->finish();
-        willExitDpe();
+        GetSolver()->finish();
+        WillExitDpe();
       }
     }
     reply.set_error_code(0);
@@ -82,7 +83,7 @@ int DPEMasterNode::handleRequest(const Request& req, Response& reply) {
   return 0;
 }
 
-bool DPEMasterNode::handleRequest(const http::HttpRequest& req,
+bool DPEMasterNode::HandleRequest(const http::HttpRequest& req,
                                   http::HttpResponse* rep) {
   if (req.method == "GET") {
     if (req.path == "/status") {
@@ -92,7 +93,7 @@ bool DPEMasterNode::handleRequest(const http::HttpRequest& req,
       if (!base::ReadFileToString(filePath, &data)) {
         return true;
       }
-      rep->setBody(data);
+      rep->SetBody(data);
     } else if (req.path == "/jquery.min.js") {
       std::string data;
       base::FilePath filePath(
@@ -100,7 +101,7 @@ bool DPEMasterNode::handleRequest(const http::HttpRequest& req,
       if (!base::ReadFileToString(filePath, &data)) {
         return true;
       }
-      rep->setBody(data);
+      rep->SetBody(data);
     } else if (req.path == "/Chart.bundle.js") {
       std::string data;
       base::FilePath filePath(
@@ -108,7 +109,7 @@ bool DPEMasterNode::handleRequest(const http::HttpRequest& req,
       if (!base::ReadFileToString(filePath, &data)) {
         return true;
       }
-      rep->setBody(data);
+      rep->SetBody(data);
     }
   }
   return true;

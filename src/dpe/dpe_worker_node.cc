@@ -17,26 +17,36 @@ DPEWorkerNode::DPEWorkerNode(const std::string& serverIP, int serverPort)
 
 DPEWorkerNode::~DPEWorkerNode() {}
 
-bool DPEWorkerNode::start() {
+bool DPEWorkerNode::Start() {
+  GetNextTask();
+  return true;
+}
+
+void DPEWorkerNode::Stop() {
+}
+
+void DPEWorkerNode::GetNextTask() {
   Request request;
   request.set_name("get_task");
   request.set_allocated_get_task(new GetTaskRequest());
-  this->sendRequest(
-      request, base::Bind(&dpe::DPEWorkerNode::HandleGetTask, this), 60000);
-  return true;
+  sendRequest(request, base::Bind(&dpe::DPEWorkerNode::HandleGetTask, this),
+              5000);
 }
 
 void DPEWorkerNode::HandleGetTask(scoped_refptr<base::ZMQResponse> response) {
   if (response->error_code_ != base::ZMQResponse::ZMQ_REP_OK) {
-    willExitDpe();
+    LOG(WARNING) << "Handle get task, error: " << response->error_code_
+                 << std::endl;
+    WillExitDpe();
   } else {
     Response body;
     body.ParseFromString(response->data_);
     auto& get_task = body.get_task();
     if (!get_task.has_task_id()) {
-      willExitDpe();
+      LOG(WARNING) << "Handle get task, no more task" << std::endl;
+      WillExitDpe();
     } else {
-      getSolver()->compute(get_task.task_id());
+      GetSolver()->compute(get_task.task_id());
 
       FinishComputeRequest* fr = new FinishComputeRequest();
       fr->set_task_id(get_task.task_id());
@@ -46,9 +56,9 @@ void DPEWorkerNode::HandleGetTask(scoped_refptr<base::ZMQResponse> response) {
       Request request;
       request.set_name("finish_compute");
       request.set_allocated_finish_compute(fr);
-      this->sendRequest(
-          request, base::Bind(&dpe::DPEWorkerNode::HandleFinishCompute, this),
-          60000);
+      sendRequest(request,
+                  base::Bind(&dpe::DPEWorkerNode::HandleFinishCompute, this),
+                  60000);
     }
   }
 }
@@ -56,13 +66,11 @@ void DPEWorkerNode::HandleGetTask(scoped_refptr<base::ZMQResponse> response) {
 void DPEWorkerNode::HandleFinishCompute(
     scoped_refptr<base::ZMQResponse> response) {
   if (response->error_code_ != base::ZMQResponse::ZMQ_REP_OK) {
-    willExitDpe();
+    LOG(WARNING) << "Handle finish compute, error: " << response->error_code_
+                 << std::endl;
+    WillExitDpe();
   } else {
-    Request request;
-    request.set_name("get_task");
-    request.set_allocated_get_task(new GetTaskRequest());
-    this->sendRequest(
-        request, base::Bind(&dpe::DPEWorkerNode::HandleGetTask, this), 60000);
+    GetNextTask();
   }
 }
 

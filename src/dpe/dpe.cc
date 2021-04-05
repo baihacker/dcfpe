@@ -15,7 +15,7 @@
 #include "dpe/variants.h"
 
 namespace dpe {
-static inline std::string get_iface_address() {
+static inline std::string GetInterfaceAddress() {
   char hostname[128];
   char localHost[128][32] = {{0}};
   struct hostent* temp;
@@ -27,7 +27,7 @@ static inline std::string get_iface_address() {
   return localHost[0];
 }
 
-static inline void startNetwork() {
+static inline void StartNetwork() {
   WSADATA wsaData;
   WORD sockVersion = MAKEWORD(2, 2);
   if (::WSAStartup(sockVersion, &wsaData) != 0) {
@@ -36,9 +36,9 @@ static inline void startNetwork() {
   }
 }
 
-static inline void stopNetwork() { ::WSACleanup(); }
+static inline void StopNetwork() { ::WSACleanup(); }
 
-static inline std::string parseCmd(const std::string& s, int& idx,
+static inline std::string ParseCmd(const std::string& s, int& idx,
                                    std::string& value) {
   idx = -1;
   value = "";
@@ -62,35 +62,31 @@ std::string type = "server";
 std::string myIP;
 std::string serverIP;
 int port = 0;
-int instanceId = 0;
-std::string defaultCacheFilePath = "dpeCache.txt";
-std::string cacheFilePath = defaultCacheFilePath;
-bool resetCache = false;
 Solver* solver;
 int httpPort = 80;
 
-static void exitDpeImpl() {
+static void ExitDpeImpl() {
   LOG(INFO) << "exitDpeImpl";
   if (dpeMasterNode) {
-    dpeMasterNode->stop();
+    dpeMasterNode->Stop();
   }
   dpeMasterNode = NULL;
-  httpServer.stop();
+  httpServer.Stop();
   if (dpeWorkerNode) {
-    // dpeWorkerNode->stop();
+    dpeWorkerNode->Stop();
   }
   dpeWorkerNode = NULL;
   base::will_quit_main_loop();
 }
 
-void willExitDpe() {
-  LOG(INFO) << "willExitDpe";
-  httpServer.setHandler(NULL);
+void WillExitDpe() {
+  LOG(INFO) << "WillExitDpe";
+  httpServer.SetHandler(NULL);
   base::ThreadPool::PostTask(base::ThreadPool::UI, FROM_HERE,
-                             base::Bind(exitDpeImpl));
+                             base::Bind(ExitDpeImpl));
 }
 
-Solver* getSolver() { return solver; }
+Solver* GetSolver() { return solver; }
 
 static inline void run() {
   LOG(INFO) << "running";
@@ -101,42 +97,42 @@ static inline void run() {
   if (type == "server") {
     dpeMasterNode =
         new DPEMasterNode(myIP, port == 0 ? dpe::kServerPort : port);
-    httpServer.setHandler(dpeMasterNode);
-    httpServer.start(httpPort);
-    if (!dpeMasterNode->start()) {
+    httpServer.SetHandler(dpeMasterNode);
+    httpServer.Start(httpPort);
+    if (!dpeMasterNode->Start()) {
       LOG(ERROR) << "Failed to start master node";
-      willExitDpe();
+      WillExitDpe();
     }
   } else if (type == "worker") {
     dpeWorkerNode =
         new DPEWorkerNode(serverIP, port == 0 ? dpe::kServerPort : port);
-    if (!dpeWorkerNode->start()) {
+    if (!dpeWorkerNode->Start()) {
       LOG(ERROR) << "Failed to start worker node";
-      willExitDpe();
+      WillExitDpe();
     }
   } else {
     LOG(ERROR) << "Unknown type";
-    willExitDpe();
+    WillExitDpe();
   }
 }
 
-void runDpe(Solver* solver, int argc, char* argv[]) {
-  std::cout << "DCFPE (version 1.1.0.0)" << std::endl;
+void RunDpe(Solver* solver, int argc, char* argv[]) {
+  std::cout << "DCFPE (version 2.0.0.0)" << std::endl;
   std::cout << "Author: baihacker" << std::endl;
   std::cout << "HomePage: https://github.com/baihacker/dcfpe" << std::endl;
 
   dpe::solver = solver;
-  startNetwork();
+  StartNetwork();
 
   type = "server";
-  myIP = get_iface_address();
+  myIP = GetInterfaceAddress();
   serverIP = myIP;
 
   int loggingLevel = 1;
   for (int i = 1; i < argc;) {
     int idx;
     std::string value;
-    const std::string str = parseCmd(argv[i], idx, value);
+    const std::string str = ParseCmd(argv[i], idx, value);
     if (str == "t" || str == "type") {
       if (idx == -1) {
         type = argv[i + 1];
@@ -177,39 +173,6 @@ void runDpe(Solver* solver, int argc, char* argv[]) {
         port = atoi(value.c_str());
         ++i;
       }
-    } else if (str == "id") {
-      if (idx == -1) {
-        instanceId = atoi(argv[i + 1]);
-        i += 2;
-      } else {
-        instanceId = atoi(value.c_str());
-        ++i;
-      }
-    } else if (str == "c" || str == "cache") {
-      if (idx == -1) {
-        cacheFilePath = argv[i + 1];
-        i += 2;
-      } else {
-        cacheFilePath = value;
-        ++i;
-      }
-    } else if (str == "reset_cache") {
-      std::string data;
-      if (idx == -1) {
-        data = argv[i + 1];
-        i += 2;
-      } else {
-        data = value;
-        ++i;
-      }
-      data = StringToLowerASCII(data);
-      if (data == "true" || data == "1") {
-        resetCache = true;
-      } else if (data == "false" || data == "0") {
-        resetCache = false;
-      } else {
-        resetCache = false;
-      }
     } else if (str == "hp" || str == "http_port") {
       if (idx == -1) {
         httpPort = atoi(argv[i + 1]);
@@ -225,10 +188,10 @@ void runDpe(Solver* solver, int argc, char* argv[]) {
 
   base::dpe_base_main(run, NULL, loggingLevel);
 
-  stopNetwork();
+  StopNetwork();
 }
 
-static DpeStub __stub_impl = {&dpe::runDpe};
+static DpeStub __stub_impl = {&dpe::RunDpe};
 
 DPE_EXPORT DpeStub* get_stub() { return &__stub_impl; }
 }  // namespace dpe

@@ -32,7 +32,7 @@ typedef std::int64_t int64;
 
 class Solver;
 struct DpeStub {
-  void (*runDpe)(Solver* solver, int argc, char* argv[]);
+  void (*RunDpe)(Solver* solver, int argc, char* argv[]);
 };
 
 DPE_EXPORT DpeStub* get_stub();

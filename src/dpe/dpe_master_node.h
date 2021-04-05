@@ -21,12 +21,12 @@ class DPEMasterNode : public ZServerHandler,
   DPEMasterNode(const std::string& myIP, int port);
   ~DPEMasterNode();
 
-  bool start();
-  void stop();
+  bool Start();
+  void Stop();
 
-  int handleRequest(const Request& req, Response& reply);
+  int HandleRequest(const Request& req, Response& reply);
 
-  bool handleRequest(const http::HttpRequest& req, http::HttpResponse* rep);
+  bool HandleRequest(const http::HttpRequest& req, http::HttpResponse* rep);
 
  private:
   scoped_refptr<ZServer> zserver;

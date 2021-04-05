@@ -6,7 +6,7 @@
 
 namespace dpe {
 struct ZServerHandler {
-  virtual int handleRequest(const Request& req, Response& reply) = 0;
+  virtual int HandleRequest(const Request& req, Response& reply) = 0;
 };
 
 class ZServer : public base::RequestHandler, public base::RefCounted<ZServer> {
@@ -34,7 +34,7 @@ class ZServer : public base::RequestHandler, public base::RefCounted<ZServer> {
   // remote message handling: bind and receive and send
   int32_t server_state_;
   std::string server_address_;
-  ZServerHandler* handler;
+  ZServerHandler* handler_;
 
   base::WeakPtrFactory<ZServer> weakptr_factory_;
 };

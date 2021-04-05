@@ -20,14 +20,14 @@ struct HttpRequest {
 
 class HttpResponse {
  public:
-  void setHeader(const std::string& key, const std::string& value) {
+  void SetHeader(const std::string& key, const std::string& value) {
     headers[key] = value;
   }
-  void setBody(const std::string& body) { this->body = body; }
-  const std::map<std::string, std::string>& getHeaders() const {
+  void SetBody(const std::string& body) { this->body = body; }
+  const std::map<std::string, std::string>& GetHeaders() const {
     return headers;
   }
-  const std::string getBody() const { return body; }
+  const std::string GetBody() const { return body; }
 
  private:
   std::map<std::string, std::string> headers;
@@ -36,7 +36,7 @@ class HttpResponse {
 
 class HttpReqestHandler {
  public:
-  virtual bool handleRequest(const HttpRequest& req, HttpResponse* rep) = 0;
+  virtual bool HandleRequest(const HttpRequest& req, HttpResponse* rep) = 0;
 };
 
 class HttpServer {
@@ -44,22 +44,22 @@ class HttpServer {
   HttpServer();
   ~HttpServer();
 
-  void start(int port);
-  void stop();
+  void Start(int port);
+  void Stop();
 
-  void setHandler(HttpReqestHandler* handler) { this->handler = handler; }
+  void SetHandler(HttpReqestHandler* handler) { this->handler = handler; }
 
-  static unsigned __stdcall threadMain(void* arg);
-  unsigned run();
-  bool handleRequestOnThread(const std::string& reqData, std::string& repData);
-  HttpRequest parseRequest(const std::string& requestData);
-  void parsePath(const std::string& fullPath, std::string& path,
+  static unsigned __stdcall ThreadMain(void* arg);
+  unsigned Run();
+  bool HandleRequestOnThread(const std::string& reqData, std::string& repData);
+  HttpRequest ParseRequest(const std::string& requestData);
+  void ParsePath(const std::string& fullPath, std::string& path,
                  std::map<std::string, std::string>& parameters);
-  std::string responseToString(const HttpResponse& rep);
+  std::string ResponseToString(const HttpResponse& rep);
 
-  static void handleRequest(base::WeakPtr<HttpServer> self,
+  static void HandleRequest(base::WeakPtr<HttpServer> self,
                             const HttpRequest& req, HttpResponse* rep);
-  void handleRequestImpl(const HttpRequest& req, HttpResponse* rep);
+  void HandleRequestImpl(const HttpRequest& req, HttpResponse* rep);
 
  private:
   int port;
