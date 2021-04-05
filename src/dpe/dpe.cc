@@ -10,9 +10,7 @@
 #include "dpe/dpe_internal.h"
 #include "dpe/dpe_master_node.h"
 #include "dpe/dpe_worker_node.h"
-#include "dpe/cache.h"
 #include "dpe/http_server.h"
-#include "dpe/variants.h"
 
 namespace dpe {
 static inline std::string GetInterfaceAddress() {

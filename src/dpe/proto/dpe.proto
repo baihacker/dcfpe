@@ -2,28 +2,19 @@ syntax = "proto2";
 
 package dpe;
 
-message Variant {
-  oneof value {
-    int64 value_int64 = 1;
-    string value_string = 2;
-  }
-}
-
-message Variants {
-  repeated Variant element = 1;
-}
-
 message GetTaskRequest {
+  optional int32 max_task_count = 1;
 }
 
 message GetTaskResponse {
-  optional int64 task_id = 1;
+  repeated int64 task_id = 1;
 }
 
 message FinishComputeRequest {
-  optional int64 task_id = 1;
-  optional Variant result = 2;
-  optional int64 time_usage = 3 [default = 0];
+  repeated int64 task_id = 1;
+  repeated int64 result = 2;
+  repeated int64 time_usage = 3;
+  optional int64 total_time_usage = 4;
 }
 
 message Request {
@@ -33,7 +24,6 @@ message Request {
 
   optional GetTaskRequest get_task = 300;
   optional FinishComputeRequest finish_compute = 301;
-
 }
 
 message Response {

@@ -55,11 +55,12 @@ class Solver {
   virtual void initAsWorker() = 0;
 
 #pragma RUN_ON_MASTER_NODE
-  virtual void setResult(int64 taskId, void* result, int result_size,
-                         int64 timeUsage) = 0;
+  virtual void setResult(int size, int64* taskId, int64* result,
+                         int64* time_usage, int64 total_time_usage) = 0;
 
 #pragma RUN_ON_WORKER_NODE
-  virtual void compute(int64 taskId) = 0;
+  virtual void compute(int size, const int64* taskId, int64* result,
+                       int64* time_usage, int thread_number) = 0;
 
 #pragma RUN_ON_MASTER_NODE
   virtual void finish() = 0;

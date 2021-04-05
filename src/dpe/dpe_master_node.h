@@ -37,7 +37,7 @@ class DPEMasterNode : public ZServerHandler,
 
   std::deque<int64> taskQueue;
   std::set<int64> taskRunningQueue;
-  std::vector<std::pair<int64, int64>> result;
+  std::vector<std::pair<int64, int64>> all_result;
 };
 }  // namespace dpe
 #endif

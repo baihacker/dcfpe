@@ -5,7 +5,6 @@
 #include "dpe/dpe.h"
 #include "dpe/dpe_internal.h"
 #include "dpe/proto/dpe.pb.h"
-#include "dpe/variants.h"
 #include "dpe/dpe_master_node.h"
 
 namespace dpe {
@@ -22,13 +21,15 @@ bool DPEWorkerNode::Start() {
   return true;
 }
 
-void DPEWorkerNode::Stop() {
-}
+void DPEWorkerNode::Stop() {}
 
 void DPEWorkerNode::GetNextTask() {
+  GetTaskRequest* get_task = new GetTaskRequest();
+  get_task->set_max_task_count(10);
+
   Request request;
   request.set_name("get_task");
-  request.set_allocated_get_task(new GetTaskRequest());
+  request.set_allocated_get_task(get_task);
   sendRequest(request, base::Bind(&dpe::DPEWorkerNode::HandleGetTask, this),
               5000);
 }
@@ -38,29 +39,45 @@ void DPEWorkerNode::HandleGetTask(scoped_refptr<base::ZMQResponse> response) {
     LOG(WARNING) << "Handle get task, error: " << response->error_code_
                  << std::endl;
     WillExitDpe();
-  } else {
-    Response body;
-    body.ParseFromString(response->data_);
-    auto& get_task = body.get_task();
-    if (!get_task.has_task_id()) {
-      LOG(WARNING) << "Handle get task, no more task" << std::endl;
-      WillExitDpe();
-    } else {
-      GetSolver()->compute(get_task.task_id());
-
-      FinishComputeRequest* fr = new FinishComputeRequest();
-      fr->set_task_id(get_task.task_id());
-      Variant* v = new Variant();
-      v->set_value_int64(2);
-      fr->set_allocated_result(v);
-      Request request;
-      request.set_name("finish_compute");
-      request.set_allocated_finish_compute(fr);
-      sendRequest(request,
-                  base::Bind(&dpe::DPEWorkerNode::HandleFinishCompute, this),
-                  60000);
-    }
+    return;
   }
+
+  Response body;
+  body.ParseFromString(response->data_);
+  auto& get_task = body.get_task();
+  const int size = get_task.task_id_size();
+  if (size == 0) {
+    LOG(WARNING) << "Handle get task, no more task" << std::endl;
+    WillExitDpe();
+    return;
+  }
+
+  std::vector<int64> task_id;
+  for (int i = 0; i < size; ++i) {
+    task_id.push_back(get_task.task_id(i));
+  }
+
+  std::vector<int64> result(size, 0);
+  std::vector<int64> time_usage(size, 0);
+
+  const int64 start_time = base::Time::Now().ToInternalValue();
+  GetSolver()->compute(size, &task_id[0], &result[0], &time_usage[0], 10);
+  const int64 end_time = base::Time::Now().ToInternalValue();
+
+  FinishComputeRequest* fr = new FinishComputeRequest();
+  for (int i = 0; i < size; ++i) {
+    fr->add_task_id(task_id[i]);
+    fr->add_result(result[i]);
+    fr->add_time_usage(time_usage[i]);
+  }
+  fr->set_total_time_usage(end_time - start_time);
+
+  Request request;
+  request.set_name("finish_compute");
+  request.set_allocated_finish_compute(fr);
+  sendRequest(request,
+              base::Bind(&dpe::DPEWorkerNode::HandleFinishCompute, this),
+              60000);
 }
 
 void DPEWorkerNode::HandleFinishCompute(

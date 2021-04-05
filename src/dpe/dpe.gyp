@@ -70,10 +70,6 @@
 
           'proto/dpe.pb.h',
           'proto/dpe.pb.cc',
-          'variants.h',
-          'variants.cc',
-          'cache.h',
-          'cache.cc',
 
           'http_server.h',
           'http_server.cc',
