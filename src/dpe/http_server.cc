@@ -8,25 +8,25 @@
 namespace http {
 HttpServer::HttpServer()
     : port(0),
-      quitFlag(0),
-      threadHandle(NULL),
-      taskEvent(NULL),
+      quit_flag_(0),
+      thread_handle_(NULL),
+      task_event_(NULL),
       handler(NULL),
       weakptr_factory_(this) {
-  taskEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+  task_event_ = CreateEvent(NULL, FALSE, FALSE, NULL);
 }
 
-HttpServer::~HttpServer() { CloseHandle(taskEvent); }
+HttpServer::~HttpServer() { CloseHandle(task_event_); }
 
 void HttpServer::Start(int port) {
   this->port = port;
   unsigned id = 0;
-  threadHandle = (HANDLE)_beginthreadex(NULL, 0, &HttpServer::ThreadMain,
-                                        (void*)this, 0, &id);
+  thread_handle_ = (HANDLE)_beginthreadex(NULL, 0, &HttpServer::ThreadMain,
+                                          (void*)this, 0, &id);
 }
 
 void HttpServer::Stop() {
-  if (threadHandle == NULL) {
+  if (thread_handle_ == NULL) {
     return;
   }
 
@@ -37,10 +37,10 @@ void HttpServer::Stop() {
   server.sin_port = htons(port);
   server.sin_addr.s_addr = inet_addr("127.0.0.1");
 
-  quitFlag = 1;
+  quit_flag_ = 1;
 
-  SetEvent(taskEvent);
-  DWORD result = ::WaitForMultipleObjects(1, &threadHandle, FALSE, 0);
+  SetEvent(task_event_);
+  DWORD result = ::WaitForMultipleObjects(1, &thread_handle_, FALSE, 0);
 
   if (result == WAIT_TIMEOUT) {
     connect(client, (struct sockaddr*)&server, sizeof(server));
@@ -50,16 +50,16 @@ void HttpServer::Stop() {
 
   closesocket(client);
 
-  result = ::WaitForMultipleObjects(1, &threadHandle, FALSE, 3000);
+  result = ::WaitForMultipleObjects(1, &thread_handle_, FALSE, 3000);
 
   if (result == WAIT_TIMEOUT) {
-    ::TerminateThread(threadHandle, -1);
-    ::WaitForMultipleObjects(1, &threadHandle, FALSE, 3000);
+    ::TerminateThread(thread_handle_, -1);
+    ::WaitForMultipleObjects(1, &thread_handle_, FALSE, 3000);
   } else if (result == WAIT_OBJECT_0) {
     //
   }
-  ::CloseHandle(threadHandle);
-  threadHandle = NULL;
+  ::CloseHandle(thread_handle_);
+  thread_handle_ = NULL;
 }
 
 unsigned __stdcall HttpServer::ThreadMain(void* arg) {
@@ -87,7 +87,7 @@ unsigned HttpServer::Run() {
     struct sockaddr addr;
     int addrLen = sizeof(addr);
     SOCKET c = accept(s, &addr, &addrLen);
-    if (quitFlag) {
+    if (quit_flag_) {
       closesocket(c);
       break;
     }
@@ -114,53 +114,54 @@ unsigned HttpServer::Run() {
 bool HttpServer::HandleRequestOnThread(const std::string& reqData,
                                        std::string& repData) {
   LOG(INFO) << "Handle http request:\n" << reqData;
-  auto req = ParseRequest(reqData);
+  auto request = ParseRequest(reqData);
 
-  if (req.path == "quit") {
+  if (request.path == "quit") {
     return false;
   }
 
-  HttpResponse rep;
+  HttpResponse response;
   base::ThreadPool::PostTask(
       base::ThreadPool::UI, FROM_HERE,
-      base::Bind(HandleRequest, weakptr_factory_.GetWeakPtr(), req, &rep));
+      base::Bind(HandleRequest, weakptr_factory_.GetWeakPtr(), request,
+                 &response));
 
-  DWORD result = WaitForSingleObject(taskEvent, 10 * 1000);
-  if (quitFlag) {
+  DWORD result = WaitForSingleObject(task_event_, 10 * 1000);
+  if (quit_flag_) {
     return false;
   }
   if (result != WAIT_OBJECT_0) {
     return false;
   }
 
-  repData = std::move(ResponseToString(rep));
+  repData = std::move(ResponseToString(response));
   return true;
 }
 
 HttpRequest HttpServer::ParseRequest(const std::string& requestData) {
   std::vector<std::string> tokens;
   Tokenize(requestData, "\n", &tokens);
-  HttpRequest req;
+  HttpRequest request;
   const int size = static_cast<int>(tokens.size());
   if (size > 0) {
     std::vector<std::string> verb;
     Tokenize(tokens[0], " ", &verb);
 
     const int hs = static_cast<int>(verb.size());
-    if (hs > 0) req.method = verb[0];
+    if (hs > 0) request.method = verb[0];
     if (hs > 1) {
-      req.fullPath = verb[1];
-      ParsePath(req.fullPath, req.path, req.parameters);
+      request.fullPath = verb[1];
+      ParsePath(request.fullPath, request.path, request.parameters);
 #if 0
-      std::cerr << req.fullPath << std::endl;
-      std::cerr << req.path << std::endl;
-      for (auto& iter: req.parameters)
+      std::cerr << request.fullPath << std::endl;
+      std::cerr << request.path << std::endl;
+      for (auto& iter: request.parameters)
       {
         std::cerr << iter.first << " " << iter.second << std::endl;
       }
 #endif
     }
-    if (hs > 2) req.version = verb[2];
+    if (hs > 2) request.version = verb[2];
   }
   for (int i = 1; i < size; ++i) {
     std::string key;
@@ -177,10 +178,10 @@ HttpRequest HttpServer::ParseRequest(const std::string& requestData) {
       while (idx < len && header[idx] == ' ') ++idx;
       value = header.substr(idx);
     }
-    req.headers[key] = value;
+    request.headers[key] = value;
   }
 
-  return req;
+  return request;
 }
 
 void HttpServer::ParsePath(const std::string& fullPath, std::string& path,
@@ -207,32 +208,34 @@ void HttpServer::ParsePath(const std::string& fullPath, std::string& path,
   }
 }
 
-std::string HttpServer::ResponseToString(const HttpResponse& rep) {
+std::string HttpServer::ResponseToString(const HttpResponse& response) {
   std::string result;
   result.append("HTTP/1.0 200 OK\n");
   result.append(
-      base::StringPrintf("Content-Length: %u\n", rep.GetBody().size()));
-  for (const auto& iter : rep.GetHeaders()) {
+      base::StringPrintf("Content-Length: %u\n", response.GetBody().size()));
+  for (const auto& iter : response.GetHeaders()) {
     result.append(base::StringPrintf("%s: %s\n", iter.first.c_str(),
                                      iter.second.c_str()));
   }
   result.append("\n");
-  result.append(rep.GetBody());
+  result.append(response.GetBody());
 
   return result;
 }
 
 void HttpServer::HandleRequest(base::WeakPtr<HttpServer> self,
-                               const HttpRequest& req, HttpResponse* rep) {
+                               const HttpRequest& request,
+                               HttpResponse* response) {
   if (auto* pThis = self.get()) {
-    pThis->HandleRequestImpl(req, rep);
-    SetEvent(pThis->taskEvent);
+    pThis->HandleRequestImpl(request, response);
+    SetEvent(pThis->task_event_);
   }
 }
 
-void HttpServer::HandleRequestImpl(const HttpRequest& req, HttpResponse* rep) {
+void HttpServer::HandleRequestImpl(const HttpRequest& request,
+                                   HttpResponse* response) {
   if (handler) {
-    handler->HandleRequest(req, rep);
+    handler->HandleRequest(request, response);
   }
 }
 }  // namespace http

@@ -6,7 +6,6 @@
 #include "dpe/dpe.h"
 #include "dpe/dpe_internal.h"
 
-
 namespace dpe {
 static char buff[1024];
 DPEMasterNode::DPEMasterNode(const std::string& my_ip, int port)
@@ -28,7 +27,7 @@ bool DPEMasterNode::Start() {
     LOG(WARNING) << "port = " << port_;
     return false;
   } else {
-    LOG(INFO) << "Zserver starts at: " << zserver_->GetServerAddress();
+    LOG(INFO) << "ZServer starts at: " << zserver_->GetServerAddress();
   }
 
   class TaskAppenderImpl : public TaskAppender {

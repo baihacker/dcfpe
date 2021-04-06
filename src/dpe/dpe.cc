@@ -16,9 +16,8 @@ namespace dpe {
 static inline std::string GetInterfaceAddress() {
   char hostname[128];
   char local_host[128][32] = {{0}};
-  struct hostent* temp;
   gethostname(hostname, 128);
-  temp = gethostbyname(hostname);
+  struct hostent* temp = gethostbyname(hostname);
   for (int i = 0; temp->h_addr_list[i] != NULL && i < 1; ++i) {
     strcpy(local_host[i], inet_ntoa(*(struct in_addr*)temp->h_addr_list[i]));
   }

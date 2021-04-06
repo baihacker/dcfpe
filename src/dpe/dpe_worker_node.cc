@@ -10,9 +10,9 @@
 namespace dpe {
 DPEWorkerNode::DPEWorkerNode(const std::string& server_ip, int server_port)
     : weakptr_factory_(this),
-      serverAddress(
+      server_address_(
           base::AddressHelper::MakeZMQTCPAddress(server_ip, server_port)),
-      zmqClient(base::zmq_client()) {}
+      zmq_client_(base::zmq_client()) {}
 
 DPEWorkerNode::~DPEWorkerNode() {}
 
@@ -107,11 +107,11 @@ int DPEWorkerNode::SendRequest(Request& req, base::ZMQCallBack callback,
 
   VLOG(1) << "Send request:\n" << req.DebugString();
 
-  zmqClient->SendRequest(serverAddress, val.c_str(),
-                         static_cast<int>(val.size()),
-                         base::Bind(&DPEWorkerNode::HandleResponse,
-                                    weakptr_factory_.GetWeakPtr(), callback),
-                         timeout);
+  zmq_client_->SendRequest(server_address_, val.c_str(),
+                           static_cast<int>(val.size()),
+                           base::Bind(&DPEWorkerNode::HandleResponse,
+                                      weakptr_factory_.GetWeakPtr(), callback),
+                           timeout);
 
   return 0;
 }

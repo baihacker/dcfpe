@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <vector>
+#include <ctime>
 
 #include <windows.h>
 

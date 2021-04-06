@@ -25,8 +25,8 @@ class DPEWorkerNode : public base::RefCounted<DPEWorkerNode> {
                              scoped_refptr<base::ZMQResponse> rep);
 
  private:
-  std::string serverAddress;
-  base::ZMQClient* zmqClient;
+  std::string server_address_;
+  base::ZMQClient* zmq_client_;
   base::WeakPtrFactory<DPEWorkerNode> weakptr_factory_;
 };
 }  // namespace dpe

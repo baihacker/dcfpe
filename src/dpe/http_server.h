@@ -36,7 +36,8 @@ class HttpResponse {
 
 class HttpReqestHandler {
  public:
-  virtual bool HandleRequest(const HttpRequest& req, HttpResponse* rep) = 0;
+  virtual bool HandleRequest(const HttpRequest& reqest,
+                             HttpResponse* response) = 0;
 };
 
 class HttpServer {
@@ -51,21 +52,22 @@ class HttpServer {
 
   static unsigned __stdcall ThreadMain(void* arg);
   unsigned Run();
-  bool HandleRequestOnThread(const std::string& reqData, std::string& repData);
-  HttpRequest ParseRequest(const std::string& requestData);
-  void ParsePath(const std::string& fullPath, std::string& path,
+  bool HandleRequestOnThread(const std::string& request_data,
+                             std::string& response_data);
+  HttpRequest ParseRequest(const std::string& request_data);
+  void ParsePath(const std::string& full_path, std::string& path,
                  std::map<std::string, std::string>& parameters);
-  std::string ResponseToString(const HttpResponse& rep);
+  std::string ResponseToString(const HttpResponse& reponse);
 
   static void HandleRequest(base::WeakPtr<HttpServer> self,
-                            const HttpRequest& req, HttpResponse* rep);
-  void HandleRequestImpl(const HttpRequest& req, HttpResponse* rep);
+                            const HttpRequest& request, HttpResponse* response);
+  void HandleRequestImpl(const HttpRequest& request, HttpResponse* response);
 
  private:
   int port;
-  volatile int quitFlag;
-  HANDLE taskEvent;
-  HANDLE threadHandle;
+  volatile int quit_flag_;
+  HANDLE task_event_;
+  HANDLE thread_handle_;
   HttpReqestHandler* handler;
   base::WeakPtrFactory<HttpServer> weakptr_factory_;
 };

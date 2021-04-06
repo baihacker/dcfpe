@@ -31,6 +31,7 @@ class DPEMasterNode : public ZServerHandler,
   void SaveState(bool force_save);
   void LoadState();
   void SkipLoadState();
+
  private:
   scoped_refptr<ZServer> zserver_;
   std::string my_ip_;
