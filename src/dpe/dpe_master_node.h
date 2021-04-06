@@ -28,16 +28,20 @@ class DPEMasterNode : public ZServerHandler,
 
   bool HandleRequest(const http::HttpRequest& req, http::HttpResponse* rep);
 
+  void SaveState(bool force_save);
+  void LoadState();
+  void SkipLoadState();
  private:
-  scoped_refptr<ZServer> zserver;
-  std::string my_ip;
-  int port;
-  std::string moduleDir;
+  scoped_refptr<ZServer> zserver_;
+  std::string my_ip_;
+  int port_;
+  std::string module_dir_;
   base::WeakPtrFactory<DPEMasterNode> weakptr_factory_;
 
-  std::deque<int64> taskQueue;
-  std::set<int64> taskRunningQueue;
-  std::vector<std::pair<int64, int64>> all_result;
+  std::deque<int64> task_queue_;
+  std::set<int64> task_running_queue_;
+  std::vector<std::pair<int64, int64>> all_result_;
+  int64 last_save_time_;
 };
 }  // namespace dpe
 #endif

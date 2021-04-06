@@ -46,8 +46,9 @@ class TaskAppender {
 
 class Solver {
  public:
-  virtual void InitAsMaster(TaskAppender* taskAppender) = 0;
-  virtual void InitAsWorker() = 0;
+  virtual void InitMaster() = 0;
+  virtual void GenerateTasks(TaskAppender* taskAppender) = 0;
+  virtual void InitWorker() = 0;
   virtual void SetResult(int size, int64* taskId, int64* result,
                          int64* time_usage, int64 total_time_usage) = 0;
   virtual void Compute(int size, const int64* taskId, int64* result,

@@ -19,12 +19,15 @@ class SolverImpl : public Solver {
 
   ~SolverImpl() {}
 
-  void InitAsMaster(TaskAppender* taskAppender) {
+  void InitMaster() {}
+
+  void GenerateTasks(TaskAppender* taskAppender) {
     for (int i = 0; i < 30; ++i) {
       taskAppender->AddTask(i);
     }
   }
-  void InitAsWorker() {}
+
+  void InitWorker() {}
 
   void SetResult(int size, int64* task_id, int64* result, int64* time_usage,
                  int64 total_time_usage) {

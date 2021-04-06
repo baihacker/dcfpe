@@ -53,28 +53,15 @@ static inline std::string ParseCmd(const std::string& s, int& idx,
   return StringToLowerASCII(s.substr(i, j - i));
 }
 
+static Flags flags;
+const Flags& GetFlags() { return flags; }
+
 Solver* solver;
 Solver* GetSolver() { return solver; }
 
 scoped_refptr<DPEMasterNode> master_node;
 scoped_refptr<DPEWorkerNode> worker_node;
 http::HttpServer http_server;
-int http_port = 80;
-std::string type = "server";
-std::string my_ip;
-std::string server_ip;
-int logging_level = 0;
-int server_port = 0;
-// The max task count in GetTaskRequest.
-// If the value is zero, use thread_number * 3.
-// If max task count is zero, the server use 1.
-int batch_size = 0;
-// Currently, thread number is forwarded to worker ans an argument.
-// This worker is not responsible for executing the tasks in parallel.
-int thread_number = 1;
-
-int GetBatchSize() { return batch_size; }
-int GetThreadNumber() { return thread_number; }
 
 static void ExitDpeImpl() {
   LOG(INFO) << "ExitDpeImpl";
@@ -98,31 +85,33 @@ void WillExitDpe() {
 }
 
 static inline void run() {
-  LOG(INFO) << "type = " << type;
-  LOG(INFO) << "my_ip = " << my_ip;
-  LOG(INFO) << "server_ip = " << server_ip;
-  server_port = server_port == 0 ? dpe::kServerPort : server_port;
-  LOG(INFO) << "server_port = " << server_port;
-  LOG(INFO) << "logging_level = " << logging_level;
+  LOG(INFO) << "type = " << flags.type;
+  LOG(INFO) << "my_ip = " << flags.my_ip;
+  LOG(INFO) << "server_ip = " << flags.server_ip;
+  flags.server_port =
+      flags.server_port == 0 ? dpe::kServerPort : flags.server_port;
+  LOG(INFO) << "server_port = " << flags.server_port;
+  LOG(INFO) << "logging_level = " << flags.logging_level;
 
-  if (type == "server") {
-    LOG(INFO) << "http_port = " << http_port;
+  if (flags.type == "server") {
+    LOG(INFO) << "read_state = " << std::boolalpha << flags.read_state;
+    LOG(INFO) << "http_port = " << flags.http_port;
   }
-  if (type == "worker") {
-    LOG(INFO) << "batch_size = " << batch_size;
-    LOG(INFO) << "thread_number = " << thread_number;
+  if (flags.type == "worker") {
+    LOG(INFO) << "batch_size = " << flags.batch_size;
+    LOG(INFO) << "thread_number = " << flags.thread_number;
   }
 
-  if (type == "server") {
-    master_node = new DPEMasterNode(my_ip, server_port);
+  if (flags.type == "server") {
+    master_node = new DPEMasterNode(flags.my_ip, flags.server_port);
     http_server.SetHandler(master_node);
-    http_server.Start(http_port);
+    http_server.Start(flags.http_port);
     if (!master_node->Start()) {
       LOG(ERROR) << "Failed to start master node";
       WillExitDpe();
     }
-  } else if (type == "worker") {
-    worker_node = new DPEWorkerNode(server_ip, server_port);
+  } else if (flags.type == "worker") {
+    worker_node = new DPEWorkerNode(flags.server_ip, flags.server_port);
     if (!worker_node->Start()) {
       LOG(ERROR) << "Failed to start worker node";
       WillExitDpe();
@@ -142,9 +131,8 @@ void RunDpe(Solver* solver, int argc, char* argv[]) {
   dpe::solver = solver;
   StartNetwork();
 
-  type = "server";
-  my_ip = GetInterfaceAddress();
-  server_ip = my_ip;
+  flags.my_ip = GetInterfaceAddress();
+  flags.server_ip = flags.my_ip;
 
   for (int i = 1; i < argc;) {
     int idx;
@@ -152,66 +140,83 @@ void RunDpe(Solver* solver, int argc, char* argv[]) {
     const std::string str = ParseCmd(argv[i], idx, value);
     if (str == "t" || str == "type") {
       if (idx == -1) {
-        type = argv[i + 1];
+        flags.type = argv[i + 1];
         i += 2;
       } else {
-        type = value;
+        flags.type = value;
         ++i;
       }
     } else if (str == "ip") {
       if (idx == -1) {
-        my_ip = argv[i + 1];
+        flags.my_ip = argv[i + 1];
         i += 2;
       } else {
-        my_ip = value;
+        flags.my_ip = value;
         ++i;
       }
     } else if (str == "server_ip") {
       if (idx == -1) {
-        server_ip = argv[i + 1];
+        flags.server_ip = argv[i + 1];
         i += 2;
       } else {
-        server_ip = value;
+        flags.server_ip = value;
         ++i;
       }
     } else if (str == "sp" || str == "server_port") {
       if (idx == -1) {
-        server_port = atoi(argv[i + 1]);
+        flags.server_port = atoi(argv[i + 1]);
         i += 2;
       } else {
-        server_port = atoi(value.c_str());
+        flags.server_port = atoi(value.c_str());
         ++i;
       }
     } else if (str == "tn" || str == "thread_number") {
       if (idx == -1) {
-        thread_number = atoi(argv[i + 1]);
+        flags.thread_number = atoi(argv[i + 1]);
         i += 2;
       } else {
-        thread_number = atoi(value.c_str());
+        flags.thread_number = atoi(value.c_str());
         ++i;
       }
     } else if (str == "bs" || str == "batch_size") {
       if (idx == -1) {
-        batch_size = atoi(argv[i + 1]);
+        flags.batch_size = atoi(argv[i + 1]);
         i += 2;
       } else {
-        batch_size = atoi(value.c_str());
+        flags.batch_size = atoi(value.c_str());
         ++i;
       }
     } else if (str == "l" || str == "log") {
       if (idx == -1) {
-        logging_level = atoi(argv[i + 1]);
+        flags.logging_level = atoi(argv[i + 1]);
         i += 2;
       } else {
-        logging_level = atoi(value.c_str());
+        flags.logging_level = atoi(value.c_str());
         ++i;
+      }
+    } else if (str == "rs" || str == "read_state") {
+      std::string data;
+      if (idx == -1) {
+        data = argv[i + 1];
+        i += 2;
+      } else {
+        data = value;
+        ++i;
+      }
+      data = StringToLowerASCII(data);
+      if (data == "true" || data == "1") {
+        flags.read_state = true;
+      } else if (data == "false" || data == "0") {
+        flags.read_state = false;
+      } else {
+        flags.read_state = false;
       }
     } else if (str == "hp" || str == "http_port") {
       if (idx == -1) {
-        http_port = atoi(argv[i + 1]);
+        flags.http_port = atoi(argv[i + 1]);
         i += 2;
       } else {
-        http_port = atoi(value.c_str());
+        flags.http_port = atoi(value.c_str());
         ++i;
       }
     } else {
@@ -219,7 +224,7 @@ void RunDpe(Solver* solver, int argc, char* argv[]) {
     }
   }
 
-  base::dpe_base_main(run, NULL, logging_level);
+  base::dpe_base_main(run, NULL, flags.logging_level);
 
   StopNetwork();
 }

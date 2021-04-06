@@ -17,7 +17,7 @@ DPEWorkerNode::DPEWorkerNode(const std::string& server_ip, int server_port)
 DPEWorkerNode::~DPEWorkerNode() {}
 
 bool DPEWorkerNode::Start() {
-  GetSolver()->InitAsWorker();
+  GetSolver()->InitWorker();
   GetNextTask();
   return true;
 }
@@ -26,9 +26,10 @@ void DPEWorkerNode::Stop() {}
 
 void DPEWorkerNode::GetNextTask() {
   GetTaskRequest* get_task = new GetTaskRequest();
-  const int batch_size = GetBatchSize();
+  const int batch_size = GetFlags().batch_size;
+  const int thread_number = GetFlags().thread_number;
 
-  get_task->set_max_task_count(batch_size == 0 ? GetThreadNumber() * 3
+  get_task->set_max_task_count(batch_size == 0 ? thread_number * 3
                                                : batch_size);
 
   Request request;
@@ -66,14 +67,15 @@ void DPEWorkerNode::HandleGetTask(scoped_refptr<base::ZMQResponse> response) {
 
   const int64 start_time = base::Time::Now().ToInternalValue();
   GetSolver()->Compute(size, &task_id[0], &result[0], &time_usage[0],
-                       GetThreadNumber());
+                       GetFlags().thread_number);
   const int64 end_time = base::Time::Now().ToInternalValue();
 
   FinishComputeRequest* fr = new FinishComputeRequest();
   for (int i = 0; i < size; ++i) {
-    fr->add_task_id(task_id[i]);
-    fr->add_result(result[i]);
-    fr->add_time_usage(time_usage[i]);
+    TaskItem* item = fr->add_task_item();
+    item->set_task_id(task_id[i]);
+    item->set_result(result[i]);
+    item->set_time_usage(time_usage[i]);
   }
   fr->set_total_time_usage(end_time - start_time);
 

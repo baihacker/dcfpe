@@ -10,11 +10,19 @@ message GetTaskResponse {
   repeated int64 task_id = 1;
 }
 
+message TaskItem {
+  optional int64 task_id = 1;
+  optional int64 result = 2;
+  optional int64 time_usage = 3;
+}
+
+message MasterState {
+  repeated TaskItem task_item = 1;
+}
+
 message FinishComputeRequest {
-  repeated int64 task_id = 1;
-  repeated int64 result = 2;
-  repeated int64 time_usage = 3;
-  optional int64 total_time_usage = 4;
+  repeated TaskItem task_item = 1;
+  optional int64 total_time_usage = 2;
 }
 
 message Request {
