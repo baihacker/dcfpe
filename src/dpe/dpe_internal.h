@@ -3,6 +3,8 @@
 
 #include "dpe/dpe.h"
 
+#include <string>
+
 namespace dpe {
 struct Flags {
   int http_port = 80;

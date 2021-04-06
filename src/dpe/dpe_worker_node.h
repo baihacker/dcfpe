@@ -1,6 +1,8 @@
 #ifndef DPE_WORKER_NODE_H_
 #define DPE_WORKER_NODE_H_
 
+#include <string>
+
 #include "dpe/http_server.h"
 #include "dpe/proto/dpe.pb.h"
 

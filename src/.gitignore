@@ -4,3 +4,4 @@ ${ROOTDIR}/
 *.pyc
 *.pb.cc
 *.pb.h
+.vscode/settings.json

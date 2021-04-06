@@ -10,7 +10,8 @@
                 "${workspaceRoot}/third_party/chromium",
                 "${workspaceRoot}/third_party/protobuf-3.3.1/src",
                 "${workspaceRoot}/third_party/zeromq_4.2.1/include",
-                "${toolChainFolder}/vs2013_files/VC/include"
+                "${toolChainFolder}/vs2013_files/VC/include",
+                "${toolChainFolder}/vs2013_files/win8sdk/Include/um"
             ],
             "defines": [
                 "COMPILER_MSVC",
@@ -27,8 +28,8 @@
                 "path": [
                     "${workspaceFolder}/**"
                 ],
-                "limitSymbolsToIncludedHeaders": false,
-                "databaseFilename": "${workspaceFolder}/.data/vscode.db"
+                "limitSymbolsToIncludedHeaders": true,
+                "databaseFilename": ".data/vscode.db"
             }
         }
     ],

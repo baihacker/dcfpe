@@ -1,14 +1,16 @@
 #ifndef DPE_MASTER_NODE_H_
 #define DPE_MASTER_NODE_H_
 
-#include "dpe_base/dpe_base.h"
-#include "dpe/http_server.h"
-#include "dpe/proto/dpe.pb.h"
-#include "dpe/zserver.h"
 #include <vector>
 #include <utility>
 #include <queue>
 #include <set>
+#include <string>
+
+#include "dpe_base/dpe_base.h"
+#include "dpe/http_server.h"
+#include "dpe/proto/dpe.pb.h"
+#include "dpe/zserver.h"
 
 namespace dpe {
 
