@@ -1,0 +1,6 @@
+output/
+.data/
+${ROOTDIR}/
+*.pyc
+*.pb.cc
+*.pb.h
