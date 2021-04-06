@@ -2,9 +2,9 @@
 
 #include <algorithm>
 #include <process.h>
-#include "dpe_base/thread_pool.h"
-
 #include <zmq.h>
+
+#include "dpe_base/thread_pool.h"
 
 namespace base
 {
@@ -22,7 +22,7 @@ ZMQServer::ZMQServer() :
   for (;;)
   {
     ctrl_address_ = AddressHelper::MakeZMQTCPAddress(ctrl_ip, AddressHelper::GetNextAvailablePort());
-    
+
     int ok = 0;
     do
     {
@@ -30,7 +30,7 @@ ZMQServer::ZMQServer() :
       if (!zmq_ctrl_pub_) break;
       int32_t rc = zmq_bind(zmq_ctrl_pub_, ctrl_address_.c_str());
       if (rc != 0) break;
-      
+
       zmq_ctrl_sub_ = zmq_socket(zmq_context_, ZMQ_SUB);
       if (!zmq_ctrl_sub_) break;
       rc = zmq_connect(zmq_ctrl_sub_, ctrl_address_.c_str());
@@ -39,18 +39,18 @@ ZMQServer::ZMQServer() :
       if (rc != 0) break;
       ok = 1;
     }while (false);
-    
+
     if (ok)
     {
       break;
     }
-    
+
     if (zmq_ctrl_pub_)
     {
       zmq_close(zmq_ctrl_pub_);
       zmq_ctrl_pub_ = NULL;
     }
-    
+
     if (zmq_ctrl_sub_)
     {
       zmq_close(zmq_ctrl_sub_);
@@ -74,9 +74,9 @@ ZMQServer::~ZMQServer()
 bool ZMQServer::Start()
 {
   DCHECK_CURRENTLY_ON(base::ThreadPool::UI);
-  
+
   if (status_ != STATUS_PREPARE) return false;
-  
+
   ::ResetEvent(start_event_);
   ::ResetEvent(hello_event_);
   unsigned id = 0;
@@ -86,7 +86,7 @@ bool ZMQServer::Start()
   {
     return false;
   }
-  
+
   // step 1: wait for Start event
   HANDLE handles[] = {thread_handle_, start_event_};
   DWORD result = ::WaitForMultipleObjects(2, handles, FALSE, -1);
@@ -100,16 +100,16 @@ bool ZMQServer::Start()
     thread_handle_ = NULL;
     return false;
   }
-  
+
   status_ = STATUS_RUNNING;
-  
+
   // step 2: send hello message and wait for reply
   // 50ms * 60 tries
   for (int32_t tries = 0; tries < 60; ++tries)
   {
     int32_t msg = CMD_HELLO;
     SendCtrlMessage((const char*)&msg, sizeof (msg));
-    
+
     HANDLE handles[] = {thread_handle_, hello_event_};
     DWORD result = ::WaitForMultipleObjects(2, handles, FALSE, 50);
     if (result == WAIT_OBJECT_0 + 1)
@@ -145,11 +145,11 @@ int32_t ZMQServer::SendMessage(void* channel, const char* msg, int32_t length)
 {
   DCHECK_CURRENTLY_ON(base::ThreadPool::UI);
   if (status_ != STATUS_RUNNING) return -1;
-  
+
   if (!msg || length <= 0) return -1;
-  
+
   void* sender = channel;
-  
+
   if (sender == zmq_ctrl_pub_)
   {
     int32_t rc = zmq_send(sender, (void*)msg, length, 0);
@@ -161,16 +161,16 @@ int32_t ZMQServer::SendMessage(void* channel, const char* msg, int32_t length)
 bool ZMQServer::Stop()
 {
   DCHECK_CURRENTLY_ON(base::ThreadPool::UI);
-  
+
   if (status_ == STATUS_PREPARE) return false;
   if (status_ == STATUS_STOPPED) return true;
-  
+
   // quit_flag_ = 1;
   int32_t cmd = CMD_QUIT;
   SendCtrlMessage((const char*)&cmd, sizeof(cmd));
-  
+
   DWORD result = ::WaitForMultipleObjects(1, &thread_handle_, FALSE, 3000);
-  
+
   if (result == WAIT_TIMEOUT)
   {
     ::TerminateThread(thread_handle_, -1);
@@ -189,7 +189,7 @@ bool ZMQServer::Stop()
 bool ZMQServer::StartServer(const std::string& address, RequestHandler* handler)
 {
   DCHECK_CURRENTLY_ON(base::ThreadPool::UI);
-  
+
   if (handler == NULL) return false;
 
   {
@@ -199,10 +199,10 @@ bool ZMQServer::StartServer(const std::string& address, RequestHandler* handler)
     {
       return false;
     }
-    
+
     skt = zmq_socket(zmq_context_, ZMQ_REP);
     if (!skt) return false;
-    
+
     int32_t rc = zmq_bind(skt, address.c_str());
     if (rc != 0)
     {
@@ -229,7 +229,7 @@ bool ZMQServer::StartServer(const std::string& address, RequestHandler* handler)
 bool ZMQServer::StopServer(RequestHandler* handler)
 {
   DCHECK_CURRENTLY_ON(base::ThreadPool::UI);
-  
+
   if (handler == NULL) return false;
   void* willClose = NULL;
   {
@@ -270,13 +270,13 @@ unsigned ZMQServer::Run()
   {
     context_mutex_.lock();
     std::vector<zmq_pollitem_t> items(context_.size() + 1);
-    
+
     items[0].socket = zmq_ctrl_sub_;
     items[0].fd = NULL;
     items[0].events = ZMQ_POLLIN;
-    
+
     int32_t top = 1;
-    
+
     for (auto& it: context_)
     {
       if (it.state_ == STATE_LISTENING)
@@ -295,7 +295,7 @@ unsigned ZMQServer::Run()
     {
       ::SetEvent(start_event_);
     }
-    
+
     if (rc > 0)
     {
       if (items[0].revents)
@@ -324,7 +324,7 @@ unsigned ZMQServer::Run()
       }
     }
   }
-  
+
   return 0;
 }
 
@@ -336,7 +336,7 @@ void ZMQServer::ProcessCtrlMessage()
   do
   {
     if (zmq_recvmsg(zmq_ctrl_sub_, &msg, ZMQ_DONTWAIT) <= 0) break;
-    
+
     const char* buffer = static_cast<const char*>(zmq_msg_data(&msg));
     const int32_t size = static_cast<int32_t>(zmq_msg_size(&msg));
     if (size == sizeof(int32_t))
@@ -372,7 +372,7 @@ void ZMQServer::ProcessEvent(const std::vector<void*>& signal_sockets)
       const int32_t size = static_cast<int32_t>(zmq_msg_size(&msg));
       std::string(buffer, buffer+size).swap(data);
     } while (false);
-    
+
     zmq_msg_close(&msg);
 
     sockets[it] = std::move(data);
@@ -388,7 +388,7 @@ void ZMQServer::ProcessEvent(const std::vector<void*>& signal_sockets)
         ++activeRequest;
         it.state_ = STATE_PROCESSING;
         it.data_ = std::move(sockets[it.zmq_socket_]);
-        
+
         ServerContext ctx;
         ctx.channel_id_ = it.channel_id_;
         ctx.zmq_socket_ = it.zmq_socket_;
@@ -396,7 +396,7 @@ void ZMQServer::ProcessEvent(const std::vector<void*>& signal_sockets)
         ctx.address_ = it.address_;
         ctx.state_ = it.state_;
         ctx.data_ = it.data_;
-        
+
         std::string reply;
         if (ctx.handler_->pre_handle_request(ctx, reply)) {
           --activeRequest;
@@ -421,7 +421,7 @@ void ZMQServer::ProcessEvent(const std::vector<void*>& signal_sockets)
 void ZMQServer::ProcessRequest(base::WeakPtr<ZMQServer> server)
 {
   DCHECK_CURRENTLY_ON(base::ThreadPool::UI);
-  
+
   if (ZMQServer* pThis = server.get())
   {
     pThis->ProcessRequestImpl();

@@ -1,9 +1,12 @@
 #include "dpe/dpe_master_node.h"
 
 #include <iostream>
+#include <google/protobuf/text_format.h>
+
 #include "dpe/dpe.h"
 #include "dpe/dpe_internal.h"
-#include <google/protobuf/text_format.h>
+
+
 namespace dpe {
 static char buff[1024];
 DPEMasterNode::DPEMasterNode(const std::string& my_ip, int port)
@@ -153,7 +156,7 @@ void DPEMasterNode::SaveState(bool force_save) {
        base::Time::FromInternalValue(last_save_time_))
               .InMinutes() > 3) {
     MasterState master_state;
-    for (auto iter : all_result_) {
+    for (auto& iter : all_result_) {
       TaskItem* item = master_state.add_task_item();
       item->set_task_id(iter.first);
       item->set_result(iter.second);

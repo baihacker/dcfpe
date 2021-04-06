@@ -1,0 +1,36 @@
+{
+    "env": {
+        "toolChainFolder": "D:/root/app/DevSoft/win_toolchain_2013e"
+    },
+    "configurations": [
+        {
+            "name": "win32",
+            "includePath": [
+                "${workspaceRoot}",
+                "${workspaceRoot}/third_party/chromium",
+                "${workspaceRoot}/third_party/protobuf-3.3.1/src",
+                "${workspaceRoot}/third_party/zeromq_4.2.1/include",
+                "${toolChainFolder}/vs2013_files/VC/include"
+            ],
+            "defines": [
+                "COMPILER_MSVC",
+                "UNICODE",
+                "_UNICODE",
+                "_WIN64",
+                "VSCODE_EDITOR",
+                "_WIN32_WINNT=0x0602"
+            ],
+            "cppStandard": "c++11",
+            "intelliSenseMode": "windows-msvc-x64",
+            "compilerPath": "{toolChainFolder}/vs2013_files/VC/bin/x86_amd64/cl.exe",
+            "browse": {
+                "path": [
+                    "${workspaceFolder}/**"
+                ],
+                "limitSymbolsToIncludedHeaders": false,
+                "databaseFilename": "${workspaceFolder}/.data/vscode.db"
+            }
+        }
+    ],
+    "version": 4
+}
