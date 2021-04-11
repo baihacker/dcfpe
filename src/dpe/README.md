@@ -2,26 +2,30 @@
 A C++ library allows you to leverage distributed environment to compute.
 
 # Design
-Updated Jun 12, 2017, [history version](https://github.com/baihacker/dcfpe/blob/master/docs/design_diary.txt).
+Updated Apr 11, 2021, [history version](https://github.com/baihacker/dcfpe/blob/master/docs/design_diary.txt).
 
-MasterNode:
-* Receives connection from workers. (duplex communication connection).
-* Uses a MasterTaskScheduler to maintain a task queue, schedule task to workers, handle request/connection error. SimpleMasterTaskScheduler uses a very simple strategy to schedule tasks.
-* MasterTaskScheduler uses a Solver to initialize the tasks (just holds the id of task), and tell the solver when a task is finished or all the tasks are completed.
+## Library structures:
+* Core
+  * dpe.dll The binary that implements the main scheduling logic.
+  * dpe.h The user includes this file and implements the Solver.
+* Example
+  * main.cc An examepl of using this library.
+  * main.exe The generated example binary.
+* Dependencies
+  * msvcp120.dll, msvcr120.dll, zmq.dll
+* Web UI on Master node
+  * index.html, Chart.bundle.js, jquery.min.js are expected to the folder where dpe.dll exists.
 
-WorkerNode:
+## MasterNode:
+* Initializes the solver as master and retrieves the tasks (int64). The task's status is PENDING.
+  * If possible, loads the saved state: if a task's status in the cache is DONE, the cached status is copied.
+* Receives GetTaskRequest from worker nodes and assigns tasks to the requestor. A task is marked as RUNNING.
+* Receives FinishComputeRequest from worker nodes and the task is marked as DONE.
+
+## WorkerNode:
 * Connects to MasterNode.
-* Uses WorkerTaskExecuter to execute task. WorkerTaskExecuter will dispatch task to correct thread anc call the corresponding compute method provide by Solver.
-
-Usage design:
-* Provides a .dll, .h and the client code can use it.
-* Support x86 and x64.
-
-# Other:
-* Main language is C++11. It is possible to use python, lua, php, javascript.
-* Basic network libary: ZMQ
-* Worker will protect the W process. (sandbox)
-* Trust mechanism between Host and Worker. (It is possible that the worker will receive a virus from Host).
+* Sends GetTaskRequest to get new tasks and execute them.
+* When a task is finished, sends FinishComputeRequest to save the result and Sends GetTaskRequest to get more tasks.
 
 # Usage
 See [README_cn.txt](https://github.com/baihacker/dcfpe/blob/master/src/dpe/README_cn.txt)
