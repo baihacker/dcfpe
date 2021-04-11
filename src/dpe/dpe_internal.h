@@ -24,6 +24,8 @@ struct Flags {
 };
 
 Solver* GetSolver();
+std::string GetDpeModuleDir();
+std::string GetExecutableDir();
 const Flags& GetFlags();
 void WillExitDpe();
 void RunDpe(Solver* solver, int argc, char* argv[]);

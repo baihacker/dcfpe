@@ -35,6 +35,34 @@ static inline void StartNetwork() {
 
 static inline void StopNetwork() { ::WSACleanup(); }
 
+std::string GetExecutableDir() {
+  char path[1024];
+  GetModuleFileNameA(NULL, path, 1024);
+  auto parentDir = base::FilePath(base::UTF8ToNative(path)).DirName();
+  return base::NativeToUTF8(parentDir.value());
+}
+
+std::string GetDpeModuleDir() {
+  HMODULE hm = NULL;
+  if (GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+                             GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                         (LPCSTR)(void*)&GetDpeModuleDir, &hm) == 0) {
+    int ret = GetLastError();
+    fprintf(stderr, "GetModuleHandle failed, error = %d\n", ret);
+    // Return or however you want to handle an error.
+  }
+
+  char path[MAX_PATH];
+  if (GetModuleFileNameA(hm, path, sizeof(path)) == 0) {
+    int ret = GetLastError();
+    fprintf(stderr, "GetModuleFileName failed, error = %d\n", ret);
+    // Return or however you want to handle an error.
+  }
+
+  auto parentDir = base::FilePath(base::UTF8ToNative(path)).DirName();
+  return base::NativeToUTF8(parentDir.value());
+}
+
 static inline std::string ParseCmd(const std::string& s, int& idx,
                                    std::string& value) {
   idx = -1;
@@ -84,6 +112,8 @@ void WillExitDpe() {
 }
 
 static inline void run() {
+  LOG(INFO) << "executable dir = " << GetExecutableDir();
+  LOG(INFO) << "dpe module dir = " << GetDpeModuleDir();
   LOG(INFO) << "type = " << flags.type;
   LOG(INFO) << "my_ip = " << flags.my_ip;
   LOG(INFO) << "server_ip = " << flags.server_ip;

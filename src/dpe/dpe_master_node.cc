@@ -7,13 +7,11 @@
 #include "dpe/dpe_internal.h"
 
 namespace dpe {
-static char buff[1024];
+
 DPEMasterNode::DPEMasterNode(const std::string& my_ip, int port)
     : my_ip_(my_ip), port_(port), weakptr_factory_(this), last_save_time_(0) {
-  GetModuleFileNameA(NULL, buff, 1024);
-  std::string modulePath = buff;
-  auto parentDir = base::FilePath(base::UTF8ToNative(modulePath)).DirName();
-  module_dir_ = base::NativeToUTF8(parentDir.value());
+  executable_dir_ = GetExecutableDir();
+  dpe_module_dir_ = GetDpeModuleDir();
 }
 
 DPEMasterNode::~DPEMasterNode() { Stop(); }
@@ -208,7 +206,8 @@ bool DPEMasterNode::HandleRequest(const http::HttpRequest& req,
       rep->SetBody(ret);
     } else if (req.path == "/") {
       std::string data;
-      base::FilePath filePath(base::UTF8ToNative(module_dir_ + "\\index.html"));
+      base::FilePath filePath(
+          base::UTF8ToNative(dpe_module_dir_ + "\\index.html"));
       if (!base::ReadFileToString(filePath, &data)) {
         return true;
       }
@@ -216,7 +215,7 @@ bool DPEMasterNode::HandleRequest(const http::HttpRequest& req,
     } else if (req.path == "/jquery.min.js") {
       std::string data;
       base::FilePath filePath(
-          base::UTF8ToNative(module_dir_ + "\\jquery.min.js"));
+          base::UTF8ToNative(dpe_module_dir_ + "\\jquery.min.js"));
       if (!base::ReadFileToString(filePath, &data)) {
         return true;
       }
@@ -224,7 +223,7 @@ bool DPEMasterNode::HandleRequest(const http::HttpRequest& req,
     } else if (req.path == "/Chart.bundle.js") {
       std::string data;
       base::FilePath filePath(
-          base::UTF8ToNative(module_dir_ + "\\Chart.bundle.js"));
+          base::UTF8ToNative(dpe_module_dir_ + "\\Chart.bundle.js"));
       if (!base::ReadFileToString(filePath, &data)) {
         return true;
       }
@@ -255,7 +254,7 @@ void DPEMasterNode::SaveState(bool force_save) {
     printer.PrintToString(master_state, &data);
 
     base::FilePath file_path(
-        base::UTF8ToNative(module_dir_ + "\\state.txtproto"));
+        base::UTF8ToNative(executable_dir_ + "\\state.txtproto"));
     base::WriteFile(file_path, data.c_str(), data.size());
 
     LOG(INFO) << "Server stat saved, file size = " << data.size();
@@ -265,7 +264,7 @@ void DPEMasterNode::SaveState(bool force_save) {
 
 void DPEMasterNode::LoadState() {
   base::FilePath file_path(
-      base::UTF8ToNative(module_dir_ + "\\state.txtproto"));
+      base::UTF8ToNative(executable_dir_ + "\\state.txtproto"));
   if (!base::PathExists(file_path)) {
     LOG(INFO) << "Cannot find master state file: " << file_path.AsUTF8Unsafe();
     return;
@@ -331,7 +330,7 @@ void DPEMasterNode::LoadState() {
 
 void DPEMasterNode::SkipLoadState() {
   base::FilePath file_path(
-      base::UTF8ToNative(module_dir_ + "\\state.txtproto"));
+      base::UTF8ToNative(executable_dir_ + "\\state.txtproto"));
   bool has_state = base::PathExists(file_path);
   LOG(INFO) << "Skip loading state.";
   LOG(INFO) << "State file exists: " << std::boolalpha << has_state;

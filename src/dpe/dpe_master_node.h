@@ -40,7 +40,8 @@ class DPEMasterNode : public ZServerHandler,
   scoped_refptr<ZServer> zserver_;
   std::string my_ip_;
   int port_;
-  std::string module_dir_;
+  std::string executable_dir_;
+  std::string dpe_module_dir_;
   base::WeakPtrFactory<DPEMasterNode> weakptr_factory_;
 
   std::vector<int64> task_queue_;

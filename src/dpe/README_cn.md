@@ -29,7 +29,7 @@
   * index.html
   * Chart.bundle.js
   * jquery.min.js
-* 目前状态文件state.txtproto的保存和dpe.dll相同.
+* 目前状态文件state.txtproto的保存和主程序相同.
 
 同一台机器上部署单个worker或多个worker
 * 支持在同一台机上部署多个worker, 但在Master结点上被视为同一个结点, 因为目前以ip作为worker结点的唯一标识符.
