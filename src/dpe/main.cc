@@ -46,12 +46,14 @@ class SolverImpl : public Solver {
     for (int i = 0; i < size; ++i) {
       int start = clock();
       result[i] = Work(task_id[i]);
-      time_usage[i] = clock() - start;
+      time_usage[i] = (clock() - start) * 1000;
     }
-    // Sleep(5000);
   }
 
-  int64 Work(int64 task_id) { return task_id * task_id * task_id; }
+  int64 Work(int64 task_id) {
+    Sleep(2000);
+    return task_id * task_id * task_id;
+  }
 
   void Finish() {
     std::cerr << std::endl << "ans = " << ans << std::endl << std::endl;

@@ -10,6 +10,14 @@ message GetTaskResponse {
   repeated int64 task_id = 1;
 }
 
+message WorkerStatus {
+  optional string worker_id = 1;
+  repeated int64 running_task = 2;
+  repeated int64 finished_task = 3;
+  optional int64 latency_sum = 4; // one way latency
+  optional int64 request_count = 5;
+}
+
 message TaskItem {
   enum TaskStatus {
     PENDING = 0;
@@ -24,6 +32,7 @@ message TaskItem {
 
 message MasterState {
   repeated TaskItem task_item = 1;
+  repeated WorkerStatus worker_status = 2;
 }
 
 message FinishComputeRequest {
@@ -33,6 +42,7 @@ message FinishComputeRequest {
 
 message Request {
   optional string name = 1;
+  optional string worker_id = 2;
 
   optional int64 request_timestamp = 100 [default = 0];
 

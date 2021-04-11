@@ -34,6 +34,8 @@ class DPEMasterNode : public ZServerHandler,
   void LoadState();
   void SkipLoadState();
 
+  WorkerStatus& GetWorker(const std::string& worker_id);
+
  private:
   scoped_refptr<ZServer> zserver_;
   std::string my_ip_;
@@ -41,9 +43,11 @@ class DPEMasterNode : public ZServerHandler,
   std::string module_dir_;
   base::WeakPtrFactory<DPEMasterNode> weakptr_factory_;
 
-  std::deque<int64> task_queue_;
+  std::vector<int64> task_queue_;
+  std::deque<int64> task_pending_queue_;
   std::set<int64> task_running_queue_;
   std::map<int64, TaskItem> task_map_;
+  std::map<std::string, WorkerStatus> worker_map_;
   int64 last_save_time_;
 };
 }  // namespace dpe

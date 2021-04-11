@@ -10,7 +10,8 @@ namespace dpe {
 
 class DPEWorkerNode : public base::RefCounted<DPEWorkerNode> {
  public:
-  DPEWorkerNode(const std::string& server_ip, int serverPort);
+  DPEWorkerNode(const std::string& my_ip, const std::string& server_ip,
+                int serverPort);
   ~DPEWorkerNode();
 
   bool Start();
@@ -27,6 +28,7 @@ class DPEWorkerNode : public base::RefCounted<DPEWorkerNode> {
                              scoped_refptr<base::ZMQResponse> rep);
 
  private:
+  std::string my_ip_;
   std::string server_address_;
   base::ZMQClient* zmq_client_;
   base::WeakPtrFactory<DPEWorkerNode> weakptr_factory_;

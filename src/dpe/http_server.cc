@@ -102,7 +102,7 @@ unsigned HttpServer::Run() {
       closesocket(c);
       break;
     }
-    LOG(INFO) << "Http response:\n" << data;
+    VLOG(1) << "Http response:\n" << data;
     send(c, data.c_str(), data.size(), 0);
     closesocket(c);
   }
@@ -113,7 +113,7 @@ unsigned HttpServer::Run() {
 
 bool HttpServer::HandleRequestOnThread(const std::string& reqData,
                                        std::string& repData) {
-  LOG(INFO) << "Handle http request:\n" << reqData;
+  VLOG(1) << "Handle http request:\n" << reqData;
   auto request = ParseRequest(reqData);
 
   if (request.path == "quit") {

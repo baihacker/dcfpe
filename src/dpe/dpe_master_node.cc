@@ -27,12 +27,13 @@ bool DPEMasterNode::Start() {
     LOG(WARNING) << "port = " << port_;
     return false;
   } else {
-    LOG(INFO) << "ZServer starts at: " << zserver_->GetServerAddress();
+    LOG(INFO) << "ZServer starts at: " << zserver_->GetServerAddress()
+              << std::endl;
   }
 
   class TaskAppenderImpl : public TaskAppender {
    public:
-    TaskAppenderImpl(std::deque<int64>& task_queue_)
+    TaskAppenderImpl(std::vector<int64>& task_queue_)
         : task_queue_(task_queue_) {}
 
     ~TaskAppenderImpl() {}
@@ -40,23 +41,24 @@ bool DPEMasterNode::Start() {
     void AddTask(int64 taskId) { task_queue_.push_back(taskId); }
 
    private:
-    std::deque<int64>& task_queue_;
+    std::vector<int64>& task_queue_;
   };
 
   GetSolver()->InitMaster();
   TaskAppenderImpl appender(task_queue_);
   GetSolver()->GenerateTasks(&appender);
-  LOG(INFO) << "Found " << task_queue_.size() << " tasks." << std::endl;
+  LOG(INFO) << "Found " << task_queue_.size() << " tasks.";
 
   for (auto& iter : task_queue_) {
     TaskItem item;
     item.set_task_id(iter);
     item.set_status(TaskItem::TaskStatus::TaskItem_TaskStatus_PENDING);
     task_map_[iter].CopyFrom(item);
+    task_pending_queue_.push_back(iter);
   }
   if (GetFlags().read_state) {
     LoadState();
-    if (task_queue_.empty() && task_running_queue_.empty()) {
+    if (task_pending_queue_.empty() && task_running_queue_.empty()) {
       GetSolver()->Finish();
       WillExitDpe();
     }
@@ -74,15 +76,23 @@ void DPEMasterNode::Stop() {
 }
 
 int DPEMasterNode::HandleRequest(const Request& req, Response& reply) {
+  const auto current_time = base::Time::Now().ToInternalValue();
+  auto& worker = GetWorker(req.worker_id());
+  worker.set_request_count(worker.request_count() + 1);
+  worker.set_latency_sum(worker.latency_sum() + current_time -
+                         req.request_timestamp());
+
   if (req.has_get_task()) {
     auto& get_task = req.get_task();
     const int max_task_count = std::max(get_task.max_task_count(), 1);
     int added = 0;
     auto* task = new GetTaskResponse();
-    while (!task_queue_.empty() && added < max_task_count) {
-      const int64 task_id = task_queue_.front();
-      task_queue_.pop_front();
+
+    while (!task_pending_queue_.empty() && added < max_task_count) {
+      const int64 task_id = task_pending_queue_.front();
+      task_pending_queue_.pop_front();
       task_running_queue_.insert(task_id);
+      worker.add_running_task(task_id);
       task_map_[task_id].set_status(
           TaskItem::TaskStatus::TaskItem_TaskStatus_RUNNING);
       task->add_task_id(task_id);
@@ -90,14 +100,18 @@ int DPEMasterNode::HandleRequest(const Request& req, Response& reply) {
     }
     reply.set_allocated_get_task(task);
     reply.set_error_code(0);
+
   } else if (req.has_finish_compute()) {
     auto& data = req.finish_compute();
     const int size = data.task_item_size();
+
+    std::set<int64> removed_task_id;
     std::vector<int64> task_id;
     std::vector<int64> result;
     std::vector<int64> time_usage;
     for (int i = 0; i < size; ++i) {
       auto& item = data.task_item(i);
+      removed_task_id.insert(item.task_id());
       if (task_running_queue_.count(item.task_id())) {
         auto& my_item = task_map_[item.task_id()];
         my_item.set_result(item.result());
@@ -112,10 +126,25 @@ int DPEMasterNode::HandleRequest(const Request& req, Response& reply) {
       }
     }
 
+    std::vector<int64> new_running_task;
+    for (auto& id : worker.running_task()) {
+      if (!removed_task_id.count(id)) {
+        new_running_task.push_back(id);
+      }
+    }
+    worker.clear_running_task();
+    for (auto& id : new_running_task) {
+      worker.add_running_task(id);
+    }
+
+    for (auto& id : removed_task_id) {
+      worker.add_finished_task(id);
+    }
+
     if (size > 0) {
       GetSolver()->SetResult(task_id.size(), &task_id[0], &result[0],
                              &time_usage[0], data.total_time_usage());
-      if (task_queue_.empty() && task_running_queue_.empty()) {
+      if (task_pending_queue_.empty() && task_running_queue_.empty()) {
         SaveState(true);
         GetSolver()->Finish();
         WillExitDpe();
@@ -132,6 +161,58 @@ bool DPEMasterNode::HandleRequest(const http::HttpRequest& req,
                                   http::HttpResponse* rep) {
   if (req.method == "GET") {
     if (req.path == "/status") {
+      auto where = req.parameters.find("startTaskId");
+      int64 start_task_id = -1;
+      if (where != req.parameters.end()) {
+        start_task_id = std::atoll(where->second.c_str());
+      }
+
+      auto* lv = new base::ListValue();
+
+      for (auto& iter : worker_map_) {
+        auto* v = new base::DictionaryValue();
+        auto& worker = iter.second;
+        v->SetString("id", iter.first);
+        v->SetString("status", "");
+        v->SetString("runningTask", std::to_string(worker.running_task_size()));
+        v->SetString("finishedTask",
+                     std::to_string(worker.finished_task_size()));
+        v->SetString("latencySum", std::to_string(worker.latency_sum()));
+        v->SetString("requestCount", std::to_string(worker.request_count()));
+        lv->Append(v);
+      }
+
+      base::DictionaryValue dv;
+      dv.Set("nodeStatus", lv);
+      dv.SetString("taskCount", std::to_string(task_map_.size()));
+
+      if (start_task_id != -1) {
+        int idx = 0;
+        const int size = task_queue_.size();
+        while (idx < size && task_queue_[idx] != start_task_id) {
+          ++idx;
+        }
+
+        auto* lv = new base::ListValue();
+        while (idx < size) {
+          auto where = task_map_.find(task_queue_[idx]);
+          if (where->second.status() !=
+              TaskItem::TaskStatus::TaskItem_TaskStatus_DONE) {
+            break;
+          }
+          auto* v = new base::DictionaryValue();
+          v->SetString("taskId", std::to_string(task_queue_[idx]));
+          v->SetString("node", std::to_string(0));
+          v->SetString("timeUsage", std::to_string(where->second.time_usage()));
+          lv->Append(v);
+          ++idx;
+        }
+        dv.Set("tasks", lv);
+      }
+
+      std::string ret;
+      base::JSONWriter::Write(&dv, &ret);
+      rep->SetBody(ret);
     } else if (req.path == "/") {
       std::string data;
       base::FilePath filePath(base::UTF8ToNative(module_dir_ + "\\index.html"));
@@ -170,6 +251,10 @@ void DPEMasterNode::SaveState(bool force_save) {
     for (auto& iter : task_map_) {
       TaskItem* item = master_state.add_task_item();
       item->CopyFrom(iter.second);
+    }
+    for (auto& iter : worker_map_) {
+      WorkerStatus* worker_status = master_state.add_worker_status();
+      worker_status->CopyFrom(iter.second);
     }
 
     google::protobuf::TextFormat::Printer printer;
@@ -224,7 +309,7 @@ void DPEMasterNode::LoadState() {
   std::vector<int64> task_id;
   std::vector<int64> result;
   std::vector<int64> time_usage;
-  std::deque<int64> new_task_queue;
+  std::deque<int64> new_task_pending_queue;
   for (auto& iter : task_queue_) {
     auto where = cached_status_.find(iter);
     if (where != cached_status_.end() &&
@@ -236,15 +321,19 @@ void DPEMasterNode::LoadState() {
       task_map_[iter].CopyFrom(where->second);
       ++loaded_done_count;
     } else {
-      new_task_queue.push_back(iter);
+      new_task_pending_queue.push_back(iter);
     }
   }
   LOG(INFO) << "Loaded cached result count =  " << loaded_done_count;
 
+  for (auto& iter: master_state.worker_status()) {
+    worker_map_[iter.worker_id()].CopyFrom(iter);
+  }
+
   GetSolver()->SetResult(task_id.size(), &task_id[0], &result[0],
                          &time_usage[0], 0LL);
 
-  task_queue_ = std::move(new_task_queue);
+  task_pending_queue_ = std::move(new_task_pending_queue);
 }
 
 void DPEMasterNode::SkipLoadState() {
@@ -253,5 +342,21 @@ void DPEMasterNode::SkipLoadState() {
   bool has_state = base::PathExists(file_path);
   LOG(INFO) << "Skip loading state.";
   LOG(INFO) << "State file exists: " << std::boolalpha << has_state;
+}
+
+WorkerStatus& DPEMasterNode::GetWorker(const std::string& worker_id) {
+  auto where = worker_map_.find(worker_id);
+  if (where != worker_map_.end()) {
+    return where->second;
+  }
+
+  WorkerStatus worker_status;
+  worker_status.set_worker_id(worker_id);
+  worker_status.set_latency_sum(0LL);
+  worker_status.set_request_count(0LL);
+
+  worker_map_[worker_id].CopyFrom(worker_status);
+
+  return worker_map_[worker_id];
 }
 }  // namespace dpe

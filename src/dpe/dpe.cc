@@ -110,7 +110,8 @@ static inline void run() {
       WillExitDpe();
     }
   } else if (flags.type == "worker") {
-    worker_node = new DPEWorkerNode(flags.server_ip, flags.server_port);
+    worker_node =
+        new DPEWorkerNode(flags.my_ip, flags.server_ip, flags.server_port);
     if (!worker_node->Start()) {
       LOG(ERROR) << "Failed to start worker node";
       WillExitDpe();

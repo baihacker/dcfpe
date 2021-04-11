@@ -8,8 +8,10 @@
 #include "dpe/dpe_master_node.h"
 
 namespace dpe {
-DPEWorkerNode::DPEWorkerNode(const std::string& server_ip, int server_port)
+DPEWorkerNode::DPEWorkerNode(const std::string& my_ip,
+                             const std::string& server_ip, int server_port)
     : weakptr_factory_(this),
+      my_ip_(my_ip),
       server_address_(
           base::AddressHelper::MakeZMQTCPAddress(server_ip, server_port)),
       zmq_client_(base::zmq_client()) {}
@@ -100,6 +102,7 @@ void DPEWorkerNode::HandleFinishCompute(
 
 int DPEWorkerNode::SendRequest(Request& req, base::ZMQCallBack callback,
                                int timeout) {
+  req.set_worker_id(my_ip_);
   req.set_request_timestamp(base::Time::Now().ToInternalValue());
 
   std::string val;

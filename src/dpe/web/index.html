@@ -1,218 +1,211 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <title>DPE</title>
 </head>
+
 <body style="background-color:#000;color:#0f0;">
-<div class="template" style="display: none">
-  <div class="node-row" style="display: none; justify-content: space-around; width: 100%">
-    <div class="id" style="width:20%"></div>
-    <div class="latency" style="width:30%"></div>
-    <div class="status" style="width:25%"></div>
-    <div class="task" style="width:25%"></div>
-  </div>
-  <div class="task-info-row">
-    <div class="id" style="width:20%"></div>
-    <div class="node" style="width:20%"></div>
-    <div class="time-usage" style="width:20%"></div>
-  </div>
-</div>
-
-<div class="header" style="display:flex;justify-content:flex-end;font-size:12px;line-height:22px;">
-  <div style="flex-grow:1;text-align:center;">
-    <span>Progress:</span>
-    <span class="progress">0/0</span>
-  </div>
-  <div>
-    <input type="checkbox" class="auto-refresh" style="vertical-align:-2px" checked>
-    <span>Auto Refresh</span>
-  </div>
-  <div style="margin-left:8px">
-    <button class="refresh-button">Refresh</button>
-  </div>
-</div>
-
-<div class="content" style="display:flex">
-  <div class="left" style="width: 30%">
-    <div class="node-list-header" style="display:flex;justify-content:space-around;">
-      <div class="id" style="width:20%">id</div>
-      <div class="latency" style="width:30%">latency</div>
-      <div class="status" style="width:25%">status</div>
-      <div class="task" style="width:25%">task</div>
+  <div class="template" style="display: none">
+    <div class="node-row" style="display: none; justify-content: space-around; width: 100%">
+      <div class="id" style="width:20%"></div>
+      <div class="latency" style="width:30%"></div>
+      <div class="running-task" style="width:25%"></div>
+      <div class="finished-task" style="width:25%"></div>
     </div>
-    <div class="node-list" style="font-size: 10px;">
+    <div class="task-info-row">
+      <div class="id" style="width:20%"></div>
+      <div class="node" style="width:20%"></div>
+      <div class="time-usage" style="width:20%"></div>
     </div>
   </div>
-  <div class="right" style="width:70%">
-    <div style="display:flex;justify-content:space-around;">
-      <div style="width:400px;height:400px">
-        <canvas id="timeChart" width="400" height="400"></canvas>
+
+  <div class="header" style="display:flex;justify-content:flex-end;font-size:12px;line-height:22px;">
+    <div style="flex-grow:1;text-align:center;">
+      <span>Progress:</span>
+      <span class="progress">0/0</span>
+    </div>
+    <div>
+      <input type="checkbox" class="auto-refresh" style="vertical-align:-2px" checked>
+      <span>Auto Refresh</span>
+    </div>
+    <div style="margin-left:8px">
+      <button class="refresh-button">Refresh</button>
+    </div>
+  </div>
+
+  <div class="content" style="display:flex">
+    <div class="left" style="width: 30%">
+      <div class="node-list-header" style="display:flex;justify-content:space-around;">
+        <div class="id" style="width:20%">id</div>
+        <div class="latency" style="width:30%">latency</div>
+        <div class="running-task" style="width:25%">running task</div>
+        <div class="finished-task" style="width:25%">finished task</div>
       </div>
-      <div style="width:400px;height:400px">
-        <canvas id="accChart" width="400" height="400"></canvas>
+      <div class="node-list" style="font-size: 10px;">
       </div>
     </div>
+    <div class="right" style="width:70%">
+      <div style="display:flex;justify-content:space-around;">
+        <div style="width:400px;height:400px">
+          <canvas id="timeChart" width="400" height="400"></canvas>
+        </div>
+        <div style="width:400px;height:400px">
+          <canvas id="accChart" width="400" height="400"></canvas>
+        </div>
+      </div>
+    </div>
   </div>
-</div>
 
-<div class="task-info-list">
-</div>
+  <div class="task-info-list">
+  </div>
 </body>
 <!--script src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.0/jquery.min.js"></script-->
 <!--script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.6.0/Chart.bundle.js"></script-->
 <script src="jquery.min.js"></script>
 <script src="Chart.bundle.js"></script>
 <script>
-(function(){
+  (function () {
 
-var srvUid = "";
+    var srvUid = "";
 
-var taskInfos = [];
-var taskIds = [];
-var taskTimeUsages = [];
-var accTaskTimeUsages = [];
+    var taskInfos = [];
+    var taskIds = [];
+    var taskTimeUsages = [];
+    var accTaskTimeUsages = [];
 
-var timeData = {
-  labels : taskIds,
-  datasets : [
-    {
-      borderWidth: 0,
-      borderColor: "rgba(255,255,255,1)",
-      backgroundColor: "rgba(0,0,255,1)",
-      label: "Time usage",
-      data : taskTimeUsages
-    }
-  ]
-};
+    var timeData = {
+      labels: taskIds,
+      datasets: [
+        {
+          borderWidth: 0,
+          borderColor: "rgba(255,255,255,1)",
+          backgroundColor: "rgba(0,0,255,1)",
+          label: "Time usage",
+          data: taskTimeUsages
+        }
+      ]
+    };
 
-var accData = {
-  labels : taskIds,
-  datasets : [
-    {
-      borderWidth: 1,
-      borderColor: "rgba(255,0,0,1)",
-      backgroundColor: "rgba(255,255,0,1)",
-      label: "Accumulated time usage",
-      data : accTaskTimeUsages
-    }
-  ]
-};
-Chart.defaults.global.defaultFontColor = 'white';
-Chart.defaults.scale.gridLines.color = 'green';
-Chart.defaults.global.elements.point.radius = 1;
+    var accData = {
+      labels: taskIds,
+      datasets: [
+        {
+          borderWidth: 1,
+          borderColor: "rgba(255,0,0,1)",
+          backgroundColor: "rgba(255,255,0,1)",
+          label: "Accumulated time usage",
+          data: accTaskTimeUsages
+        }
+      ]
+    };
+    Chart.defaults.global.defaultFontColor = 'white';
+    Chart.defaults.scale.gridLines.color = 'green';
+    Chart.defaults.global.elements.point.radius = 1;
 
-var timeCtx = $("#timeChart").get(0).getContext("2d");
-var timeChart = new Chart(timeCtx, {type: 'bar', data: timeData, options:{
-  elements: {
-    line: {
-      tension: 0.4,
-    }
-  }
-}});
-
-var accCtx = $("#accChart").get(0).getContext("2d");
-var accChart = new Chart(accCtx, {type: 'line', data: accData, options:{
-  elements: {
-    line: {
-      tension: 0.4,
-    }
-  },
-  scaleLineColor: 'white',
-}});
-
-function getStartTaskId()
-{
-  var l = taskInfos.length;
-  if (l == 0)
-  {
-    return 0;
-  }
-  return +taskInfos[l-1].taskId + 1;
-}
-
-function addTaskInfo(taskInfo) {
-  $(".template > .task-info-row > .id").text(taskInfo.taskId);
-  $(".template > .task-info-row > .node").text(taskInfo.node);
-  var timeUsage = Number(taskInfo.timeUsage)/1e6;
-  $(".template > .task-info-row > .time-usage").text(timeUsage.toFixed(6));
-  $(".template > .task-info-row").clone().css("display", "flex").appendTo(".task-info-list");
-}
-
-function addNodeStatus(status) {
-  $(".template > .node-row > .id").text(status.id);
-  var latency = Number(status.latencySum)/Number(status.requestCount)/1e6;
-  $(".template > .node-row > .latency").text(latency.toFixed(6));
-  $(".template > .node-row > .status").text(status.status);
-  $(".template > .node-row > .task").text(status.taskId);
-  $(".template > .node-row").clone().css("display", "flex").appendTo(".node-list");
-}
-
-function refresh(byAuto) {
-  if (byAuto && !$(".auto-refresh").prop("checked")) {
-    return;
-  }
-  $.ajax({
-    url: "status?" + "startTaskId=" + getStartTaskId(),
-  }).done(function(repdata) {
-    var result = JSON.parse(repdata);
-    
-    if (srvUid == "") {
-      srvUid = result.srvUid;
-    }
-    else if (srvUid != result.srvUid)
-    {
-      window.location.reload();
-      return;
-    }
-    
-    var nodeStatus = result.nodeStatus;
-    var newLength = nodeStatus.length;
-    var oldCount = 0;
-    $(".node-list > .node-row").each(function(idx) {
-      if (idx < newLength) {
-        var status = nodeStatus[idx];
-        $(this).find('.id').text(status.id);
-        var latency = Number(status.latencySum)/Number(status.requestCount)/1e6;
-        $(this).find('.latency').text(latency.toFixed(6));
-        $(this).find('.status').text(status.status);
-        $(this).find('.task').text(status.taskId);
-      } else {
-        $(this).remove();
+    var timeCtx = $("#timeChart").get(0).getContext("2d");
+    var timeChart = new Chart(timeCtx, {
+      type: 'bar', data: timeData, options: {
+        elements: {
+          line: {
+            tension: 0.4,
+          }
+        }
       }
-      ++oldCount;
     });
-    for (var i = oldCount; i < newLength; ++i)
-    {
-      addNodeStatus(nodeStatus[i]);
-    }
-    
-    var taskList = result.tasks;
-    if (taskList)
-    {
-      var length = taskList.length;
-      for (var i = 0; i < length; ++i)
-      {
-        var taskInfo = taskList[i];
-        taskInfos.push(taskInfo);
-        taskIds.push(+taskInfo.taskId);
-        var thisTime = (+taskInfo.timeUsage)/1e6;
-        taskTimeUsages.push(thisTime);
-        var t = accTaskTimeUsages.length == 0 ?
-            0 : accTaskTimeUsages[accTaskTimeUsages.length-1];
-        accTaskTimeUsages.push(t+thisTime);
+
+    var accCtx = $("#accChart").get(0).getContext("2d");
+    var accChart = new Chart(accCtx, {
+      type: 'line', data: accData, options: {
+        elements: {
+          line: {
+            tension: 0.4,
+          }
+        },
+        scaleLineColor: 'white',
       }
-      timeChart.update(0, true);
-      accChart.update(0, true);
+    });
+
+    function getStartTaskId() {
+      var l = taskInfos.length;
+      if (l == 0) {
+        return 0;
+      }
+      return +taskInfos[l - 1].taskId + 1;
     }
-    
-    $(".progress").text(taskInfos.length + "/" + result.taskCount);
-  });
-}
 
-setInterval(function(){refresh(true);}, 1000);
-$(".refresh-button").click(function(){refresh(false);});
+    function addTaskInfo(taskInfo) {
+      $(".template > .task-info-row > .id").text(taskInfo.taskId);
+      $(".template > .task-info-row > .node").text(taskInfo.node);
+      var timeUsage = Number(taskInfo.timeUsage) / 1e6;
+      $(".template > .task-info-row > .time-usage").text(timeUsage.toFixed(6));
+      $(".template > .task-info-row").clone().css("display", "flex").appendTo(".task-info-list");
+    }
 
-})();
+    function addNodeStatus(status) {
+      $(".template > .node-row > .id").text(status.id);
+      var latency = Number(status.latencySum) / Number(status.requestCount) / 1e6;
+      $(".template > .node-row > .latency").text(latency.toFixed(6));
+      $(".template > .node-row > .running-task").text(status.runningTask);
+      $(".template > .node-row > .finished-task").text(status.finishedTask);
+      $(".template > .node-row").clone().css("display", "flex").appendTo(".node-list");
+    }
+
+    function refresh(byAuto) {
+      if (byAuto && !$(".auto-refresh").prop("checked")) {
+        return;
+      }
+      $.ajax({
+        url: "status?" + "startTaskId=" + getStartTaskId(),
+      }).done(function (repdata) {
+        var result = JSON.parse(repdata);
+
+        var nodeStatus = result.nodeStatus;
+        var newLength = nodeStatus.length;
+        var oldCount = 0;
+        $(".node-list > .node-row").each(function (idx) {
+          if (idx < newLength) {
+            var status = nodeStatus[idx];
+            $(this).find('.id').text(status.id);
+            var latency = Number(status.latencySum) / Number(status.requestCount) / 1e6;
+            $(this).find('.latency').text(latency.toFixed(6));
+            $(this).find('.running-task').text(status.runningTask);
+            $(this).find('.finished-task').text(status.finishedTask);
+          } else {
+            $(this).remove();
+          }
+          ++oldCount;
+        });
+        for (var i = oldCount; i < newLength; ++i) {
+          addNodeStatus(nodeStatus[i]);
+        }
+
+        var taskList = result.tasks;
+        if (taskList) {
+          var length = taskList.length;
+          for (var i = 0; i < length; ++i) {
+            var taskInfo = taskList[i];
+            taskInfos.push(taskInfo);
+            taskIds.push(+taskInfo.taskId);
+            var thisTime = (+taskInfo.timeUsage) / 1e6;
+            taskTimeUsages.push(thisTime);
+            var t = accTaskTimeUsages.length == 0 ?
+              0 : accTaskTimeUsages[accTaskTimeUsages.length - 1];
+            accTaskTimeUsages.push(t + thisTime);
+          }
+          timeChart.update(0, true);
+          accChart.update(0, true);
+        }
+
+        $(".progress").text(taskInfos.length + "/" + result.taskCount);
+      });
+    }
+
+    setInterval(function () { refresh(true); }, 1000);
+    $(".refresh-button").click(function () { refresh(false); });
+
+  })();
 
 </script>
+
 </html>
