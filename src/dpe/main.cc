@@ -22,9 +22,13 @@ class SolverImpl : public Solver {
 
   void InitMaster() {}
 
-  void GenerateTasks(TaskAppender* taskAppender) {
+  int GetTaskCount() {
+    return 30;
+  }
+
+  void GenerateTasks(int64* task) {
     for (int i = 0; i < 30; ++i) {
-      taskAppender->AddTask(i);
+      task[i] = i;
     }
   }
 

@@ -37,17 +37,11 @@ struct DpeStub {
 
 DPE_EXPORT DpeStub* get_stub();
 
-// The binary compatibility issue still exists for
-// TaskAppender and Solver, but we ignore them now.
-class TaskAppender {
- public:
-  virtual void AddTask(int64 taskId) = 0;
-};
-
 class Solver {
  public:
   virtual void InitMaster() = 0;
-  virtual void GenerateTasks(TaskAppender* taskAppender) = 0;
+  virtual int GetTaskCount() = 0;
+  virtual void GenerateTasks(int64* task) = 0;
   virtual void InitWorker() = 0;
   virtual void SetResult(int size, int64* taskId, int64* result,
                          int64* time_usage, int64 total_time_usage) = 0;

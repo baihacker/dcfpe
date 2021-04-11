@@ -31,22 +31,10 @@ bool DPEMasterNode::Start() {
               << std::endl;
   }
 
-  class TaskAppenderImpl : public TaskAppender {
-   public:
-    TaskAppenderImpl(std::vector<int64>& task_queue_)
-        : task_queue_(task_queue_) {}
-
-    ~TaskAppenderImpl() {}
-
-    void AddTask(int64 taskId) { task_queue_.push_back(taskId); }
-
-   private:
-    std::vector<int64>& task_queue_;
-  };
-
   GetSolver()->InitMaster();
-  TaskAppenderImpl appender(task_queue_);
-  GetSolver()->GenerateTasks(&appender);
+  int task_count = GetSolver()->GetTaskCount();
+  task_queue_.resize(task_count);
+  GetSolver()->GenerateTasks(&task_queue_[0]);
   LOG(INFO) << "Found " << task_queue_.size() << " tasks.";
 
   for (auto& iter : task_queue_) {
