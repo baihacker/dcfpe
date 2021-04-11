@@ -1,4 +1,36 @@
 *******************************************************************************
+Apr 11, 2021
+
+
+Overview:
+====================
+
+
+## Library structures:
+* Core
+  * dpe.dll The binary that implements the main scheduling logic.
+  * dpe.h The user includes this file and implements the Solver.
+* Example
+  * main.cc An examepl of using this library.
+  * main.exe The generated example binary.
+* Dependencies
+  * msvcp120.dll, msvcr120.dll, zmq.dll
+* Web UI on Master node
+  * index.html, Chart.bundle.js, jquery.min.js are expected to the folder where dpe.dll exists.
+
+## MasterNode:
+* Initializes the solver as master and retrieves the tasks (int64). The task's status is PENDING.
+  * If possible, loads the saved state: if a task's status in the cache is DONE, the cached status is copied.
+* Receives GetTaskRequest from worker nodes and assigns tasks to the requestor. A task is marked as RUNNING.
+* Receives FinishComputeRequest from worker nodes and the task is marked as DONE.
+
+## WorkerNode:
+* Connects to MasterNode.
+* Sends GetTaskRequest to get new tasks and execute them.
+* When a task is finished, sends FinishComputeRequest to save the result and Sends GetTaskRequest to get more tasks.
+
+
+*******************************************************************************
 Jun 12, 2017
 
 
@@ -38,7 +70,7 @@ three type of process "H process", "W process", "R process". They form a "MapRed
 computer framework. There two type of entities on our virtual network (overlapped
 network), it is not a good design.
 
-We have only one type of entity on the virtual network, which is called a 
+We have only one type of entity on the virtual network, which is called a
 DPE-Service. DPE-Services connet with each other and form a virtual network.
 When a user wants to start a compute job, he sends requets to available DPE-Serices.
 When a DPE-Service receive the request, it accepts the request and allocates a compute
@@ -94,7 +126,7 @@ Brief Component List:
 
 Host:
 * Discover workers from LAN.
-* Discover workers from server. 
+* Discover workers from server.
 * Add workers manual.
 * Comunnicate with Worker
 * Maintain the H process and R process.
