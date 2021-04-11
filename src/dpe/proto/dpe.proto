@@ -16,6 +16,7 @@ message WorkerStatus {
   repeated int64 finished_task = 3;
   optional int64 latency_sum = 4; // one way latency
   optional int64 request_count = 5;
+  optional int64 updated_time = 6;
 }
 
 message TaskItem {

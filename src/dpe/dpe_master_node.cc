@@ -81,6 +81,7 @@ int DPEMasterNode::HandleRequest(const Request& req, Response& reply) {
   worker.set_request_count(worker.request_count() + 1);
   worker.set_latency_sum(worker.latency_sum() + current_time -
                          req.request_timestamp());
+  worker.set_updated_time(current_time);
 
   if (req.has_get_task()) {
     auto& get_task = req.get_task();
@@ -177,6 +178,10 @@ bool DPEMasterNode::HandleRequest(const http::HttpRequest& req,
         v->SetString("runningTask", std::to_string(worker.running_task_size()));
         v->SetString("finishedTask",
                      std::to_string(worker.finished_task_size()));
+        v->SetString(
+            "updatedTime",
+            std::to_string(base::Time::FromInternalValue(worker.updated_time())
+                               .ToJsTime()));
         v->SetString("latencySum", std::to_string(worker.latency_sum()));
         v->SetString("requestCount", std::to_string(worker.request_count()));
         lv->Append(v);
@@ -326,7 +331,7 @@ void DPEMasterNode::LoadState() {
   }
   LOG(INFO) << "Loaded cached result count =  " << loaded_done_count;
 
-  for (auto& iter: master_state.worker_status()) {
+  for (auto& iter : master_state.worker_status()) {
     worker_map_[iter.worker_id()].CopyFrom(iter);
   }
 
@@ -350,12 +355,13 @@ WorkerStatus& DPEMasterNode::GetWorker(const std::string& worker_id) {
     return where->second;
   }
 
-  WorkerStatus worker_status;
-  worker_status.set_worker_id(worker_id);
-  worker_status.set_latency_sum(0LL);
-  worker_status.set_request_count(0LL);
+  WorkerStatus worker;
+  worker.set_worker_id(worker_id);
+  worker.set_latency_sum(0LL);
+  worker.set_request_count(0LL);
+  worker.set_updated_time(base::Time::Now().ToInternalValue());
 
-  worker_map_[worker_id].CopyFrom(worker_status);
+  worker_map_[worker_id].CopyFrom(worker);
 
   return worker_map_[worker_id];
 }
