@@ -39,6 +39,6 @@ if __name__ == '__main__':
   dpe_dir = os.path.join(ENV_SOLUTION_DIRECTORY, 'dpe')
   shutil.copyfile(os.path.join(dpe_dir, 'README.md'),
                   os.path.join(dest_dir, 'README.md'))
-  shutil.copyfile(os.path.join(dpe_dir, 'README_cn.txt'),
-                  os.path.join(dest_dir, 'README_cn.txt'))
+  shutil.copyfile(os.path.join(dpe_dir, 'README_cn.md'),
+                  os.path.join(dest_dir, 'README_cn.md'))
   sys.exit(0)
