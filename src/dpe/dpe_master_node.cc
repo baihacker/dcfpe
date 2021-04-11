@@ -48,6 +48,12 @@ bool DPEMasterNode::Start() {
   GetSolver()->GenerateTasks(&appender);
   LOG(INFO) << "Found " << task_queue_.size() << " tasks." << std::endl;
 
+  for (auto& iter : task_queue_) {
+    TaskItem item;
+    item.set_task_id(iter);
+    item.set_status(TaskItem::TaskStatus::TaskItem_TaskStatus_PENDING);
+    task_map_[iter].CopyFrom(item);
+  }
   if (GetFlags().read_state) {
     LoadState();
     if (task_queue_.empty() && task_running_queue_.empty()) {
@@ -77,6 +83,8 @@ int DPEMasterNode::HandleRequest(const Request& req, Response& reply) {
       const int64 task_id = task_queue_.front();
       task_queue_.pop_front();
       task_running_queue_.insert(task_id);
+      task_map_[task_id].set_status(
+          TaskItem::TaskStatus::TaskItem_TaskStatus_RUNNING);
       task->add_task_id(task_id);
       ++added;
     }
@@ -91,7 +99,11 @@ int DPEMasterNode::HandleRequest(const Request& req, Response& reply) {
     for (int i = 0; i < size; ++i) {
       auto& item = data.task_item(i);
       if (task_running_queue_.count(item.task_id())) {
-        all_result_.push_back({item.task_id(), item.result()});
+        auto& my_item = task_map_[item.task_id()];
+        my_item.set_result(item.result());
+        my_item.set_time_usage(item.time_usage());
+        my_item.set_status(TaskItem::TaskStatus::TaskItem_TaskStatus_DONE);
+
         task_running_queue_.erase(item.task_id());
 
         task_id.push_back(item.task_id());
@@ -155,10 +167,9 @@ void DPEMasterNode::SaveState(bool force_save) {
        base::Time::FromInternalValue(last_save_time_))
               .InMinutes() > 3) {
     MasterState master_state;
-    for (auto& iter : all_result_) {
+    for (auto& iter : task_map_) {
       TaskItem* item = master_state.add_task_item();
-      item->set_task_id(iter.first);
-      item->set_result(iter.second);
+      item->CopyFrom(iter.second);
     }
 
     google::protobuf::TextFormat::Printer printer;
@@ -194,32 +205,41 @@ void DPEMasterNode::LoadState() {
     return;
   }
 
-  std::map<int64, int64> task_to_result;
+  std::map<int64, TaskItem> cached_status_;
+  int done_count = 0;
   const int size = master_state.task_item_size();
   for (int i = 0; i < size; ++i) {
     auto& item = master_state.task_item(i);
-    if (item.has_result()) {
-      task_to_result[item.task_id()] = item.result();
+    cached_status_[item.task_id()].CopyFrom(item);
+    if (item.status() == TaskItem::TaskStatus::TaskItem_TaskStatus_DONE) {
+      ++done_count;
     }
   }
 
-  LOG(INFO) << "Load " << all_result_.size() << " results from saved state.";
+  LOG(INFO) << "Load " << cached_status_.size() << " results from saved state.";
+  LOG(INFO) << "Done count =  " << done_count;
+
+  int loaded_done_count = 0;
 
   std::vector<int64> task_id;
   std::vector<int64> result;
   std::vector<int64> time_usage;
   std::deque<int64> new_task_queue;
   for (auto& iter : task_queue_) {
-    auto where = task_to_result.find(iter);
-    if (where != task_to_result.end()) {
-      all_result_.push_back({iter, where->second});
+    auto where = cached_status_.find(iter);
+    if (where != cached_status_.end() &&
+        where->second.status() ==
+            TaskItem::TaskStatus::TaskItem_TaskStatus_DONE) {
       task_id.push_back(iter);
-      result.push_back(where->second);
-      time_usage.push_back(0);
+      result.push_back(where->second.result());
+      time_usage.push_back(where->second.time_usage());
+      task_map_[iter].CopyFrom(where->second);
+      ++loaded_done_count;
     } else {
       new_task_queue.push_back(iter);
     }
   }
+  LOG(INFO) << "Loaded cached result count =  " << loaded_done_count;
 
   GetSolver()->SetResult(task_id.size(), &task_id[0], &result[0],
                          &time_usage[0], 0LL);

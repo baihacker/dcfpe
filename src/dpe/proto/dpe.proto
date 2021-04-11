@@ -11,9 +11,15 @@ message GetTaskResponse {
 }
 
 message TaskItem {
+  enum TaskStatus {
+    PENDING = 0;
+    RUNNING = 1;
+    DONE = 2;
+  }
   optional int64 task_id = 1;
-  optional int64 result = 2;
-  optional int64 time_usage = 3;
+  optional TaskStatus status = 2;
+  optional int64 result = 3;
+  optional int64 time_usage = 4;
 }
 
 message MasterState {
