@@ -28,4 +28,4 @@ Updated Apr 11, 2021, [history version](https://github.com/baihacker/dcfpe/blob/
 * When a task is finished, sends FinishComputeRequest to save the result and Sends GetTaskRequest to get more tasks.
 
 # Usage
-See [README_cn.txt](https://github.com/baihacker/dcfpe/blob/master/src/dpe/README_cn.txt)
+See [README_cn.md](https://github.com/baihacker/dcfpe/blob/master/src/dpe/README_cn.md)
