@@ -85,9 +85,9 @@ int DPEMasterNode::HandleRequest(const Request& req, Response& reply) {
       task->add_task_id(task_id);
       ++added;
     }
+
     reply.set_allocated_get_task(task);
     reply.set_error_code(0);
-
   } else if (req.has_finish_compute()) {
     auto& data = req.finish_compute();
     const int size = data.task_item_size();
@@ -319,7 +319,9 @@ void DPEMasterNode::LoadState() {
   LOG(INFO) << "Loaded cached result count =  " << loaded_done_count;
 
   for (auto& iter : master_state.worker_status()) {
-    worker_map_[iter.worker_id()].CopyFrom(iter);
+    auto& item = worker_map_[iter.worker_id()];
+    item.CopyFrom(iter);
+    item.clear_running_task();
   }
 
   GetSolver()->SetResult(task_id.size(), &task_id[0], &result[0],
