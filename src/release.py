@@ -10,10 +10,10 @@ if __name__ == '__main__':
     os.system('rmdir /S /Q %s'%output)
   os.makedirs(output)
   for dir in ["Release", "Release_x64"]:
-    src_dir = os.path.join(ENV_SOLUTION_DIRECTORY, 'output/' + dir)
+    src_dir = os.path.join(ENV_SOLUTION_DIRECTORY, 'output\\' + dir)
 
     # Release rs
-    dest_dir = os.path.join(output, 'rs/' + dir)
+    dest_dir = os.path.join(output, 'rs\\' + dir)
     os.makedirs(dest_dir)
     shutil.copyfile(os.path.join(src_dir, 'msvcr120.dll'),
                     os.path.join(dest_dir, 'msvcr120.dll'))
@@ -30,7 +30,7 @@ if __name__ == '__main__':
                     os.path.join(dest_dir, 'deploy_demo_README.txt'))
 
     # Release dpe
-    dest_dir = os.path.join(output, 'dpe/' + dir)
+    dest_dir = os.path.join(output, 'dpe\\' + dir)
     os.makedirs(dest_dir)
     shutil.copyfile(os.path.join(src_dir, 'msvcr120.dll'),
                     os.path.join(dest_dir, 'msvcr120.dll'))

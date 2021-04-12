@@ -10,7 +10,7 @@ if __name__ == '__main__':
     os.system('rmdir /S /Q %s' % output)
   os.makedirs(output)
   for dir in ["Release", "Release_x64"]:
-    src_dir = os.path.join(ENV_SOLUTION_DIRECTORY, 'output/' + dir)
+    src_dir = os.path.join(ENV_SOLUTION_DIRECTORY, 'output\\' + dir)
 
     # Release dpe
     dest_dir = os.path.join(output, dir)
