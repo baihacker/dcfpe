@@ -16,8 +16,10 @@ struct Flags {
   bool read_state = true;
   // The number of worker threads
   int thread_number = 1;
-  // The expected size in Solver::Compute
-  // size <= batch_size
+  // If batch_size > 0, the expected size in Solver::Compute, it is guaranteed
+  // that size <= batch_size
+  // If batch_size < 0, |batch_size| is the expected executing time of
+  // Solver::Compute in seconds.
   int batch_size = 1;
   // The argument forwarded to Solver::Compute
   int parallel_info = 0;

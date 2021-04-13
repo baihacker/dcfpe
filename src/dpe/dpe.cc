@@ -134,8 +134,8 @@ static inline void run() {
       LOG(WARNING) << "thread_number should be greater than 0.";
       WillExitDpe();
     }
-    if (flags.batch_size <= 0) {
-      LOG(WARNING) << "batch_size should be greater than 0.";
+    if (flags.batch_size == 0) {
+      LOG(WARNING) << "batch_size cannot be 0.";
       WillExitDpe();
     }
   }

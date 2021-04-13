@@ -17,9 +17,10 @@ class DPEWorkerNode : public base::RefCounted<DPEWorkerNode> {
   bool Start();
   void Stop();
 
-  void GetNextTask();
+  void GetNextTask(int suggested_size);
   void HandleGetTask(scoped_refptr<base::ZMQResponse> response);
-  void HandleFinishCompute(scoped_refptr<base::ZMQResponse> response);
+  void HandleFinishCompute(int suggested_size,
+                           scoped_refptr<base::ZMQResponse> response);
 
   static void ExecuteTask(base::WeakPtr<DPEWorkerNode> self,
                           std::vector<int64> tasks);
@@ -28,8 +29,9 @@ class DPEWorkerNode : public base::RefCounted<DPEWorkerNode> {
                                 std::vector<int64> result,
                                 std::vector<int64> time_usage,
                                 int64 total_time);
-  void FinishExecuteTaskImpl(std::vector<int64> tasks, std::vector<int64> result,
-                         std::vector<int64> time_usage, int64 total_time);
+  void FinishExecuteTaskImpl(std::vector<int64> tasks,
+                             std::vector<int64> result,
+                             std::vector<int64> time_usage, int64 total_time);
 
   int SendRequest(Request& req, base::ZMQCallBack callback, int timeout);
 

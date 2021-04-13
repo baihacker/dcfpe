@@ -22,19 +22,18 @@ DPEWorkerNode::~DPEWorkerNode() {}
 bool DPEWorkerNode::Start() {
   GetSolver()->InitWorker();
   for (int i = 0; i < GetFlags().thread_number; ++i) {
-    GetNextTask();
+    GetNextTask(1);
   }
   return true;
 }
 
 void DPEWorkerNode::Stop() {}
 
-void DPEWorkerNode::GetNextTask() {
+void DPEWorkerNode::GetNextTask(int suggested_size) {
   GetTaskRequest* get_task = new GetTaskRequest();
   const int batch_size = GetFlags().batch_size;
-  const int thread_number = GetFlags().thread_number;
 
-  get_task->set_max_task_count(batch_size);
+  get_task->set_max_task_count(batch_size > 0 ? batch_size : suggested_size);
 
   Request request;
   request.set_name("get_task");
@@ -78,7 +77,7 @@ void DPEWorkerNode::HandleGetTask(scoped_refptr<base::ZMQResponse> response) {
 }
 
 void DPEWorkerNode::HandleFinishCompute(
-    scoped_refptr<base::ZMQResponse> response) {
+    int suggested_size, scoped_refptr<base::ZMQResponse> response) {
   if (response->error_code_ != base::ZMQResponse::ZMQ_REP_OK) {
     LOG(WARNING) << "Handle finish compute, error: " << response->error_code_
                  << std::endl;
@@ -86,7 +85,7 @@ void DPEWorkerNode::HandleFinishCompute(
       WillExitDpe();
     }
   } else {
-    GetNextTask();
+    GetNextTask(suggested_size);
   }
 }
 
@@ -133,11 +132,35 @@ void DPEWorkerNode::FinishExecuteTaskImpl(std::vector<int64> tasks,
   }
   fr->set_total_time_usage(total_time);
 
+  int suggested_size = 1;
+  if (size > 0 && GetFlags().batch_size < 0) {
+    int64 expected_time = -GetFlags().batch_size;
+    double actual_time = total_time * 1e-6 / size;
+    if (fabs(actual_time) > 1e-2) {
+      int64 can = 1. * expected_time / actual_time;
+      if (can > 100) {
+        suggested_size = 100;
+      } else if (can <= 0) {
+        suggested_size = 1;
+      } else {
+        suggested_size = static_cast<int>(can);
+      }
+    } else {
+      suggested_size = size + 1;
+    }
+    if (suggested_size > 100) {
+      suggested_size = 100;
+    }
+    if (suggested_size <= 0) {
+      suggested_size = 1;
+    }
+  }
   Request request;
   request.set_name("finish_compute");
   request.set_allocated_finish_compute(fr);
   SendRequest(request,
-              base::Bind(&dpe::DPEWorkerNode::HandleFinishCompute, this),
+              base::Bind(&dpe::DPEWorkerNode::HandleFinishCompute, this,
+                         suggested_size),
               10000);
 }
 

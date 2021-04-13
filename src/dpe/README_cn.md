@@ -73,14 +73,17 @@
   * --tn=thread_number
   * --thread_number=thread_num
   * Worker结点
-     * Solver::Compute中的thread_number值.
+     * Worker结点用于执行Solver::Compute的线程数
+     * 小于1的值是非法的,在Master结点上也会检查该值
   * 默认值1.
 
-* 传入Solver::Compute的最大task数
+* Solver::Compute负载
   * --bs=batch_size
   * --batch_size=batch_size
   * Worker结点
-    * 指定Worker节点上传科Solver::Comput的最大task数
+    * batch_size大于0时,指定Worker节点上Solver::Compute执行的最大task数
+    * batch_size小于0时,|batch_size|为worker结点上Solver::Compute的期望执行时间(单位:秒)
+    * 0值是非法的.
   * 默认值1.
 
 * 自定义并行参数
