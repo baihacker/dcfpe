@@ -14,13 +14,16 @@ DPEWorkerNode::DPEWorkerNode(const std::string& my_ip,
       my_ip_(my_ip),
       server_address_(
           base::AddressHelper::MakeZMQTCPAddress(server_ip, server_port)),
+      running_task_count_(0),
       zmq_client_(base::zmq_client()) {}
 
 DPEWorkerNode::~DPEWorkerNode() {}
 
 bool DPEWorkerNode::Start() {
   GetSolver()->InitWorker();
-  GetNextTask();
+  for (int i = 0; i < GetFlags().thread_number; ++i) {
+    GetNextTask();
+  }
   return true;
 }
 
@@ -44,7 +47,9 @@ void DPEWorkerNode::HandleGetTask(scoped_refptr<base::ZMQResponse> response) {
   if (response->error_code_ != base::ZMQResponse::ZMQ_REP_OK) {
     LOG(WARNING) << "Handle get task, error: " << response->error_code_
                  << std::endl;
-    WillExitDpe();
+    if (running_task_count_ == 0) {
+      WillExitDpe();
+    }
     return;
   }
 
@@ -54,38 +59,22 @@ void DPEWorkerNode::HandleGetTask(scoped_refptr<base::ZMQResponse> response) {
   const int size = get_task.task_id_size();
   if (size == 0) {
     LOG(WARNING) << "Handle get task, no more task" << std::endl;
-    WillExitDpe();
+    if (running_task_count_ == 0) {
+      WillExitDpe();
+    }
     return;
   }
 
-  std::vector<int64> task_id;
+  std::vector<int64> tasks;
   for (int i = 0; i < size; ++i) {
-    task_id.push_back(get_task.task_id(i));
+    tasks.push_back(get_task.task_id(i));
   }
 
-  std::vector<int64> result(size, 0);
-  std::vector<int64> time_usage(size, 0);
+  ++running_task_count_;
 
-  const int64 start_time = base::Time::Now().ToInternalValue();
-  GetSolver()->Compute(size, &task_id[0], &result[0], &time_usage[0],
-                       GetFlags().parallel_info);
-  const int64 end_time = base::Time::Now().ToInternalValue();
-
-  FinishComputeRequest* fr = new FinishComputeRequest();
-  for (int i = 0; i < size; ++i) {
-    TaskItem* item = fr->add_task_item();
-    item->set_task_id(task_id[i]);
-    item->set_result(result[i]);
-    item->set_time_usage(time_usage[i]);
-  }
-  fr->set_total_time_usage(end_time - start_time);
-
-  Request request;
-  request.set_name("finish_compute");
-  request.set_allocated_finish_compute(fr);
-  SendRequest(request,
-              base::Bind(&dpe::DPEWorkerNode::HandleFinishCompute, this),
-              60000);
+  base::ThreadPool::GetBlockingPool()->PostTask(
+      FROM_HERE, base::Bind(DPEWorkerNode::ExecuteTask,
+                            weakptr_factory_.GetWeakPtr(), tasks));
 }
 
 void DPEWorkerNode::HandleFinishCompute(
@@ -93,10 +82,63 @@ void DPEWorkerNode::HandleFinishCompute(
   if (response->error_code_ != base::ZMQResponse::ZMQ_REP_OK) {
     LOG(WARNING) << "Handle finish compute, error: " << response->error_code_
                  << std::endl;
-    WillExitDpe();
+    if (running_task_count_ == 0) {
+      WillExitDpe();
+    }
   } else {
     GetNextTask();
   }
+}
+
+void DPEWorkerNode::ExecuteTask(base::WeakPtr<DPEWorkerNode> self,
+                                std::vector<int64> tasks) {
+  const int size = tasks.size();
+  std::vector<int64> result(size, 0);
+  std::vector<int64> time_usage(size, 0);
+
+  const int64 start_time = base::Time::Now().ToInternalValue();
+  GetSolver()->Compute(size, &tasks[0], &result[0], &time_usage[0],
+                       GetFlags().parallel_info);
+  const int64 end_time = base::Time::Now().ToInternalValue();
+
+  base::ThreadPool::PostTask(
+      base::ThreadPool::UI, FROM_HERE,
+      base::Bind(DPEWorkerNode::FinishExecuteTask, self, tasks, result,
+                 time_usage, end_time - start_time));
+}
+
+void DPEWorkerNode::FinishExecuteTask(base::WeakPtr<DPEWorkerNode> self,
+                                      std::vector<int64> tasks,
+                                      std::vector<int64> result,
+                                      std::vector<int64> time_usage,
+                                      int64 total_time) {
+  if (DPEWorkerNode* p_this = self.get()) {
+    p_this->FinishExecuteTaskImpl(tasks, result, time_usage, total_time);
+  }
+}
+
+void DPEWorkerNode::FinishExecuteTaskImpl(std::vector<int64> tasks,
+                                          std::vector<int64> result,
+                                          std::vector<int64> time_usage,
+                                          int64 total_time) {
+  --running_task_count_;
+
+  const int size = tasks.size();
+  FinishComputeRequest* fr = new FinishComputeRequest();
+  for (int i = 0; i < size; ++i) {
+    TaskItem* item = fr->add_task_item();
+    item->set_task_id(tasks[i]);
+    item->set_result(result[i]);
+    item->set_time_usage(time_usage[i]);
+  }
+  fr->set_total_time_usage(total_time);
+
+  Request request;
+  request.set_name("finish_compute");
+  request.set_allocated_finish_compute(fr);
+  SendRequest(request,
+              base::Bind(&dpe::DPEWorkerNode::HandleFinishCompute, this),
+              10000);
 }
 
 int DPEWorkerNode::SendRequest(Request& req, base::ZMQCallBack callback,

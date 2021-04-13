@@ -21,6 +21,8 @@ DPE_BASE_EXPORT void will_quit_main_loop();
 DPE_BASE_EXPORT MessageCenter* zmq_message_center();
 DPE_BASE_EXPORT ZMQServer* zmq_server();
 DPE_BASE_EXPORT ZMQClient* zmq_client();
+DPE_BASE_EXPORT void set_blocking_pool_thread_number(int thread_number);
+DPE_BASE_EXPORT int get_blocking_pool_thread_number();
 }
 
 namespace base

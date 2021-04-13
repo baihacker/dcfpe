@@ -132,9 +132,11 @@ static inline void run() {
     LOG(INFO) << "parallel_info = " << flags.parallel_info;
     if (flags.thread_number <= 0) {
       LOG(WARNING) << "thread_number should be greater than 0.";
+      WillExitDpe();
     }
     if (flags.batch_size <= 0) {
       LOG(WARNING) << "batch_size should be greater than 0.";
+      WillExitDpe();
     }
   }
 
@@ -269,7 +271,13 @@ void RunDpe(Solver* solver, int argc, char* argv[]) {
     }
   }
 
-  base::dpe_base_main(run, NULL, flags.logging_level);
+  base::set_blocking_pool_thread_number(flags.thread_number);
+  if (flags.thread_number <= 0) {
+    fprintf(stderr, "The thread number should be greater than 0, but it is %d",
+            flags.thread_number);
+  } else {
+    base::dpe_base_main(run, NULL, flags.logging_level);
+  }
 
   StopNetwork();
 }

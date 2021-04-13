@@ -53,7 +53,7 @@ class SolverImpl : public Solver {
   }
 
   int64 Work(int64 task_id) {
-    Sleep(2000);
+    //Sleep(2000);
     return task_id * task_id * task_id;
   }
 

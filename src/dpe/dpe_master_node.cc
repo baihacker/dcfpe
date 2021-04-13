@@ -257,7 +257,7 @@ void DPEMasterNode::SaveState(bool force_save) {
         base::UTF8ToNative(executable_dir_ + "\\state.txtproto"));
     base::WriteFile(file_path, data.c_str(), data.size());
 
-    LOG(INFO) << "Server stat saved, file size = " << data.size();
+    LOG(INFO) << "Server state saved, file size = " << data.size();
     last_save_time_ = current_time;
   }
 }

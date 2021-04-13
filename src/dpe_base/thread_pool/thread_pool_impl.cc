@@ -14,6 +14,7 @@
 #include "third_party/chromium/base/message_loop/message_loop_proxy.h"
 #include "third_party/chromium/base/threading/sequenced_worker_pool.h"
 #include "third_party/chromium/base/threading/thread_restrictions.h"
+#include "dpe_base/dpe_base.h"
 #include "dpe_base/thread_pool_delegate.h"
 
 #include "third_party/chromium/base/run_loop.h"
@@ -88,7 +89,8 @@ base::LazyInstance<ThreadPoolProxies>::Leaky
 
 struct ThreadPoolGlobals {
   ThreadPoolGlobals()
-      : blocking_pool(new base::SequencedWorkerPool(3, "BrowserBlocking")) {
+      : blocking_pool(new base::SequencedWorkerPool(
+            base::get_blocking_pool_thread_number(), "BrowserBlocking")) {
     memset(threads, 0, ThreadPool::ID_COUNT * sizeof(threads[0]));
     memset(thread_delegates, 0,
            ThreadPool::ID_COUNT * sizeof(thread_delegates[0]));
@@ -552,7 +554,7 @@ void ThreadPool::SetDelegate(ID identifier,
     content/??/browser_main_runner
     content/??/browser_process_sub_thread
     base/run_loop
-    
+
     1.MainMessageLoopStart
     2.CreateStartupTasks
     3.RunMainMessageLoopParts
@@ -572,13 +574,13 @@ static scoped_ptr<ThreadPoolImpl> compute_thread_;
 void ThreadPool::InitializeThreadPool()
 {
   exit_manager_ = new AtExitManager();
-  
+
   if (!base::MessageLoop::current()) {
     main_message_loop_.reset(new base::MessageLoopForUI);
   }
   main_thread_.reset(
       new ThreadPoolImpl(ThreadPool::UI, base::MessageLoop::current()));
-      
+
   base::Thread::Options default_options;
   base::Thread::Options io_message_loop_options;
   io_message_loop_options.message_loop_type = base::MessageLoop::TYPE_IO;
@@ -590,7 +592,7 @@ void ThreadPool::InitializeThreadPool()
        ++thread_id) {
     scoped_ptr<ThreadPoolImpl>* thread_to_start = NULL;
     base::Thread::Options* options = &default_options;
-    
+
     switch (thread_id) {
       case ThreadPool::DB:
         thread_to_start = &db_thread_;
@@ -684,7 +686,7 @@ void ThreadPool::DeinitializeThreadPool()
         break;
     }
   }
-  
+
   main_thread_.reset();
   main_message_loop_.reset();
   delete exit_manager_;

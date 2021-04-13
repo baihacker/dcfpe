@@ -94,6 +94,14 @@ ZMQClient* zmq_client()
   return zmq_client_impl;
 }
 
+static int blocking_pool_thread_number = 3;
+
+void set_blocking_pool_thread_number(int thread_number) {
+  blocking_pool_thread_number = thread_number;
+}
+
+int get_blocking_pool_thread_number() { return blocking_pool_thread_number; }
+
 }
 
 namespace base
@@ -229,8 +237,8 @@ static std::string HardDriverIDImpl(int32_t driver_id)
   for(int i=0; i < 256; i++) dwDiskData[i] = pIDSector[i];
 
   return ConvertToString(dwDiskData, 10, 19);
-  // 10 19 ĞòÁĞºÅ
-  // 27 46 Ä£ĞÍºÅ
+  // 10 19 ï¿½ï¿½ï¿½Ğºï¿½
+  // 27 46 Ä£ï¿½Íºï¿½
 }
 
 static std::string GetCPUID()
@@ -247,15 +255,15 @@ static std::string GetCPUID()
   {
   case '1':
       __asm{
-          xor eax,eax      //eax=0:È¡VendorĞÅÏ¢
-          cpuid    //È¡cpu idÖ¸Áî£¬¿ÉÔÚRing3¼¶Ê¹ÓÃ
+          xor eax,eax      //eax=0:È¡Vendorï¿½ï¿½Ï¢
+          cpuid    //È¡cpu idÖ¸ï¿½î£¬ï¿½ï¿½ï¿½ï¿½Ring3ï¿½ï¿½Ê¹ï¿½ï¿½
           mov dword ptr vendor_id,ebx
           mov dword ptr vendor_id[+4],edx
           mov dword ptr vendor_id[+8],ecx
       }
       VernderID = base::StringPrintf("%s-",vendor_id);
       __asm{
-          mov eax,01h   //eax=1:È¡CPUĞòÁĞºÅ
+          mov eax,01h   //eax=1:È¡CPUï¿½ï¿½ï¿½Ğºï¿½
           xor edx,edx
           cpuid
           mov s1,edx
