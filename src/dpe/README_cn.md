@@ -74,16 +74,20 @@
   * --thread_number=thread_num
   * Worker结点
      * Solver::Compute中的thread_number值.
-     * 当batch_size值为0时，thread_number * 3作为batch_size值.
   * 默认值1.
-  * 注意: 目前该参数并不影响worker结点启用的worker的线程数.
 
-* 获取task的最大数量
+* 传入Solver::Compute的最大task数
   * --bs=batch_size
   * --batch_size=batch_size
   * Worker结点
-    * 指定Worker节点上每次发送GetTaskRequest时允许返回的最大task数量.
-    * 当该值为0时, 使用thread_number * 3.
+    * 指定Worker节点上传科Solver::Comput的最大task数
+  * 默认值1.
+
+* 自定义并行参数
+  * --pi=parallel_info
+  * --parallel_info=parallel_info
+  * Worker结点
+    * 用户自定义的parallel_info可以用于从命令行向Compute方法传递额外的信息
   * 默认值0.
 
 * 是否读取上次保存的状态

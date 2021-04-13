@@ -46,7 +46,7 @@ class Solver {
   virtual void SetResult(int size, int64* taskId, int64* result,
                          int64* time_usage, int64 total_time_usage) = 0;
   virtual void Compute(int size, const int64* taskId, int64* result,
-                       int64* time_usage, int thread_number) = 0;
+                       int64* time_usage, int parallel_info) = 0;
   virtual void Finish() = 0;
 };
 

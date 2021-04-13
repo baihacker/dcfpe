@@ -31,8 +31,7 @@ void DPEWorkerNode::GetNextTask() {
   const int batch_size = GetFlags().batch_size;
   const int thread_number = GetFlags().thread_number;
 
-  get_task->set_max_task_count(batch_size == 0 ? thread_number * 3
-                                               : batch_size);
+  get_task->set_max_task_count(batch_size);
 
   Request request;
   request.set_name("get_task");
@@ -69,7 +68,7 @@ void DPEWorkerNode::HandleGetTask(scoped_refptr<base::ZMQResponse> response) {
 
   const int64 start_time = base::Time::Now().ToInternalValue();
   GetSolver()->Compute(size, &task_id[0], &result[0], &time_usage[0],
-                       GetFlags().thread_number);
+                       GetFlags().parallel_info);
   const int64 end_time = base::Time::Now().ToInternalValue();
 
   FinishComputeRequest* fr = new FinishComputeRequest();

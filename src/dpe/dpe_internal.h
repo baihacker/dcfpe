@@ -14,13 +14,13 @@ struct Flags {
   int logging_level = 0;
   int server_port = 0;
   bool read_state = true;
-  // The max task count in GetTaskRequest.
-  // If the value is zero, use thread_number * 3.
-  // If max task count is zero, the server use 1.
-  int batch_size = 0;
-  // Currently, thread number is forwarded to worker ans an argument.
-  // This worker is not responsible for executing the tasks in parallel.
+  // The number of worker threads
   int thread_number = 1;
+  // The expected size in Solver::Compute
+  // size <= batch_size
+  int batch_size = 1;
+  // The argument forwarded to Solver::Compute
+  int parallel_info = 0;
 };
 
 Solver* GetSolver();

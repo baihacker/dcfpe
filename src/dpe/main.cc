@@ -22,9 +22,7 @@ class SolverImpl : public Solver {
 
   void InitMaster() {}
 
-  int GetTaskCount() {
-    return 30;
-  }
+  int GetTaskCount() { return 30; }
 
   void GenerateTasks(int64* task) {
     for (int i = 0; i < 30; ++i) {
@@ -46,7 +44,7 @@ class SolverImpl : public Solver {
   }
 
   void Compute(int size, const int64* task_id, int64* result, int64* time_usage,
-               int thread_number) {
+               int parallel_info) {
     for (int i = 0; i < size; ++i) {
       int start = clock();
       result[i] = Work(task_id[i]);

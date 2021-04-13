@@ -127,8 +127,15 @@ static inline void run() {
     LOG(INFO) << "http_port = " << flags.http_port;
   }
   if (flags.type == "worker") {
-    LOG(INFO) << "batch_size = " << flags.batch_size;
     LOG(INFO) << "thread_number = " << flags.thread_number;
+    LOG(INFO) << "batch_size = " << flags.batch_size;
+    LOG(INFO) << "parallel_info = " << flags.parallel_info;
+    if (flags.thread_number <= 0) {
+      LOG(WARNING) << "thread_number should be greater than 0.";
+    }
+    if (flags.batch_size <= 0) {
+      LOG(WARNING) << "batch_size should be greater than 0.";
+    }
   }
 
   if (flags.type == "server") {
@@ -214,6 +221,14 @@ void RunDpe(Solver* solver, int argc, char* argv[]) {
         i += 2;
       } else {
         flags.batch_size = atoi(value.c_str());
+        ++i;
+      }
+    } else if (str == "pi" || str == "parallel_info") {
+      if (idx == -1) {
+        flags.parallel_info = atoi(argv[i + 1]);
+        i += 2;
+      } else {
+        flags.parallel_info = atoi(value.c_str());
         ++i;
       }
     } else if (str == "l" || str == "log") {
