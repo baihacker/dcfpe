@@ -45,8 +45,13 @@ def main(argv):
   if len(argv) >= 2:
     patterns = argv[1:]
 
+  is_first = True
   for target in sorted(all_targets.keys()):
     if match(target, patterns):
+      if is_first:
+        is_first = False
+      else:
+        print
       print 'Build %s' % target
       exit_code = os.system('ninja -C %s' % all_targets[target])
       if exit_code != 0:
