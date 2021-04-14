@@ -1,1 +1,2 @@
-ninja -C output\Release
+@echo off
+build.py %*

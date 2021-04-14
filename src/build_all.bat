@@ -1,1 +1,0 @@
-ninja -C output\Release && ninja -C output\Release_x64 && ninja -C output\Debug && ninja -C output\Debug_x64

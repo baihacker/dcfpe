@@ -5,7 +5,9 @@ import shutil
 
 HOMEDIR = os.environ.get('HOMEDIR', '')
 
-if __name__ == '__main__':
+
+def main(argv):
+  print 'Install dpe'
   if len(HOMEDIR) == 0:
     print "Cannot find HOMEDIR"
     sys.exit(-1)
@@ -38,4 +40,7 @@ if __name__ == '__main__':
   dest_dir = os.path.join(HOMEDIR, 'usr\\include')
   shutil.copyfile(os.path.join(dpe_dir, 'dpe.h'),
                   os.path.join(dest_dir, 'dpe.h'))
-  sys.exit(0)
+
+
+if __name__ == '__main__':
+  main(sys.argv)
